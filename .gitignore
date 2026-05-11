@@ -11,3 +11,6 @@
 
 # Node modules
 /smart-finance-frontend/node_modules/
+
+# IDE
+.idea/
