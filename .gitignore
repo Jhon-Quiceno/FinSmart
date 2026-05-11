@@ -1,0 +1,13 @@
+# Ignore agent and skill files
+.agents/
+.claude/
+
+# Ignore environment files with secrets
+.env
+.env.*
+
+# Maven build artifacts
+/smart-finance-backend/target/
+
+# Node modules
+/smart-finance-frontend/node_modules/
