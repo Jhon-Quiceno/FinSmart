@@ -73,12 +73,12 @@ export default function RegisterPage() {
       return
     }
 
-    const success = await register(name, email, password)
-    
-    if (success) {
+    const result = await register(name, email, password)
+
+    if (result.success) {
       router.push("/")
     } else {
-      setError("Error al crear la cuenta. Intenta de nuevo.")
+      setError(result.error ?? "Error al crear la cuenta. Intenta de nuevo.")
     }
     
     setIsSubmitting(false)
