@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "**/CHANGELOG.md"
+      - "**/package.json"
+      - "**/pom.xml"
+      - ".release-please-manifest.json"
+      - "release-please-config.json"
 
 permissions:
   contents: write
@@ -13,9 +19,98 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      backend-released: ${{ steps.release.outputs['smart-finance-backend--release_created'] }}
+      backend-version: ${{ steps.release.outputs['smart-finance-backend--version'] }}
+      backend-tag: ${{ steps.release.outputs['smart-finance-backend--tag_name'] }}
+      frontend-released: ${{ steps.release.outputs['smart-finance-frontend--release_created'] }}
+      frontend-version: ${{ steps.release.outputs['smart-finance-frontend--version'] }}
+      frontend-tag: ${{ steps.release.outputs['smart-finance-frontend--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  # ─── Publicar backend (Docker) cuando se crea un release ───
+  publish-backend:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.backend-released }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build backend JAR
+        run: ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
+        working-directory: smart-finance-backend
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: smart-finance-backend
+          file: smart-finance-backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/backend:${{ needs.release-please.outputs.backend-version }}
+            ghcr.io/${{ github.repository }}/backend:latest
+
+  # ─── Publicar frontend cuando se crea un release ───
+  publish-frontend:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.frontend-released }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: smart-finance-frontend/pnpm-lock.yaml
+          registry-url: "https://npm.pkg.github.com"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: smart-finance-frontend
+
+      - name: Build frontend
+        run: pnpm build
+        working-directory: smart-finance-frontend
+
+      # TODO: Agregar deploy a Vercel/AWS/etc. cuando tengas el entorno
+      # - name: Deploy to Vercel
+      #   run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+      #   working-directory: smart-finance-frontend
