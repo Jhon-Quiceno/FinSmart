@@ -51,12 +51,12 @@ export default function LoginPage() {
       return
     }
 
-    const success = await login(email, password)
-    
-    if (success) {
+    const result = await login(email, password)
+
+    if (result.success) {
       router.push("/")
     } else {
-      setError("Credenciales invalidas. Intenta de nuevo.")
+      setError(result.error ?? "Credenciales invalidas. Intenta de nuevo.")
     }
     
     setIsSubmitting(false)
@@ -317,10 +317,6 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          {/* Demo credentials hint */}
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            Demo: Usa cualquier email y contrasena (min. 6 caracteres)
-          </p>
         </div>
       </div>
     </div>
