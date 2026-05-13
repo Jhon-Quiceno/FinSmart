@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    "smart-finance-backend": {
+      "release-type": "maven",
+      "package-name": "smart-finance-backend",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "smart-finance-frontend": {
+      "release-type": "node",
+      "package-name": "smart-finance-frontend",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}
