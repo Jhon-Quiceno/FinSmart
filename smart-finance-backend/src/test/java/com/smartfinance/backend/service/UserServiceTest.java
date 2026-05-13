@@ -62,7 +62,11 @@ class UserServiceTest {
 
     @Test
     void loginShouldReturnAuthResponseForValidCredentials() {
-        User user = new User(7L, "John", "john@mail.com", "hashed");
+        User user = new User();
+        user.setId(7L);
+        user.setName("John");
+        user.setEmail("john@mail.com");
+        user.setPasswordHash("hashed");
         when(userRepository.findByEmailIgnoreCase("john@mail.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret123", "hashed")).thenReturn(true);
 
@@ -75,7 +79,11 @@ class UserServiceTest {
 
     @Test
     void loginShouldFailWhenPasswordIsInvalid() {
-        User user = new User(7L, "John", "john@mail.com", "hashed");
+        User user = new User();
+        user.setId(7L);
+        user.setName("John");
+        user.setEmail("john@mail.com");
+        user.setPasswordHash("hashed");
         when(userRepository.findByEmailIgnoreCase("john@mail.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("bad-pass", "hashed")).thenReturn(false);
 
