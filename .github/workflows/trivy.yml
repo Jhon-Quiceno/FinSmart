@@ -41,7 +41,7 @@ jobs:
           docker build -t finsmart-backend:${{ github.sha }} -f smart-finance-backend/Dockerfile smart-finance-backend
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'finsmart-backend:${{ github.sha }}'
           format: 'sarif'
@@ -50,6 +50,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload results to GitHub Security
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
