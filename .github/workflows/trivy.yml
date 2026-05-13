@@ -1,9 +1,9 @@
 name: Trivy Security Scan
 
 on:
-  push:
-    branches: [ "main", "develop" ]
   pull_request:
+    branches: [ "main", "develop" ]
+  push:
     branches: [ "main" ]
   schedule:
     - cron: '0 3 * * 1'
