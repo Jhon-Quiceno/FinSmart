@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { getApiErrorMessage, loginRequest, registerRequest } from "@/lib/api-client"
 
 interface User {
@@ -29,13 +29,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const STORAGE_USER_KEY = "financeai_user"
 const STORAGE_TOKEN_KEY = "financeai_token"
-const PUBLIC_ROUTES = ["/login", "/registro", "/recuperar-password"]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const pathname = usePathname()
 
   useEffect(() => {
     const storedUser = window.localStorage.getItem(STORAGE_USER_KEY)
@@ -49,18 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(false)
   }, [])
-
-  useEffect(() => {
-    if (!isLoading) {
-      const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
-      
-      if (!user && !isPublicRoute) {
-        router.push("/login")
-      } else if (user && isPublicRoute) {
-        router.push("/")
-      }
-    }
-  }, [user, isLoading, pathname, router])
 
   const setTokenCookie = (token: string) => {
     document.cookie = `financeai_token=${token}; path=/; max-age=604800; samesite=lax`
