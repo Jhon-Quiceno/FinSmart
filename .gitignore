@@ -5,6 +5,7 @@
 # Ignore environment files with secrets
 .env
 .env.*
+!.env.example
 
 # Maven build artifacts
 /smart-finance-backend/target/
