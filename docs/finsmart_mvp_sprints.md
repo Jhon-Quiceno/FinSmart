@@ -21,23 +21,23 @@
 > Proyecto, autenticación y base de datos · **13 tareas**
 
 ### Backend
-- [ ] `[BE]` Setup proyecto Spring Boot + estructura de capas (`config/controller/service/repository/model/dto/mapper/exception`)
-- [ ] `[BE]` Entidad `User` + `UserRepository` + `UserService` (registro y login básico)
-- [ ] `[BE]` Endpoint `POST /api/users/register` — validaciones de email único y contraseña
-- [ ] `[BE]` Endpoint `POST /api/users/login` — respuesta con token/sesión (stub JWT para fase futura)
-- [ ] `[BE]` Manejo global de excepciones (`GlobalExceptionHandler`) + DTOs de error estándar
-- [ ] `[BE]` Configurar CORS para permitir peticiones desde el frontend Next.js
+- [x] `[BE]` Setup proyecto Spring Boot + estructura de capas (`config/controller/service/repository/model/dto/mapper/exception`)
+- [x] `[BE]` Entidad `User` + `UserRepository` + `UserService` (registro y login básico)
+- [x] `[BE]` Endpoint `POST /api/users/register` — validaciones de email único y contraseña
+- [x] `[BE]` Endpoint `POST /api/users/login` — respuesta con token/sesión (stub JWT para fase futura)
+- [x] `[BE]` Manejo global de excepciones (`GlobalExceptionHandler`) + DTOs de error estándar
+- [x] `[BE]` Configurar CORS para permitir peticiones desde el frontend Next.js
 
 ### Base de datos
-- [ ] `[DB]` Configurar conexión PostgreSQL + Spring Data JPA + Flyway/Liquibase para migraciones
-- [ ] `[DB]` Crear schema inicial: tablas `users`, `categories`, `incomes`, `expenses`, `debts`, `recurring_payments`, `notifications`
+- [x] `[DB]` Configurar conexión PostgreSQL + Spring Data JPA + Flyway/Liquibase para migraciones
+- [x] `[DB]` Crear schema inicial: tablas `users`, `categories`, `incomes`, `expenses`, `debts`, `recurring_payments`, `notifications`
 
 ### Frontend
-- [ ] `[FE]` Configurar cliente HTTP (axios) con interceptores para token de autenticación
-- [ ] `[FE]` Reemplazar mock de `AuthContext` con llamadas reales a `POST /api/users/register` y `/login`
-- [ ] `[FE]` Persistir token JWT en `localStorage` y proteger rutas con middleware de Next.js
-- [ ] `[FE]` Pantalla Login conectada al backend — mostrar errores de validación del servidor
-- [ ] `[FE]` Pantalla Registro conectada al backend — feedback visual de éxito/error
+- [x] `[FE]` Configurar cliente HTTP (axios) con interceptores para token de autenticación
+- [x] `[FE]` Reemplazar mock de `AuthContext` con llamadas reales a `POST /api/users/register` y `/login`
+- [x] `[FE]` Persistir token JWT en `localStorage` y proteger rutas con middleware de Next.js
+- [x] `[FE]` Pantalla Login conectada al backend — mostrar errores de validación del servidor
+- [x] `[FE]` Pantalla Registro conectada al backend — feedback visual de éxito/error
 
 ---
 
@@ -163,7 +163,7 @@
 
 | Sprint | Título | Tareas | BE | FE | N8 | DB |
 |--------|--------|--------|----|----|----|----|
-| 1 | Base del Sistema | 13 | 6 | 5 | 0 | 2 |
+| 1 | Base del Sistema | 13/13 | 6 | 5 | 0 | 2 |
 | 2 | Ingresos y Gastos | 14 | 7 | 7 | 0 | 0 |
 | 3 | Deudas y Servicios | 11 | 5 | 6 | 0 | 0 |
 | 4 | Motor Financiero + Dashboard | 15 | 8 | 6 | 0 | 1 |

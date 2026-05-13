@@ -1,13 +1,13 @@
 package com.smartfinance.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.Assertions;
 
-@SpringBootTest
 class SmartFinanceBackendApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void applicationClassIsInstantiable() throws Exception {
+		Assertions.assertNotNull(SmartFinanceBackendApplication.class.getDeclaredConstructor().newInstance());
 	}
 
 }

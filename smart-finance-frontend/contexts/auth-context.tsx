@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { getApiErrorMessage, loginRequest, registerRequest } from "@/lib/api-client"
 
 interface User {
   id: string
@@ -10,17 +11,24 @@ interface User {
   avatar?: string
 }
 
+interface AuthActionResult {
+  success: boolean
+  error?: string
+}
+
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<boolean>
-  register: (name: string, email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<AuthActionResult>
+  register: (name: string, email: string, password: string) => Promise<AuthActionResult>
   logout: () => void
   isAuthenticated: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const STORAGE_USER_KEY = "financeai_user"
+const STORAGE_TOKEN_KEY = "financeai_token"
 const PUBLIC_ROUTES = ["/login", "/registro", "/recuperar-password"]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -30,11 +38,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Check for existing session
-    const storedUser = localStorage.getItem("financeai_user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    const storedUser = window.localStorage.getItem(STORAGE_USER_KEY)
+    const storedToken = window.localStorage.getItem(STORAGE_TOKEN_KEY)
+
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser) as User)
+    } else {
+      clearSession()
     }
+
     setIsLoading(false)
   }, [])
 
@@ -50,59 +62,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isLoading, pathname, router])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Demo validation - in production this would be a real API call
-    if (email && password.length >= 6) {
-      const newUser: User = {
-        id: "1",
-        name: email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1),
-        email: email,
-        avatar: undefined
-      }
-      
-      setUser(newUser)
-      localStorage.setItem("financeai_user", JSON.stringify(newUser))
-      setIsLoading(false)
-      return true
-    }
-    
-    setIsLoading(false)
-    return false
+  const setTokenCookie = (token: string) => {
+    document.cookie = `financeai_token=${token}; path=/; max-age=604800; samesite=lax`
   }
 
-  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+  const clearTokenCookie = () => {
+    document.cookie = "financeai_token=; path=/; max-age=0; samesite=lax"
+  }
+
+  const clearSession = () => {
+    setUser(null)
+    window.localStorage.removeItem(STORAGE_USER_KEY)
+    window.localStorage.removeItem(STORAGE_TOKEN_KEY)
+    clearTokenCookie()
+  }
+
+  const persistSession = (nextUser: User, token: string) => {
+    setUser(nextUser)
+    window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(nextUser))
+    window.localStorage.setItem(STORAGE_TOKEN_KEY, token)
+    setTokenCookie(token)
+  }
+
+  const login = async (email: string, password: string): Promise<AuthActionResult> => {
     setIsLoading(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    // Demo validation - in production this would be a real API call
-    if (name && email && password.length >= 6) {
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: name,
-        email: email,
-        avatar: undefined
+
+    try {
+      const response = await loginRequest(email, password)
+      const nextUser: User = {
+        id: String(response.user.id),
+        name: response.user.name,
+        email: response.user.email,
       }
-      
-      setUser(newUser)
-      localStorage.setItem("financeai_user", JSON.stringify(newUser))
+
+      persistSession(nextUser, response.token)
       setIsLoading(false)
-      return true
+      return { success: true }
+    } catch (error) {
+      setIsLoading(false)
+      return {
+        success: false,
+        error: getApiErrorMessage(error, "No fue posible iniciar sesión"),
+      }
     }
-    
-    setIsLoading(false)
-    return false
+  }
+
+  const register = async (name: string, email: string, password: string): Promise<AuthActionResult> => {
+    setIsLoading(true)
+
+    try {
+      const response = await registerRequest(name, email, password)
+      const nextUser: User = {
+        id: String(response.user.id),
+        name: response.user.name,
+        email: response.user.email,
+      }
+
+      persistSession(nextUser, response.token)
+      setIsLoading(false)
+      return { success: true }
+    } catch (error) {
+      setIsLoading(false)
+      return {
+        success: false,
+        error: getApiErrorMessage(error, "No fue posible crear la cuenta"),
+      }
+    }
   }
 
   const logout = () => {
-    setUser(null)
-    localStorage.removeItem("financeai_user")
+    clearSession()
     router.push("/login")
   }
 
