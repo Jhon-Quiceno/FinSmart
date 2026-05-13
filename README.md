@@ -215,21 +215,17 @@ Construido con tecnologías modernas para una experiencia fluida y profesional:
          📧 Email      💬 WhatsApp    🤖 IA API
 ```
 
-### Estructura del Backend (Clean Architecture)
+### Estructura del Backend (estado actual)
 
 ```
-backend/src/main/java/com/finsmart/
-├── config/          → JWT, CORS, seguridad
-├── controller/      → Endpoints REST (solo recibe/responde)
-├── service/         → Toda la lógica de negocio
-│   └── FinancialAnalysisService.java  ← Motor financiero
-├── repository/      → Acceso a datos con JPA
-├── model/
-│   ├── entity/      → Entidades JPA (mapeadas a BD)
-│   └── dto/         → Objetos de transferencia de datos
-├── mapper/          → Conversión Entity ↔ DTO
+smart-finance-backend/src/main/java/com/smartfinance/backend/
+├── config/          → Configuración de seguridad y OpenAPI
+├── controller/      → Endpoints REST
+├── dto/             → Objetos de transferencia de datos
 ├── exception/       → Manejo centralizado de errores
-└── util/            → Helpers y utilidades
+├── model/           → Entidades de dominio
+├── repository/      → Acceso a datos con Spring Data JPA
+└── service/         → Lógica de negocio
 ```
 
 ### Modelo de Base de Datos
@@ -251,12 +247,8 @@ financial_analysis → Snapshots mensuales para análisis e IA
 |--------|----------|-------------|
 | POST | `/api/users/register` | Registro de usuario |
 | POST | `/api/users/login` | Autenticación |
-| GET/POST | `/api/incomes` | Gestión de ingresos |
-| GET/POST | `/api/expenses` | Gestión de gastos |
-| GET/POST | `/api/debts` | Gestión de deudas |
-| GET/POST | `/api/recurring` | Servicios recurrentes |
-| GET | `/api/analysis/summary` | Resumen financiero del mes |
-| GET | `/api/analysis/recommendations` | Recomendaciones de IA |
+
+> Los endpoints de ingresos, gastos, deudas, pagos recurrentes y análisis financiero están planificados para próximas iteraciones.
 
 ---
 
@@ -325,7 +317,7 @@ FinSmart = Registro Inteligente
 | Capa | Tecnología |
 |------|-----------|
 | Frontend | Next.js 16 · TypeScript · Tailwind CSS v4 · shadcn/ui · Recharts |
-| Backend | Java 17 · Spring Boot · Spring Data JPA · REST API |
+| Backend | Java 21 · Spring Boot · Spring Data JPA · REST API |
 | Base de datos | PostgreSQL |
 | Automatización | n8n |
 | Seguridad | JWT (fase futura) |
