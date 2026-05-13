@@ -35,19 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    const storedUser = window.localStorage.getItem(STORAGE_USER_KEY)
-    const storedToken = window.localStorage.getItem(STORAGE_TOKEN_KEY)
-
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser) as User)
-    } else {
-      clearSession()
-    }
-
-    setIsLoading(false)
-  }, [])
-
   const setTokenCookie = (token: string) => {
     document.cookie = `financeai_token=${token}; path=/; max-age=604800; samesite=lax`
   }
@@ -62,6 +49,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem(STORAGE_TOKEN_KEY)
     clearTokenCookie()
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const storedUser = window.localStorage.getItem(STORAGE_USER_KEY)
+      const storedToken = window.localStorage.getItem(STORAGE_TOKEN_KEY)
+
+      if (storedUser && storedToken) {
+        setUser(JSON.parse(storedUser) as User)
+      } else {
+        clearSession()
+      }
+
+      setIsLoading(false)
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const persistSession = (nextUser: User, token: string) => {
     setUser(nextUser)
