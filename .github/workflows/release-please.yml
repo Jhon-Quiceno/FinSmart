@@ -191,21 +191,10 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  - name: Checkout
+    uses: actions/checkout@v4
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: Build backend JAR
-        run: ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
-        working-directory: smart-finance-backend
-
-      - name: Set up Docker Buildx
+  - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
@@ -225,6 +214,9 @@ jobs:
           context: smart-finance-backend
           file: smart-finance-backend/Dockerfile
           push: true
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ghcr.io/${{ steps.repo_owner.outputs.owner }}/backend:${{ needs.release-please.outputs.backend-version }}
             ghcr.io/${{ steps.repo_owner.outputs.owner }}/backend:latest
