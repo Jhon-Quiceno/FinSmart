@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from "axios"
 
 export interface ApiUser {
   id: number
@@ -7,7 +7,9 @@ export interface ApiUser {
 }
 
 export interface ApiAuthResponse {
-  token: string
+  accessToken: string
+  tokenType: string
+  expiresIn: number
   user: ApiUser
 }
 
@@ -15,23 +17,66 @@ interface ApiErrorResponse {
   message?: string
 }
 
+interface RetryAxiosRequestConfig extends AxiosRequestConfig {
+  _retry?: boolean
+}
+
+let accessToken: string | null = null
+let refreshPromise: Promise<string> | null = null
+
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 })
 
-apiClient.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("financeai_token")
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+function setAuthorizationHeader(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`
+  } else {
+    delete config.headers.Authorization
+  }
+  return config
+}
+
+apiClient.interceptors.request.use((config) => setAuthorizationHeader(config))
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (!axios.isAxiosError(error) || !error.config) {
+      return Promise.reject(error)
+    }
+
+    const originalRequest = error.config as RetryAxiosRequestConfig
+    const requestUrl = originalRequest.url ?? ""
+    const isAuthEndpoint =
+      requestUrl.includes("/api/users/login") ||
+      requestUrl.includes("/api/users/register") ||
+      requestUrl.includes("/api/users/refresh") ||
+      requestUrl.includes("/api/users/logout")
+
+    if (error.response?.status !== 401 || originalRequest._retry || isAuthEndpoint) {
+      return Promise.reject(error)
+    }
+
+    originalRequest._retry = true
+
+    try {
+      const token = await refreshAccessToken()
+      if (!originalRequest.headers) {
+        originalRequest.headers = {}
+      }
+      originalRequest.headers.Authorization = `Bearer ${token}`
+      return await apiClient(originalRequest)
+    } catch (refreshError) {
+      clearAccessToken()
+      return Promise.reject(refreshError)
     }
   }
-
-  return config
-})
+)
 
 export async function registerRequest(name: string, email: string, password: string): Promise<ApiAuthResponse> {
   const response = await apiClient.post<ApiAuthResponse>("/api/users/register", {
@@ -39,6 +84,7 @@ export async function registerRequest(name: string, email: string, password: str
     email,
     password,
   })
+  setAccessToken(response.data.accessToken)
   return response.data
 }
 
@@ -47,7 +93,27 @@ export async function loginRequest(email: string, password: string): Promise<Api
     email,
     password,
   })
+  setAccessToken(response.data.accessToken)
   return response.data
+}
+
+export async function refreshRequest(): Promise<ApiAuthResponse> {
+  const response = await apiClient.post<ApiAuthResponse>("/api/users/refresh")
+  setAccessToken(response.data.accessToken)
+  return response.data
+}
+
+export async function logoutRequest(): Promise<void> {
+  await apiClient.post("/api/users/logout")
+  clearAccessToken()
+}
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token
+}
+
+export function clearAccessToken(): void {
+  accessToken = null
 }
 
 export function getApiErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -60,4 +126,16 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string): str
   }
 
   return fallbackMessage
+}
+
+async function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = refreshRequest()
+      .then((response) => response.accessToken)
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+
+  return refreshPromise
 }
