@@ -33,4 +33,3 @@
 * release main ([70f2a1e](https://github.com/Jhon-Quiceno/FinSmart/commit/70f2a1e3724586be9045b2c7e05fe4f19746ebf2))
 * release main ([482ad62](https://github.com/Jhon-Quiceno/FinSmart/commit/482ad6225f6685f4af0ae66019ba3d35e2b976df))
 * release main ([77c5a1a](https://github.com/Jhon-Quiceno/FinSmart/commit/77c5a1a24aac2c6cd2e13d265021c83d1fc51e2d))
->>>>>>> origin/main
