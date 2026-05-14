@@ -17,6 +17,7 @@ permissions:
   issues: write
 
 jobs:
+  # ─── Job 1: release-please — escanea commits y crea releases ───
   release-please:
     runs-on: ubuntu-latest
     outputs:
@@ -26,6 +27,7 @@ jobs:
       frontend-released: ${{ steps.release.outputs['smart-finance-frontend--release_created'] }}
       frontend-version: ${{ steps.release.outputs['smart-finance-frontend--version'] }}
       frontend-tag: ${{ steps.release.outputs['smart-finance-frontend--tag_name'] }}
+      releases-created: ${{ steps.release.outputs.releases_created }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -34,10 +36,151 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # ─── Publicar backend (Docker) cuando se crea un release ───
+  # ─── Job 2: generate-release-notes — Gemini AI transforma changelogs ───
+  generate-release-notes:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.releases-created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: smart-finance-backend
+            released: ${{ needs.release-please.outputs.backend-released }}
+            tag: ${{ needs.release-please.outputs.backend-tag }}
+            version: ${{ needs.release-please.outputs.backend-version }}
+          - component: smart-finance-frontend
+            released: ${{ needs.release-please.outputs.frontend-released }}
+            tag: ${{ needs.release-please.outputs.frontend-tag }}
+            version: ${{ needs.release-please.outputs.frontend-version }}
+    steps:
+      - name: Skip if component not released
+        if: ${{ matrix.released != 'true' }}
+        run: echo "No release for ${{ matrix.component }}, skipping." && exit 0
+
+      - name: Checkout
+        if: ${{ matrix.released == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js for AI notes
+        if: ${{ matrix.released == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Get previous tag
+        if: ${{ matrix.released == 'true' }}
+        id: prev-tag
+        run: |
+          PREV_TAG=$(git tag --sort=-version:refname | grep "^${{ matrix.component }}-v" | head -2 | tail -1 || echo "")
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Get changelog and commit log
+        if: ${{ matrix.released == 'true' }}
+        id: changelog
+        run: |
+          # Obtener el body del release recién creado (changelog autogenerado)
+          RELEASE_BODY=$(gh release view "${{ matrix.tag }}" --json body -q '.body' 2>/dev/null || echo "")
+          {
+            echo "release_body<<RELEASE_BODY_EOF"
+            echo "${RELEASE_BODY}"
+            echo "RELEASE_BODY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Obtener log de commits desde el tag anterior
+          if [ -n "${{ steps.prev-tag.outputs.prev_tag }}" ]; then
+            COMMIT_LOG=$(git log "${{ steps.prev-tag.outputs.prev_tag }}..${{ matrix.tag }}" --oneline 2>/dev/null | head -50 || git log --oneline -20)
+          else
+            COMMIT_LOG=$(git log --oneline -20)
+          fi
+          {
+            echo "commit_log<<COMMIT_LOG_EOF"
+            echo "${COMMIT_LOG}"
+            echo "COMMIT_LOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate AI release notes with Gemini
+        if: ${{ matrix.released == 'true' }}
+        id: ai-notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require("child_process");
+
+            // Instalar @google/generative-ai on-the-fly
+            execSync("npm install @google/generative-ai", { stdio: "inherit" });
+
+            const { GoogleGenerativeAI } = require("@google/generative-ai");
+            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+            const changelog = `${{ steps.changelog.outputs.release_body }}`;
+            const commitLog = `${{ steps.changelog.outputs.commit_log }}`;
+            const component = `${{ matrix.component }}`;
+            const version = `${{ matrix.version }}`;
+
+            const prompt = `Eres un **Senior Release Engineer** con 15+ años de experiencia en Google, Vercel y Stripe. Tu especialidad es transformar changelogs técnicos en release notes profesionales que tanto developers como stakeholders no-técnicos puedan entender.
+
+            CONTEXTO:
+            - Proyecto: **FinSmart** — plataforma de gestión financiera personal
+            - Componente: **${component}**
+            - Versión: **${version}**
+
+            REGLAS ESTRICTAS:
+            1. Escribí en español profesional pero cercano y claro
+            2. Categorizá los cambios usando estas secciones (solo incluí las que tengan cambios):
+               - 🚀 **Nuevas funcionalidades** — features nuevas, endpoints, pantallas
+               - 🐛 **Correcciones** — bugs fixeados, errores resueltos
+               - 💥 **Breaking Changes** — cambios que requieren migración o rompen compatibilidad
+               - ⚡ **Rendimiento** — mejoras de speed, optimizaciones
+               - 🔧 **Refactorización** — cambios internos, arquitectura
+               - 📦 **Build/Dependencias** — cambios en deps, configuración de build
+               - 🔄 **CI/CD** — pipelines, workflows, automatización
+               - 🧹 **Mantenimiento** — chores, limpieza, docs menores
+            3. Para CADA cambio: explicá QUÉ cambió y POR QUÉ importa al usuario o developer
+            4. Si hay breaking changes, destacá la migración necesaria con un callout 🔴
+            5. Usá markdown profesional: headers ##, bullets -, código \`inline\` donde aplique
+            6. NO inventes cambios que no están en el changelog o commits
+            7. Si el changelog está vacío o es minimal, generá notas igualmente basándote en los commits
+            8. Terminá con una sección **📋 Notas de migración** SOLO si hay breaking changes
+            9. Agregá una línea de resumen ejecutivo al inicio: una oración que capture el espíritu de la release
+            10. Formato final: markdown limpio, listo para GitHub Release
+            11. NO uses fences de código (\`\`\`) al inicio o final del mensaje — el output debe ser markdown directo
+
+            CHANGELOG AUTOGENERADO:
+            ${changelog}
+
+            LOG DE COMMITS:
+            ${commitLog}
+
+            Generá las release notes profesionales ahora:`;
+
+            const result = await model.generateContent(prompt);
+            const aiNotes = result.response.text();
+
+            const fs = require("fs");
+            fs.writeFileSync("/tmp/ai-release-notes.md", aiNotes);
+            core.setOutput("notes", aiNotes);
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Update GitHub Release with AI notes
+        if: ${{ matrix.released == 'true' }}
+        run: |
+          gh release edit "${{ matrix.tag }}" --notes-file /tmp/ai-release-notes.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Job 3: Publicar backend (Docker) cuando se crea un release ───
   publish-backend:
     needs: release-please
-    if: ${{ needs.release-please.outputs.backend-released }}
+    if: ${{ needs.release-please.outputs.backend-released == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -77,10 +220,10 @@ jobs:
             ghcr.io/${{ github.repository }}/backend:${{ needs.release-please.outputs.backend-version }}
             ghcr.io/${{ github.repository }}/backend:latest
 
-  # ─── Publicar frontend cuando se crea un release ───
+  # ─── Job 4: Publicar frontend cuando se crea un release ───
   publish-frontend:
     needs: release-please
-    if: ${{ needs.release-please.outputs.frontend-released }}
+    if: ${{ needs.release-please.outputs.frontend-released == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
