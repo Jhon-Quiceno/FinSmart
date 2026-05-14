@@ -226,8 +226,11 @@ jobs:
           file: smart-finance-backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.repo_owner.outputs.owner }}/backend:${{ needs.release-please.outputs.backend-version }}
-            ghcr.io/${{ steps.repo_owner.outputs.owner }}/backend:latest
+            ghcr.io/${{ github.repository_owner }}/backend:${{ needs.release-please.outputs.backend-version }}
+            ghcr.io/${{ github.repository_owner }}/backend:latest
+        env:
+          # Convert repository owner to lowercase for Docker tags
+          github_repository_owner: ${{ github.repository_owner }}
 
 
   # ─── Job 4: Publicar frontend cuando se crea un release ───
