@@ -1,3 +1,4 @@
 const nextConfig = require("eslint-config-next/core-web-vitals");
 
-module.exports = [...nextConfig];
+/** @type {import('eslint').Linter.Config[]} */
+module.exports = [...nextConfig, { ignores: [".next/", "node_modules/"] }];

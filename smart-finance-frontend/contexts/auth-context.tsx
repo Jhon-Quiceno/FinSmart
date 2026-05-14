@@ -1,8 +1,15 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { useRouter } from "next/navigation"
-import { getApiErrorMessage, loginRequest, registerRequest } from "@/lib/api-client"
+import { createContext, ReactNode, useContext, useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import {
+  clearAccessToken,
+  getApiErrorMessage,
+  loginRequest,
+  logoutRequest,
+  refreshRequest,
+  registerRequest,
+} from "@/lib/api-client"
 
 interface User {
   id: string
@@ -21,14 +28,14 @@ interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<AuthActionResult>
   register: (name: string, email: string, password: string) => Promise<AuthActionResult>
-  logout: () => void
+  logout: () => Promise<void>
   isAuthenticated: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const STORAGE_USER_KEY = "financeai_user"
-const STORAGE_TOKEN_KEY = "financeai_token"
+const PUBLIC_ROUTES = ["/login", "/registro", "/recuperar-password"]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -36,90 +43,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  useEffect(() => {
-    const storedUser = window.localStorage.getItem(STORAGE_USER_KEY)
-    const storedToken = window.localStorage.getItem(STORAGE_TOKEN_KEY)
-
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser) as User)
-    } else {
-      clearSession()
-    }
-
-    setIsLoading(false)
-  }, [])
-
-  useEffect(() => {
-    if (!isLoading) {
-      const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
-      
-      if (!user && !isPublicRoute) {
-        router.push("/login")
-      } else if (user && isPublicRoute) {
-        router.push("/")
-      }
-    }
-  }, [user, isLoading, pathname, router])
-
-  const setTokenCookie = (token: string) => {
-    document.cookie = `financeai_token=${token}; path=/; max-age=604800; samesite=lax`
-  }
-
-  const clearTokenCookie = () => {
-    document.cookie = "financeai_token=; path=/; max-age=0; samesite=lax"
-  }
-
   const clearSession = () => {
     setUser(null)
     window.localStorage.removeItem(STORAGE_USER_KEY)
-    window.localStorage.removeItem(STORAGE_TOKEN_KEY)
-    clearTokenCookie()
+    clearAccessToken()
+  }
+
+  const persistSession = (nextUser: User) => {
+    setUser(nextUser)
+    window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(nextUser))
   }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const bootstrapSession = async () => {
       const storedUser = window.localStorage.getItem(STORAGE_USER_KEY)
-      const storedToken = window.localStorage.getItem(STORAGE_TOKEN_KEY)
-
-      if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser) as User)
-      } else {
+      if (!storedUser) {
         clearSession()
+        setIsLoading(false)
+        return
       }
 
-      setIsLoading(false)
-    }, 0)
+      try {
+        const parsedUser = JSON.parse(storedUser) as User
+        setUser(parsedUser)
+        await refreshRequest()
+      } catch {
+        clearSession()
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    return () => clearTimeout(timer)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    void bootstrapSession()
+  }, [])
 
-  const persistSession = (nextUser: User, token: string) => {
-    setUser(nextUser)
-    window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(nextUser))
-    window.localStorage.setItem(STORAGE_TOKEN_KEY, token)
-    setTokenCookie(token)
-  }
+  useEffect(() => {
+    if (isLoading) {
+      return
+    }
+
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
+
+    if (!user && !isPublicRoute) {
+      router.push("/login")
+      return
+    }
+
+    if (user && isPublicRoute) {
+      router.push("/")
+    }
+  }, [isLoading, pathname, router, user])
 
   const login = async (email: string, password: string): Promise<AuthActionResult> => {
     setIsLoading(true)
 
     try {
       const response = await loginRequest(email, password)
-      const nextUser: User = {
+      persistSession({
         id: String(response.user.id),
         name: response.user.name,
         email: response.user.email,
-      }
-
-      persistSession(nextUser, response.token)
-      setIsLoading(false)
+      })
       return { success: true }
     } catch (error) {
-      setIsLoading(false)
+      clearSession()
       return {
         success: false,
         error: getApiErrorMessage(error, "No fue posible iniciar sesión"),
       }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -128,27 +121,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await registerRequest(name, email, password)
-      const nextUser: User = {
+      persistSession({
         id: String(response.user.id),
         name: response.user.name,
         email: response.user.email,
-      }
-
-      persistSession(nextUser, response.token)
-      setIsLoading(false)
+      })
       return { success: true }
     } catch (error) {
-      setIsLoading(false)
+      clearSession()
       return {
         success: false,
         error: getApiErrorMessage(error, "No fue posible crear la cuenta"),
       }
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const logout = () => {
-    clearSession()
-    router.push("/login")
+  const logout = async () => {
+    try {
+      await logoutRequest()
+    } catch {
+      // Keep logout resilient on client side.
+    } finally {
+      clearSession()
+      router.push("/login")
+    }
   }
 
   return (
