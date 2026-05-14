@@ -230,7 +230,6 @@ jobs:
             ghcr.io/${{ steps.repo_owner.outputs.owner }}/backend:latest
 
 
-
   # ─── Job 4: Publicar frontend cuando se crea un release ───
   publish-frontend:
     needs: release-please
