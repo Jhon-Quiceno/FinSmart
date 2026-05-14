@@ -127,39 +127,39 @@ jobs:
 
               const prompt = `Eres un **Senior Release Engineer** con 15+ años de experiencia en Google, Vercel y Stripe. Tu especialidad es transformar changelogs técnicos en release notes profesionales que tanto developers como stakeholders no-técnicos puedan entender.
 
-              CONTEXTO:
-              - Proyecto: **FinSmart** — plataforma de gestión financiera personal
-              - Componente: **${component}**
-              - Versión: **${version}**
+            CONTEXTO:
+            - Proyecto: **FinSmart** — plataforma de gestión financiera personal
+            - Componente: **${component}**
+            - Versión: **${version}**
 
-              REGLAS ESTRICTAS:
-              1. Escribí en español profesional pero cercano y claro
-              2. Categorizá los cambios usando estas secciones (solo incluí las que tengan cambios):
-                 - 🚀 **Nuevas funcionalidades** — features nuevas, endpoints, pantallas
-                 - 🐛 **Correcciones** — bugs fixeados, errores resueltos
-                 - 💥 **Breaking Changes** — cambios que requieren migración o rompen compatibilidad
-                 - ⚡ **Rendimiento** — mejoras de speed, optimizaciones
-                 - 🔧 **Refactorización** — cambios internos, arquitectura
-                 - 📦 **Build/Dependencias** — cambios en deps, configuración de build
-                 - 🔄 **CI/CD** — pipelines, workflows, automatización
-                 - 🧹 **Mantenimiento** — chores, limpieza, docs menores
-              3. Para CADA cambio: explicá QUÉ cambió y POR QUÉ importa al usuario o developer
-              4. Si hay breaking changes, destacá la migración necesaria con un callout 🔴
-              5. Usá markdown profesional: headers ##, bullets -, código \`inline\` donde aplique
-              6. NO inventes cambios que no están en el changelog o commits
-              7. Si el changelog está vacío o es minimal, generá notas igualmente basándote en los commits
-              8. Terminá con una sección **📋 Notas de migración** SOLO si hay breaking changes
-              9. Agregá una línea de resumen ejecutivo al inicio: una oración que capture el espíritu de la release
-              10. Formato final: markdown limpio, listo para GitHub Release
-              11. NO uses fences de código (\`\`\`) al inicio o final del mensaje — el output debe ser markdown directo
+            REGLAS ESTRICTAS:
+            1. Escribí en español profesional pero cercano y claro
+            2. Categorizá los cambios usando estas secciones (solo incluí las que tengan cambios):
+               - 🚀 **Nuevas funcionalidades** — features nuevas, endpoints, pantallas
+               - 🐛 **Correcciones** — bugs fixeados, errores resueltos
+               - 💥 **Breaking Changes** — cambios que requieren migración o rompen compatibilidad
+               - ⚡ **Rendimiento** — mejoras de speed, optimizaciones
+               - 🔧 **Refactorización** — cambios internos, arquitectura
+               - 📦 **Build/Dependencias** — cambios en deps, configuración de build
+               - 🔄 **CI/CD** — pipelines, workflows, automatización
+               - 🧹 **Mantenimiento** — chores, limpieza, docs menores
+            3. Para CADA cambio: explicá QUÉ cambió y POR QUÉ importa al usuario o developer
+            4. Si hay breaking changes, destacá la migración necesaria con un callout 🔴
+            5. Usá markdown profesional: headers ##, bullets -, código \`inline\` donde aplique
+            6. NO inventes cambios que no están en el changelog o commits
+            7. Si el changelog está vacío o es minimal, generá notas igualmente basándote en los commits
+            8. Terminá con una sección **📋 Notas de migración** SOLO si hay breaking changes
+            9. Agregá una línea de resumen ejecutivo al inicio: una oración que capture el espíritu de la release
+            10. Formato final: markdown limpio, listo para GitHub Release
+            11. NO uses fences de código (\`\`\`) al inicio o final del mensaje — el output debe ser markdown directo
 
-              CHANGELOG AUTOGENERADO:
-              ${changelog}
+            CHANGELOG AUTOGENERADO:
+            ${changelog}
 
-              LOG DE COMMITS:
-              ${commitLog}
+            LOG DE COMMITS:
+            ${commitLog}
 
-              Generá las release notes profesionales ahora:`;
+            Generá las release notes profesionales ahora:`;
 
               const result = await model.generateContent(prompt);
               const aiNotes = result.response.text();
@@ -191,10 +191,10 @@ jobs:
       contents: read
       packages: write
     steps:
-  - name: Checkout
-    uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  - name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
@@ -220,7 +220,6 @@ jobs:
           tags: |
             ghcr.io/${{ steps.repo_owner.outputs.owner }}/backend:${{ needs.release-please.outputs.backend-version }}
             ghcr.io/${{ steps.repo_owner.outputs.owner }}/backend:latest
-
 
   # ─── Job 4: Publicar frontend cuando se crea un release ───
   publish-frontend:
