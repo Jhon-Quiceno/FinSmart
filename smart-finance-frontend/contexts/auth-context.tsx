@@ -34,6 +34,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    const storedUser = window.localStorage.getItem(STORAGE_USER_KEY)
+    const storedToken = window.localStorage.getItem(STORAGE_TOKEN_KEY)
+
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser) as User)
+    } else {
+      clearSession()
+    }
+
+    setIsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (!isLoading) {
+      const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
+      
+      if (!user && !isPublicRoute) {
+        router.push("/login")
+      } else if (user && isPublicRoute) {
+        router.push("/")
+      }
+    }
+  }, [user, isLoading, pathname, router])
 
   const setTokenCookie = (token: string) => {
     document.cookie = `financeai_token=${token}; path=/; max-age=604800; samesite=lax`
