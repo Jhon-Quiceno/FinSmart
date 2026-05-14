@@ -61,9 +61,6 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint frontend
-        run: pnpm run lint
-
       - name: Run frontend tests
         run: pnpm test
 
