@@ -1,10 +1,12 @@
 package com.smartfinance.backend.service;
 
-import com.smartfinance.backend.dto.auth.AuthResponse;
 import com.smartfinance.backend.dto.auth.LoginRequest;
 import com.smartfinance.backend.dto.auth.RegisterRequest;
+import com.smartfinance.backend.dto.auth.UserResponse;
 import com.smartfinance.backend.exception.EmailAlreadyExistsException;
 import com.smartfinance.backend.exception.InvalidCredentialsException;
+import com.smartfinance.backend.exception.InvalidRefreshTokenException;
+import com.smartfinance.backend.mapper.UserMapper;
 import com.smartfinance.backend.model.User;
 import com.smartfinance.backend.repository.UserRepository;
 import org.junit.jupiter.api.Assertions;
@@ -29,6 +31,15 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtService jwtService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private UserMapper userMapper;
+
     @InjectMocks
     private UserService userService;
 
@@ -42,14 +53,18 @@ class UserServiceTest {
             user.setId(10L);
             return user;
         });
+        when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
+        when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
+        when(refreshTokenService.createForUser(any(User.class))).thenReturn("refresh-token");
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(10L, "Ana", "ana@mail.com"));
 
-        AuthResponse response = userService.register(request);
+        AuthSession session = userService.register(request);
 
-        Assertions.assertNotNull(response.token());
-        Assertions.assertTrue(response.token().startsWith("stub-"));
-        Assertions.assertEquals(10L, response.user().id());
-        Assertions.assertEquals("Ana", response.user().name());
-        Assertions.assertEquals("ana@mail.com", response.user().email());
+        Assertions.assertEquals("access-token", session.response().accessToken());
+        Assertions.assertEquals("Bearer", session.response().tokenType());
+        Assertions.assertEquals(900L, session.response().expiresIn());
+        Assertions.assertEquals(10L, session.response().user().id());
+        Assertions.assertEquals("refresh-token", session.refreshToken());
     }
 
     @Test
@@ -69,12 +84,16 @@ class UserServiceTest {
         user.setPasswordHash("hashed");
         when(userRepository.findByEmailIgnoreCase("john@mail.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret123", "hashed")).thenReturn(true);
+        when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
+        when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
+        when(refreshTokenService.createForUser(any(User.class))).thenReturn("refresh-token");
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(7L, "John", "john@mail.com"));
 
-        AuthResponse response = userService.login(new LoginRequest("JOHN@mail.com", "secret123"));
+        AuthSession session = userService.login(new LoginRequest("JOHN@mail.com", "secret123"));
 
-        Assertions.assertNotNull(response.token());
-        Assertions.assertEquals(7L, response.user().id());
-        Assertions.assertEquals("john@mail.com", response.user().email());
+        Assertions.assertEquals("access-token", session.response().accessToken());
+        Assertions.assertEquals(7L, session.response().user().id());
+        Assertions.assertEquals("refresh-token", session.refreshToken());
     }
 
     @Test
@@ -89,5 +108,10 @@ class UserServiceTest {
 
         Assertions.assertThrows(InvalidCredentialsException.class,
                 () -> userService.login(new LoginRequest("john@mail.com", "bad-pass")));
+    }
+
+    @Test
+    void refreshShouldFailWhenTokenIsMissing() {
+        Assertions.assertThrows(InvalidRefreshTokenException.class, () -> userService.refresh(" "));
     }
 }

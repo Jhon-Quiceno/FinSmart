@@ -1,62 +1,57 @@
-# Sprint 1 — Base del Sistema (FinSmart)
+# Sprint 1 - Autenticacion JWT end-to-end (FinSmart)
 
-Este documento define el trabajo del **Sprint 1** tomando como fuente `docs/finsmart_mvp_sprints.md`.
+Este sprint redefine la base del sistema para dejar **registro/login/logout/refresh funcionales** entre backend y frontend, sin tokens stub.
 
-## Rama de trabajo (obligatorio)
+## Objetivo
 
-Antes de iniciar cualquier tarea del sprint:
+Entregar autenticacion completa con:
 
-```bash
-git checkout develop
-git pull origin develop
- git checkout -b feature/auth-base-system-setup
+1. Access token JWT en memoria del cliente.
+2. Refresh token en cookie `HttpOnly`.
+3. Rotacion y revocacion de refresh token.
+4. Frontend conectado a endpoints reales de auth.
+
+## Alcance del Sprint 1
+
+### Backend
+
+1. Mantener `POST /api/users/register` y `POST /api/users/login`, devolviendo `accessToken`, `tokenType`, `expiresIn` y `user`.
+2. Agregar `POST /api/users/refresh` para renovar access token y rotar refresh token.
+3. Agregar `POST /api/users/logout` para revocar refresh token y limpiar cookie.
+4. Implementar emision y validacion JWT real (access/refresh) en Spring Security.
+5. Persistir refresh tokens en base de datos (hash + expiracion + revocado).
+6. Configurar propiedades JWT en `application.properties` (issuer, expiraciones, cookie).
+7. Mantener validaciones con anotaciones y manejo global de errores consistente.
+8. Usar mapper para transformar entidad `User` a DTO de salida.
+
+### Base de datos
+
+1. Agregar migracion para tabla `refresh_tokens`.
+2. Incluir indices por `user_id` y `expires_at`.
+
+### Frontend
+
+1. Ajustar `api-client` al nuevo contrato JWT.
+2. Guardar solo usuario en `localStorage` y manejar access token en memoria.
+3. Usar refresh automatico ante `401` con endpoint `/api/users/refresh`.
+4. Ejecutar logout real contra `/api/users/logout`.
+5. Mantener pantallas de login/registro conectadas a backend real.
+6. Proteger rutas usando cookie de refresh en `proxy.ts`.
+
+## Definicion de terminado (DoD)
+
+1. Register/login/logout/refresh operativos con JWT real.
+2. Refresh token guardado en cookie `HttpOnly`, sin exponerlo en JavaScript.
+3. Access token renovable automaticamente desde frontend.
+4. Seguridad stateless con filtro JWT para endpoints protegidos.
+5. Migraciones y configuracion listas para correr en entornos dev/prod.
+6. Pruebas de backend/frontend de autenticacion actualizadas.
+
+## Referencia de endpoints de auth (Sprint 1)
+
+```http
+POST /api/users/register
+POST /api/users/login
+POST /api/users/refresh
+POST /api/users/logout
 ```
-
-> Todo el trabajo de este sprint debe salir desde `develop` y ejecutarse en una rama dedicada.
-
-## Uso de skills (obligatorio)
-
-Durante la ejecución del Sprint 1 se deben usar las skills disponibles en la raíz del proyecto:
-
-- `.agents`
-- `.claude`
-- `.atl`
-
-Estas skills deben guiar la implementación, revisión técnica y calidad de los entregables del sprint.
-
-## Objetivo del Sprint 1
-
-Dejar lista la base técnica del sistema: estructura inicial backend/frontend, autenticación básica y esquema base de base de datos.
-
-## Alcance detallado (13 tareas)
-
-### Backend (6)
-
-1. Setup del proyecto Spring Boot con estructura por capas (`config/controller/service/repository/model/dto/mapper/exception`).
-2. Crear entidad `User`, `UserRepository` y `UserService` (registro y login básico).
-3. Implementar `POST /api/users/register` con validaciones de email único y contraseña.
-4. Implementar `POST /api/users/login` con respuesta de token/sesión (stub JWT para fase futura).
-5. Implementar manejo global de excepciones (`GlobalExceptionHandler`) y DTOs de error estándar.
-6. Configurar CORS para permitir peticiones desde el frontend Next.js.
-
-### Base de datos (2)
-
-1. Configurar PostgreSQL + Spring Data JPA + Flyway/Liquibase para migraciones.
-2. Crear schema inicial con tablas: `users`, `categories`, `incomes`, `expenses`, `debts`, `recurring_payments`, `notifications`.
-
-### Frontend (5)
-
-1. Configurar cliente HTTP (axios) con interceptores para token de autenticación.
-2. Reemplazar mock de `AuthContext` por llamadas reales a `POST /api/users/register` y `/api/users/login`.
-3. Persistir JWT en `localStorage` y proteger rutas con middleware de Next.js.
-4. Conectar pantalla de Login al backend con visualización de errores de validación del servidor.
-5. Conectar pantalla de Registro al backend con feedback visual de éxito/error.
-
-## Definición de terminado (DoD) del Sprint 1
-
-- Registro y login funcionales extremo a extremo (frontend ↔ backend).
-- Backend con manejo de errores y CORS configurado.
-- Base de datos inicial versionada con migraciones.
-- Frontend autenticando contra API real sin mocks.
-- Trabajo realizado en rama `feature/auth-base-system-setup` basada en `develop`.
-- Uso explícito de skills desde `.agents`, `.claude` y `.atl` durante la ejecución.
