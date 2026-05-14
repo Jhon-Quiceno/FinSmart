@@ -17,25 +17,27 @@
 
 ---
 
-## 🟦 Sprint 1 — Base del Sistema
-> Proyecto, autenticación y base de datos · **13 tareas**
+## 🟦 Sprint 1 — Base del Sistema (JWT Real)
+> Proyecto, autenticacion JWT real y base de datos · **15 tareas**
 
 ### Backend
 - [x] `[BE]` Setup proyecto Spring Boot + estructura de capas (`config/controller/service/repository/model/dto/mapper/exception`)
-- [x] `[BE]` Entidad `User` + `UserRepository` + `UserService` (registro y login básico)
+- [x] `[BE]` Entidad `User` + `UserRepository` + `UserService` (registro y login con seguridad)
 - [x] `[BE]` Endpoint `POST /api/users/register` — validaciones de email único y contraseña
-- [x] `[BE]` Endpoint `POST /api/users/login` — respuesta con token/sesión (stub JWT para fase futura)
+- [x] `[BE]` Endpoint `POST /api/users/login` — respuesta con `accessToken` JWT real + cookie HttpOnly de refresh token
+- [x] `[BE]` Endpoints `POST /api/users/refresh` y `POST /api/users/logout` con rotacion/revocacion de refresh token
 - [x] `[BE]` Manejo global de excepciones (`GlobalExceptionHandler`) + DTOs de error estándar
-- [x] `[BE]` Configurar CORS para permitir peticiones desde el frontend Next.js
+- [x] `[BE]` Configurar CORS y filtro JWT stateless para peticiones autenticadas desde frontend Next.js
 
 ### Base de datos
 - [x] `[DB]` Configurar conexión PostgreSQL + Spring Data JPA + Flyway/Liquibase para migraciones
 - [x] `[DB]` Crear schema inicial: tablas `users`, `categories`, `incomes`, `expenses`, `debts`, `recurring_payments`, `notifications`
+- [x] `[DB]` Crear tabla `refresh_tokens` para persistencia de sesiones y rotacion segura
 
 ### Frontend
-- [x] `[FE]` Configurar cliente HTTP (axios) con interceptores para token de autenticación
+- [x] `[FE]` Configurar cliente HTTP (axios) con access token en memoria y refresh automatico via `/api/users/refresh`
 - [x] `[FE]` Reemplazar mock de `AuthContext` con llamadas reales a `POST /api/users/register` y `/login`
-- [x] `[FE]` Persistir token JWT en `localStorage` y proteger rutas con middleware de Next.js
+- [x] `[FE]` Persistir usuario en `localStorage`, usar cookie HttpOnly para refresh token y proteger rutas con `proxy.ts`
 - [x] `[FE]` Pantalla Login conectada al backend — mostrar errores de validación del servidor
 - [x] `[FE]` Pantalla Registro conectada al backend — feedback visual de éxito/error
 
@@ -163,13 +165,13 @@
 
 | Sprint | Título | Tareas | BE | FE | N8 | DB |
 |--------|--------|--------|----|----|----|----|
-| 1 | Base del Sistema | 13/13 | 6 | 5 | 0 | 2 |
+| 1 | Base del Sistema (JWT Real) | 15/15 | 7 | 5 | 0 | 3 |
 | 2 | Ingresos y Gastos | 14 | 7 | 7 | 0 | 0 |
 | 3 | Deudas y Servicios | 11 | 5 | 6 | 0 | 0 |
 | 4 | Motor Financiero + Dashboard | 15 | 8 | 6 | 0 | 1 |
 | 5 | IA + n8n | 13 | 3 | 3 | 7 | 0 |
 | 6 | Reportes y Launch | 14 | 6 | 7 | 0 | 1 |
-| **Total** | | **80** | **35** | **34** | **7** | **4** |
+| **Total** | | **82** | **36** | **34** | **7** | **5** |
 
 ---
 
@@ -179,6 +181,8 @@
 # Usuarios
 POST   /api/users/register
 POST   /api/users/login
+POST   /api/users/refresh
+POST   /api/users/logout
 
 # Categorías
 GET    /api/categories

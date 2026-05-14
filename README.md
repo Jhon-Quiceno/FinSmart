@@ -256,7 +256,7 @@ financial_analysis → Snapshots mensuales para análisis e IA
 
 | Componente | Estado | Avance |
 |-----------|--------|--------|
-| UI / Frontend | ✅ Completado | ~90% |
+| UI / Frontend | ✅ Completado | 100% |
 | Diseño responsivo | ✅ Completado | 100% |
 | Autenticación UI | ✅ Completado | 100% |
 | Dashboard con datos mock | ✅ Completado | 100% |
@@ -266,7 +266,7 @@ financial_analysis → Snapshots mensuales para análisis e IA
 | Motor financiero | 🔄 En progreso | Lógica definida |
 | Integración n8n | 📋 Planificado | Diseño listo |
 | IA financiera | 📋 Planificado | Arquitectura definida |
-| JWT / Seguridad | 📋 Fase futura | — |
+| JWT / Seguridad | ✅ Completado | 100% |
 
 ---
 
