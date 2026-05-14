@@ -109,62 +109,69 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { execSync } = require("child_process");
-
-            // Instalar @google/generative-ai on-the-fly
-            execSync("npm install @google/generative-ai", { stdio: "inherit" });
-
-            const { GoogleGenerativeAI } = require("@google/generative-ai");
-            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
+            const fs = require("fs");
             const changelog = `${{ steps.changelog.outputs.release_body }}`;
             const commitLog = `${{ steps.changelog.outputs.commit_log }}`;
             const component = `${{ matrix.component }}`;
             const version = `${{ matrix.version }}`;
 
-            const prompt = `Eres un **Senior Release Engineer** con 15+ años de experiencia en Google, Vercel y Stripe. Tu especialidad es transformar changelogs técnicos en release notes profesionales que tanto developers como stakeholders no-técnicos puedan entender.
+            try {
+              const { execSync } = require("child_process");
 
-            CONTEXTO:
-            - Proyecto: **FinSmart** — plataforma de gestión financiera personal
-            - Componente: **${component}**
-            - Versión: **${version}**
+              // Instalar @google/generative-ai on-the-fly
+              execSync("npm install @google/generative-ai", { stdio: "inherit" });
 
-            REGLAS ESTRICTAS:
-            1. Escribí en español profesional pero cercano y claro
-            2. Categorizá los cambios usando estas secciones (solo incluí las que tengan cambios):
-               - 🚀 **Nuevas funcionalidades** — features nuevas, endpoints, pantallas
-               - 🐛 **Correcciones** — bugs fixeados, errores resueltos
-               - 💥 **Breaking Changes** — cambios que requieren migración o rompen compatibilidad
-               - ⚡ **Rendimiento** — mejoras de speed, optimizaciones
-               - 🔧 **Refactorización** — cambios internos, arquitectura
-               - 📦 **Build/Dependencias** — cambios en deps, configuración de build
-               - 🔄 **CI/CD** — pipelines, workflows, automatización
-               - 🧹 **Mantenimiento** — chores, limpieza, docs menores
-            3. Para CADA cambio: explicá QUÉ cambió y POR QUÉ importa al usuario o developer
-            4. Si hay breaking changes, destacá la migración necesaria con un callout 🔴
-            5. Usá markdown profesional: headers ##, bullets -, código \`inline\` donde aplique
-            6. NO inventes cambios que no están en el changelog o commits
-            7. Si el changelog está vacío o es minimal, generá notas igualmente basándote en los commits
-            8. Terminá con una sección **📋 Notas de migración** SOLO si hay breaking changes
-            9. Agregá una línea de resumen ejecutivo al inicio: una oración que capture el espíritu de la release
-            10. Formato final: markdown limpio, listo para GitHub Release
-            11. NO uses fences de código (\`\`\`) al inicio o final del mensaje — el output debe ser markdown directo
+              const { GoogleGenerativeAI } = require("@google/generative-ai");
+              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+              const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-            CHANGELOG AUTOGENERADO:
-            ${changelog}
+              const prompt = `Eres un **Senior Release Engineer** con 15+ años de experiencia en Google, Vercel y Stripe. Tu especialidad es transformar changelogs técnicos en release notes profesionales que tanto developers como stakeholders no-técnicos puedan entender.
 
-            LOG DE COMMITS:
-            ${commitLog}
+              CONTEXTO:
+              - Proyecto: **FinSmart** — plataforma de gestión financiera personal
+              - Componente: **${component}**
+              - Versión: **${version}**
 
-            Generá las release notes profesionales ahora:`;
+              REGLAS ESTRICTAS:
+              1. Escribí en español profesional pero cercano y claro
+              2. Categorizá los cambios usando estas secciones (solo incluí las que tengan cambios):
+                 - 🚀 **Nuevas funcionalidades** — features nuevas, endpoints, pantallas
+                 - 🐛 **Correcciones** — bugs fixeados, errores resueltos
+                 - 💥 **Breaking Changes** — cambios que requieren migración o rompen compatibilidad
+                 - ⚡ **Rendimiento** — mejoras de speed, optimizaciones
+                 - 🔧 **Refactorización** — cambios internos, arquitectura
+                 - 📦 **Build/Dependencias** — cambios en deps, configuración de build
+                 - 🔄 **CI/CD** — pipelines, workflows, automatización
+                 - 🧹 **Mantenimiento** — chores, limpieza, docs menores
+              3. Para CADA cambio: explicá QUÉ cambió y POR QUÉ importa al usuario o developer
+              4. Si hay breaking changes, destacá la migración necesaria con un callout 🔴
+              5. Usá markdown profesional: headers ##, bullets -, código \`inline\` donde aplique
+              6. NO inventes cambios que no están en el changelog o commits
+              7. Si el changelog está vacío o es minimal, generá notas igualmente basándote en los commits
+              8. Terminá con una sección **📋 Notas de migración** SOLO si hay breaking changes
+              9. Agregá una línea de resumen ejecutivo al inicio: una oración que capture el espíritu de la release
+              10. Formato final: markdown limpio, listo para GitHub Release
+              11. NO uses fences de código (\`\`\`) al inicio o final del mensaje — el output debe ser markdown directo
 
-            const result = await model.generateContent(prompt);
-            const aiNotes = result.response.text();
+              CHANGELOG AUTOGENERADO:
+              ${changelog}
 
-            const fs = require("fs");
-            fs.writeFileSync("/tmp/ai-release-notes.md", aiNotes);
-            core.setOutput("notes", aiNotes);
+              LOG DE COMMITS:
+              ${commitLog}
+
+              Generá las release notes profesionales ahora:`;
+
+              const result = await model.generateContent(prompt);
+              const aiNotes = result.response.text();
+
+              fs.writeFileSync("/tmp/ai-release-notes.md", aiNotes);
+              core.setOutput("notes", aiNotes);
+            } catch (error) {
+              console.error("Error generando notas con IA (posible cuota excedida):", error);
+              const fallbackNotes = `## Release v${version}\n\n${changelog}\n\n> *Nota: No se pudieron generar notas con IA por límites de cuota (429).*`;
+              fs.writeFileSync("/tmp/ai-release-notes.md", fallbackNotes);
+              core.setOutput("notes", fallbackNotes);
+            }
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
@@ -215,8 +222,12 @@ jobs:
           file: smart-finance-backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/backend:${{ needs.release-please.outputs.backend-version }}
-            ghcr.io/${{ github.repository }}/backend:latest
+            ghcr.io/${{ github.repository_owner }}/backend:${{ needs.release-please.outputs.backend-version }}
+            ghcr.io/${{ github.repository_owner }}/backend:latest
+        env:
+          # Convert repository owner to lowercase for Docker tags
+          github_repository_owner: ${{ github.repository_owner }}
+
 
   # ─── Job 4: Publicar frontend cuando se crea un release ───
   publish-frontend:
