@@ -4,17 +4,15 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "**/CHANGELOG.md"
-      - "**/package.json"
-      - "**/pom.xml"
-      - ".release-please-manifest.json"
-      - "release-please-config.json"
 
 permissions:
   contents: write
   pull-requests: write
   issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   # ─── Job 1: release-please — escanea commits y crea releases ───

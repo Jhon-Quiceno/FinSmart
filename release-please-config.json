@@ -1,7 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "separate-pull-requests": true,
-  "bump-minor-pre-release": true,
+  "bump-minor-pre-major": true,
+  "include-component-in-tag": true,
   "packages": {
     "smart-finance-backend": {
       "release-type": "maven",
