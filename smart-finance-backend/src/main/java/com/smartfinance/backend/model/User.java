@@ -2,13 +2,30 @@ package com.smartfinance.backend.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.Instant;
 
 @Entity
 @Table(name = "users")
+@EntityListeners(AuditingEntityListener.class)
+@Getter
+@Setter
+@ToString(exclude = "passwordHash")
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
 
     @Id
@@ -24,45 +41,11 @@ public class User {
     @Column(nullable = false, length = 120)
     private String passwordHash;
 
-    public User() {
-    }
+    @CreatedDate
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
-    public User(Long id, String name, String email, String passwordHash) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.passwordHash = passwordHash;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }
