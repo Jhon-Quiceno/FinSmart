@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/Jhon-Quiceno/FinSmart/compare/smart-finance-backend-v0.1.6...smart-finance-backend-v0.1.7) (2026-05-14)
+
+
+### 🧹 Mantenimiento
+
+* **main:** release smart-finance-backend 0.1.7-SNAPSHOT ([#44](https://github.com/Jhon-Quiceno/FinSmart/issues/44)) ([7667728](https://github.com/Jhon-Quiceno/FinSmart/commit/76677286deca24d3e8d38bd0bf7cc742c0d8d2b1))
+
 ## [0.1.6](https://github.com/Jhon-Quiceno/FinSmart/compare/smart-finance-backend-v0.1.5...smart-finance-backend-v0.1.6) (2026-05-14)
 
 
