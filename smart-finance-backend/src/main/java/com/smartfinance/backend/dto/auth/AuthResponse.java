@@ -1,7 +1,9 @@
 package com.smartfinance.backend.dto.auth;
 
 public record AuthResponse(
-        String token,
+        String accessToken,
+        String tokenType,
+        long expiresIn,
         UserResponse user
 ) {
 }
