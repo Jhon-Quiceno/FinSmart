@@ -1,7 +1,11 @@
 # Build
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace
-COPY . .
+COPY .mvn/ .mvn/
+COPY mvnw mvnw
+COPY pom.xml pom.xml
+RUN ./mvnw --batch-mode --no-transfer-progress dependency:go-offline
+COPY src src
 RUN ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
 # Runtime
