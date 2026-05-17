@@ -32,16 +32,36 @@ export const apiClient = axios.create({
   },
 })
 
-function setAuthorizationHeader(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
+/**
+ * Reads the XSRF-TOKEN cookie set by Spring Security's CookieCsrfTokenRepository
+ * and attaches it as X-XSRF-TOKEN header on every mutating request (POST/PUT/PATCH/DELETE).
+ * This protects against CSRF attacks on cookie-based endpoints like /api/users/refresh.
+ */
+function getXsrfToken(): string | null {
+  if (typeof document === "undefined") return null
+  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+function setAuthorizationAndCsrfHeaders(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
   } else {
     delete config.headers.Authorization
   }
+
+  const method = config.method?.toUpperCase()
+  if (method && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const xsrfToken = getXsrfToken()
+    if (xsrfToken) {
+      config.headers["X-XSRF-TOKEN"] = xsrfToken
+    }
+  }
+
   return config
 }
 
-apiClient.interceptors.request.use((config) => setAuthorizationHeader(config))
+apiClient.interceptors.request.use((config) => setAuthorizationAndCsrfHeaders(config))
 
 apiClient.interceptors.response.use(
   (response) => response,
