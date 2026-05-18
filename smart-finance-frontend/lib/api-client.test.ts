@@ -1,16 +1,10 @@
 import { AxiosError } from "axios"
 import MockAdapter from "axios-mock-adapter"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import {
-  apiClient,
-  getApiErrorMessage,
-  loginRequest,
-  logoutRequest,
-  refreshRequest,
-  registerRequest,
-} from "./api-client"
+import { apiClient, getApiErrorMessage } from "./api-client"
+import { loginRequest, logoutRequest, refreshRequest, registerRequest } from "./services/auth.service"
 
-describe("api-client auth requests", () => {
+describe("auth service requests", () => {
   let mock: MockAdapter
 
   beforeEach(() => {
@@ -79,7 +73,7 @@ describe("api-client auth requests", () => {
 
   it("getApiErrorMessage devuelve mensaje de conexion cuando no hay response", () => {
     const error = new AxiosError("Network Error", "ERR_NETWORK")
-    expect(getApiErrorMessage(error, "Fallback")).toContain("No hay conexión con el backend")
+    expect(getApiErrorMessage(error, "Fallback")).toContain("No hay conexion con el backend")
   })
 
   it("getApiErrorMessage usa fallback cuando no es AxiosError", () => {

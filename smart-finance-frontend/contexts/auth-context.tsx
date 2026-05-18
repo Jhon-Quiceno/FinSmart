@@ -2,14 +2,8 @@
 
 import { createContext, ReactNode, useContext, useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import {
-  clearAccessToken,
-  getApiErrorMessage,
-  loginRequest,
-  logoutRequest,
-  refreshRequest,
-  registerRequest,
-} from "@/lib/api-client"
+import { clearAccessToken, getApiErrorMessage } from "@/lib/api-client"
+import { loginRequest, logoutRequest, refreshRequest, registerRequest } from "@/lib/services/auth.service"
 
 interface User {
   id: string
@@ -78,9 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (isLoading) {
-      return
-    }
+    if (isLoading) return
 
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
 
@@ -109,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearSession()
       return {
         success: false,
-        error: getApiErrorMessage(error, "No fue posible iniciar sesión"),
+        error: getApiErrorMessage(error, "No fue posible iniciar sesion"),
       }
     } finally {
       setIsLoading(false)
@@ -170,5 +162,6 @@ export function useAuth() {
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider")
   }
+
   return context
 }

@@ -1,173 +1,188 @@
 "use client"
 
-import { useState } from "react"
-import { X } from "lucide-react"
+import { useEffect } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { CategorySelect } from "@/components/shared/category-select"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { incomeSchema } from "@/lib/schemas/income.schema"
+import type { Income } from "@/lib/types/income"
+
+const incomeSources = ["Salario", "Freelance", "Inversiones", "Alquiler", "Bonos", "Otros"]
+
+type IncomeFormValues = z.infer<typeof incomeSchema>
 
 interface IncomeModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (income: {
-    description: string
-    amount: number
-    type: string
-    source: string
-    date: string
-  }) => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  initialValue?: Income | null
+  isSubmitting: boolean
+  onSubmit: (values: IncomeFormValues) => Promise<void>
 }
 
-const incomeTypes = ["Fijo", "Variable"]
+const getDefaultValues = (income?: Income | null): IncomeFormValues => ({
+  amount: income?.amount ?? 0,
+  description: income?.description ?? "",
+  date: income?.date ?? new Date().toISOString().slice(0, 10),
+  isRecurring: income?.isRecurring ?? false,
+  source: income?.source ?? "",
+  categoryId: income?.categoryId ?? null,
+})
 
-const incomeSources = [
-  "Salario",
-  "Freelance",
-  "Inversiones",
-  "Negocio",
-  "Alquiler",
-  "Bonos",
-  "Otros",
-]
+export function IncomeModal({ open, onOpenChange, initialValue, isSubmitting, onSubmit }: IncomeModalProps) {
+  const form = useForm<IncomeFormValues>({
+    resolver: zodResolver(incomeSchema),
+    mode: "onSubmit",
+    reValidateMode: "onBlur",
+    defaultValues: getDefaultValues(initialValue),
+  })
 
-export function IncomeModal({ isOpen, onClose, onSubmit }: IncomeModalProps) {
-  const [description, setDescription] = useState("")
-  const [amount, setAmount] = useState("")
-  const [type, setType] = useState("")
-  const [source, setSource] = useState("")
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  useEffect(() => {
+    if (open) {
+      form.reset(getDefaultValues(initialValue))
+    }
+  }, [form, initialValue, open])
 
-  if (!isOpen) return null
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit({
-      description,
-      amount: parseFloat(amount),
-      type,
-      source,
-      date,
-    })
-    setDescription("")
-    setAmount("")
-    setType("")
-    setSource("")
-    setDate(new Date().toISOString().split("T")[0])
-    onClose()
-  }
+  const handleSubmit = form.handleSubmit(async (values) => {
+    await onSubmit(values)
+    form.reset(getDefaultValues(null))
+  })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{initialValue ? "Editar ingreso" : "Crear ingreso"}</DialogTitle>
+          <DialogDescription>
+            Completa la informacion para registrar el ingreso en tu historial.
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="relative w-full max-w-md rounded-xl bg-card border border-border p-6 shadow-xl mx-4">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-foreground">Agregar Ingreso</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-smooth"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="description">Descripcion</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ej: Salario quincenal"
-              required
-              className="bg-secondary border-border"
+        <Form {...form}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripcion</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ej: Salario mensual" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Monto</Label>
-            <Input
-              id="amount"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              required
-              min="0"
-              step="0.01"
-              className="bg-secondary border-border"
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Monto</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      {...field}
+                      onChange={(event) => field.onChange(event.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label>Tipo de Ingreso</Label>
-            <Select value={type} onValueChange={setType} required>
-              <SelectTrigger className="bg-secondary border-border">
-                <SelectValue placeholder="Fijo o Variable" />
-              </SelectTrigger>
-              <SelectContent>
-                {incomeTypes.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Fuente</Label>
-            <Select value={source} onValueChange={setSource} required>
-              <SelectTrigger className="bg-secondary border-border">
-                <SelectValue placeholder="Selecciona la fuente" />
-              </SelectTrigger>
-              <SelectContent>
-                {incomeSources.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="date">Fecha</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              className="bg-secondary border-border"
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <FormControl>
+                    <CategorySelect
+                      type="INCOME"
+                      value={field.value === null ? "none" : String(field.value)}
+                      onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1 bg-success text-success-foreground hover:bg-success/90">
-              Agregar Ingreso
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <FormField
+              control={form.control}
+              name="source"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fuente</FormLabel>
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una fuente" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        {incomeSources.map((source) => (
+                          <SelectItem key={source} value={source}>
+                            {source}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isRecurring"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center gap-2">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(Boolean(checked))} />
+                  </FormControl>
+                  <FormLabel>Es un ingreso recurrente</FormLabel>
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : initialValue ? "Guardar cambios" : "Crear ingreso"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   )
 }
