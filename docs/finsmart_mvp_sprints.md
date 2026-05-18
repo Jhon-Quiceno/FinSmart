@@ -44,25 +44,27 @@
 ---
 
 ## 🟧 Sprint 2 — Ingresos y Gastos
-> CRUD completo de movimientos financieros · **14 tareas**
+> CRUD completo de movimientos financieros · **17 tareas**
 
 ### Backend
-- [ ] `[BE]` Entidad `Category` + `CategoryRepository` + `CategoryService` — categorías por usuario (`INCOME`/`EXPENSE`)
-- [ ] `[BE]` CRUD endpoints `/api/categories` — `GET`, `POST`, `PUT`, `DELETE` filtradas por `userId`
-- [ ] `[BE]` Entidad `Income` + `IncomeRepository` + `IncomeService` con filtros por mes/año/fuente
-- [ ] `[BE]` CRUD endpoints `/api/incomes` — `GET` (con paginación), `POST`, `PUT`, `DELETE`
-- [ ] `[BE]` Entidad `Expense` + `ExpenseRepository` + `ExpenseService` con filtros por categoría/fecha
-- [ ] `[BE]` CRUD endpoints `/api/expenses` — `GET` (con paginación), `POST`, `PUT`, `DELETE`
-- [ ] `[BE]` Mappers `Income`/`Expense` Entity ↔ DTO para no exponer entidades directamente
+- [x] `[BE]` Entidad `Category` + `CategoryRepository` + `CategoryService` — categorías por usuario (`INCOME`/`EXPENSE`)
+- [x] `[BE]` CRUD endpoints `/api/categories` — `GET`, `POST`, `PUT`, `DELETE` filtradas por `userId`
+- [x] `[BE]` Entidad `Income` + `IncomeRepository` + `IncomeService` con filtros por mes/año/fuente
+- [x] `[BE]` CRUD endpoints `/api/incomes` — `GET` (con paginación), `POST`, `PUT`, `DELETE`
+- [x] `[BE]` Entidad `Expense` + `ExpenseRepository` + `ExpenseService` con filtros por categoría/fecha
+- [x] `[BE]` CRUD endpoints `/api/expenses` — `GET` (con paginación), `POST`, `PUT`, `DELETE`
+- [x] `[BE]` Mappers `Income`/`Expense` Entity ↔ DTO para no exponer entidades directamente
+- [x] `[BE]` Tests unitarios de servicios — `CategoryServiceTest` (4), `IncomeServiceTest` (3), `ExpenseServiceTest` (3)
+- [x] `[BE]` Tests de integración de controllers — `CategoryControllerTest` (9), `IncomeControllerTest` (11), `ExpenseControllerTest` (10)
 
 ### Frontend
-- [ ] `[FE]` Página `/ingresos` conectada al backend — lista con paginación y filtros por mes
-- [ ] `[FE]` Modal/formulario crear y editar ingreso — select de fuente + monto + fecha
-- [ ] `[FE]` Página `/gastos` conectada al backend — tabla con filtros por categoría y rango de fechas
-- [ ] `[FE]` Modal/formulario crear y editar gasto — select de categoría real + método de pago
-- [ ] `[FE]` Cargar categorías reales desde `/api/categories` en los formularios de gasto/ingreso
-- [ ] `[FE]` Eliminación de registros con confirmación + feedback toast de éxito/error
-- [ ] `[FE]` Loading skeletons mientras se cargan los datos del backend
+- [x] `[FE]` Página `/ingresos` conectada al backend — lista con paginación y filtros por mes
+- [x] `[FE]` Modal/formulario crear y editar ingreso — select de fuente + monto + fecha
+- [x] `[FE]` Página `/gastos` conectada al backend — tabla con filtros por categoría y rango de fechas
+- [x] `[FE]` Modal/formulario crear y editar gasto — select de categoría real + método de pago
+- [x] `[FE]` Cargar categorías reales desde `/api/categories` en los formularios de gasto/ingreso
+- [x] `[FE]` Eliminación de registros con confirmación + feedback toast de éxito/error
+- [x] `[FE]` Loading skeletons mientras se cargan los datos del backend
 
 ---
 
@@ -166,12 +168,14 @@
 | Sprint | Título | Tareas | BE | FE | N8 | DB |
 |--------|--------|--------|----|----|----|----|
 | 1 | Base del Sistema (JWT Real) | 15/15 | 7 | 5 | 0 | 3 |
-| 2 | Ingresos y Gastos | 14 | 7 | 7 | 0 | 0 |
+| 2 | Ingresos y Gastos | 17/17 | 9 | 7 | 0 | 0 |
 | 3 | Deudas y Servicios | 11 | 5 | 6 | 0 | 0 |
 | 4 | Motor Financiero + Dashboard | 15 | 8 | 6 | 0 | 1 |
 | 5 | IA + n8n | 13 | 3 | 3 | 7 | 0 |
 | 6 | Reportes y Launch | 14 | 6 | 7 | 0 | 1 |
-| **Total** | | **82** | **36** | **34** | **7** | **5** |
+| **Total** | | **85** | **38** | **34** | **7** | **5** |
+
+> **Sprint 2 — Notas de completitud:** Las 17 tareas del tablero están completadas. Backend: código y tests implementados; las pruebas backend (controllers y servicios) pasan localmente tras ajustes de tests (configuración de ObjectMapper para JavaTime y mocks de JPA metamodel). Frontend: 7 páginas/componentes conectados al backend con cero mock data; lint/test/build pasan localmente. Revisar CI para validar en pipeline.
 
 ---
 
