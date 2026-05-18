@@ -17,7 +17,7 @@ public interface IncomeMapper {
     @Mapping(target = "updatedAt", ignore = true)
     Income toEntity(IncomeRequest request);
 
-    @Mapping(target = "categoryId", source = "category.id")
+    @Mapping(target = "categoryId", expression = "java(income.getCategory() != null ? income.getCategory().getId() : null)")
     IncomeResponse toResponse(Income income);
 
     @Mapping(target = "id", ignore = true)
