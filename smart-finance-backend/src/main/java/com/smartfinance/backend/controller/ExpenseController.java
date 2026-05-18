@@ -1,0 +1,62 @@
+package com.smartfinance.backend.controller;
+
+import com.smartfinance.backend.dto.expense.ExpenseRequest;
+import com.smartfinance.backend.dto.expense.ExpenseResponse;
+import com.smartfinance.backend.service.ExpenseService;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+
+@RestController
+@RequestMapping("/api/expenses")
+public class ExpenseController {
+
+    private final ExpenseService expenseService;
+
+    public ExpenseController(ExpenseService expenseService) {
+        this.expenseService = expenseService;
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ExpenseResponse>> getExpenses(
+            @RequestParam(required = false, name = "category") Long categoryId,
+            @RequestParam(required = false, name = "from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false, name = "to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(expenseService.getExpenses(categoryId, fromDate, toDate, pageable));
+    }
+
+    @PostMapping
+    public ResponseEntity<ExpenseResponse> createExpense(@Valid @RequestBody ExpenseRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(expenseService.createExpense(request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ExpenseResponse> updateExpense(
+            @PathVariable("id") Long expenseId,
+            @Valid @RequestBody ExpenseRequest request
+    ) {
+        return ResponseEntity.ok(expenseService.updateExpense(expenseId, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteExpense(@PathVariable("id") Long expenseId) {
+        expenseService.deleteExpense(expenseId);
+        return ResponseEntity.noContent().build();
+    }
+}
