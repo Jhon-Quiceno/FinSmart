@@ -18,13 +18,13 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     Page<Expense> findByUser_IdAndCategory_Id(Long userId, Long categoryId, Pageable pageable);
 
     @Query("""
-            SELECT e
-            FROM Expense e
-            WHERE e.user.id = :userId
-              AND (:categoryId IS NULL OR e.category.id = :categoryId)
-              AND (:fromDate IS NULL OR e.date >= :fromDate)
-              AND (:toDate IS NULL OR e.date <= :toDate)
-            """)
+        SELECT e
+        FROM Expense e
+        WHERE e.user.id = :userId
+        AND (COALESCE(:categoryId, 0) = 0 OR e.category.id = :categoryId)
+        AND (COALESCE(:fromDate, CAST('0001-01-01' AS date)) = CAST('0001-01-01' AS date) OR e.date >= :fromDate)
+        AND (COALESCE(:toDate, CAST('9999-12-31' AS date)) = CAST('9999-12-31' AS date) OR e.date <= :toDate)
+        """)
     Page<Expense> findAllByFilters(
             @Param("userId") Long userId,
             @Param("categoryId") Long categoryId,

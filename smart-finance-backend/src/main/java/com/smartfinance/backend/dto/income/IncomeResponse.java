@@ -7,6 +7,7 @@ import java.time.LocalDate;
 public record IncomeResponse(
         Long id,
         Long categoryId,
+        String categoryName,
         BigDecimal amount,
         String description,
         LocalDate date,

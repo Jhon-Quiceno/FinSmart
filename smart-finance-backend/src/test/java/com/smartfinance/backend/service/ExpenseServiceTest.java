@@ -75,6 +75,7 @@ class ExpenseServiceTest {
         ExpenseResponse response = new ExpenseResponse(
                 12L,
                 4L,
+                "Supermercado Cat",
                 new BigDecimal("180.50"),
                 "Supermercado",
                 request.date(),

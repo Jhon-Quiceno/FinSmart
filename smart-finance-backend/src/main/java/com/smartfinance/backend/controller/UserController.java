@@ -20,12 +20,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -88,6 +91,15 @@ public class UserController {
                 .ok()
                 .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken()).toString())
                 .body(session.response());
+    }
+
+    @Operation(summary = "Obtener CSRF token", description = "Genera/retorna token CSRF y lo expone para el frontend SPA")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "CSRF token disponible")
+    })
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, String>> csrf(CsrfToken csrfToken) {
+        return ResponseEntity.ok(Map.of("token", csrfToken.getToken()));
     }
 
     @Operation(summary = "Cerrar sesion", description = "Revoca refresh token y limpia cookie")

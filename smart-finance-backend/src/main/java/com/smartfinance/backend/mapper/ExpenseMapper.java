@@ -18,6 +18,7 @@ public interface ExpenseMapper {
     Expense toEntity(ExpenseRequest request);
 
     @Mapping(target = "categoryId", expression = "java(expense.getCategory() != null ? expense.getCategory().getId() : null)")
+    @Mapping(target = "categoryName", expression = "java(expense.getCategory() != null ? expense.getCategory().getName() : null)")
     ExpenseResponse toResponse(Expense expense);
 
     @Mapping(target = "id", ignore = true)

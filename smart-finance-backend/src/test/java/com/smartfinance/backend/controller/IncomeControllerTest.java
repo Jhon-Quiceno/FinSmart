@@ -64,7 +64,7 @@ class IncomeControllerTest {
     private static final String AUTH_HEADER = "Bearer test-token";
 
     private final IncomeResponse incomeResponse = new IncomeResponse(
-            1L, 1L, new BigDecimal("5000.00"), "Salario mensual",
+            1L, 1L, "Salario", new BigDecimal("5000.00"), "Salario mensual",
             LocalDate.of(2026, 3, 15), false, "Empresa ACME",
             Instant.now(), Instant.now()
     );
@@ -119,7 +119,7 @@ class IncomeControllerTest {
                 1L, new BigDecimal("3000.00"), "Bonus", LocalDate.of(2026, 3, 20), true, "Empresa"
         );
         IncomeResponse response = new IncomeResponse(
-                2L, 1L, new BigDecimal("3000.00"), "Bonus",
+                2L, 1L, "Bonus Cat", new BigDecimal("3000.00"), "Bonus",
                 LocalDate.of(2026, 3, 20), true, "Empresa",
                 Instant.now(), Instant.now()
         );
@@ -169,7 +169,7 @@ class IncomeControllerTest {
                 1L, new BigDecimal("5500.00"), "Salario actualizado", LocalDate.of(2026, 3, 15), false, "Empresa ACME"
         );
         IncomeResponse response = new IncomeResponse(
-                1L, 1L, new BigDecimal("5500.00"), "Salario actualizado",
+                1L, 1L, "Salario Cat", new BigDecimal("5500.00"), "Salario actualizado",
                 LocalDate.of(2026, 3, 15), false, "Empresa ACME",
                 Instant.now(), Instant.now()
         );

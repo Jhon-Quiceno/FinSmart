@@ -75,6 +75,7 @@ class IncomeServiceTest {
         IncomeResponse response = new IncomeResponse(
                 33L,
                 8L,
+                "Salario Cat",
                 new BigDecimal("2500.00"),
                 "Salario mensual",
                 request.date(),

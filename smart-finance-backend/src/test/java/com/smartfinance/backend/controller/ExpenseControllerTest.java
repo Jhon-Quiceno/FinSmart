@@ -64,7 +64,7 @@ class ExpenseControllerTest {
     private static final String AUTH_HEADER = "Bearer test-token";
 
     private final ExpenseResponse expenseResponse = new ExpenseResponse(
-            1L, 4L, new BigDecimal("2500.00"), "Renta mensual",
+            1L, 4L, "Renta", new BigDecimal("2500.00"), "Renta mensual",
             LocalDate.of(2026, 3, 1), true, "TRANSFERENCIA",
             Instant.now(), Instant.now()
     );
@@ -109,7 +109,7 @@ class ExpenseControllerTest {
                 4L, new BigDecimal("1500.00"), "Supermercado", LocalDate.of(2026, 3, 10), false, "EFECTIVO"
         );
         ExpenseResponse response = new ExpenseResponse(
-                2L, 4L, new BigDecimal("1500.00"), "Supermercado",
+                2L, 4L, "Super Cat", new BigDecimal("1500.00"), "Supermercado",
                 LocalDate.of(2026, 3, 10), false, "EFECTIVO",
                 Instant.now(), Instant.now()
         );
@@ -159,7 +159,7 @@ class ExpenseControllerTest {
                 4L, new BigDecimal("2600.00"), "Renta actualizada", LocalDate.of(2026, 3, 1), true, "TRANSFERENCIA"
         );
         ExpenseResponse response = new ExpenseResponse(
-                1L, 4L, new BigDecimal("2600.00"), "Renta actualizada",
+                1L, 4L, "Renta Cat", new BigDecimal("2600.00"), "Renta actualizada",
                 LocalDate.of(2026, 3, 1), true, "TRANSFERENCIA",
                 Instant.now(), Instant.now()
         );
