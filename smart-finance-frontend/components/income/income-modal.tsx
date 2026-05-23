@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getTodayDateInput } from "@/lib/date"
 import { incomeSchema } from "@/lib/schemas/income.schema"
 import type { Income } from "@/lib/types/income"
 
@@ -29,9 +30,9 @@ interface IncomeModalProps {
 const getDefaultValues = (income?: Income | null): IncomeFormValues => ({
   amount: income?.amount ?? 0,
   description: income?.description ?? "",
-  date: income?.date ?? new Date().toISOString().slice(0, 10),
+  date: income?.date ?? getTodayDateInput(),
   isRecurring: income?.isRecurring ?? false,
-  source: income?.source ?? "",
+  source: income?.source ?? "Salario",
   categoryId: income?.categoryId ?? null,
 })
 

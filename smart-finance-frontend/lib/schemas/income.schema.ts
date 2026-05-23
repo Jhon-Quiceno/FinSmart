@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { isFutureDateInput, isValidDateInput } from "../date"
 
 const optionalText = (maxLength: number) =>
   z.preprocess(
@@ -13,8 +14,8 @@ const optionalText = (maxLength: number) =>
 const dateSchema = z
   .string()
   .min(1, "La fecha es obligatoria")
-  .refine((value) => !Number.isNaN(new Date(`${value}T00:00:00`).getTime()), "Fecha invalida")
-  .refine((value) => new Date(`${value}T23:59:59`) <= new Date(), "La fecha no puede ser futura")
+  .refine((value) => isValidDateInput(value), "Fecha invalida")
+  .refine((value) => !isFutureDateInput(value), "La fecha no puede ser futura")
 
 export const incomeSchema = z.object({
   amount: z.coerce.number().gt(0, "El monto debe ser mayor a 0"),

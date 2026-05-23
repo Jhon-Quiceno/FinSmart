@@ -58,9 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const parsedUser = JSON.parse(storedUser) as User
-        setUser(parsedUser)
-        await refreshRequest()
+        JSON.parse(storedUser) as User
+        const refreshResponse = await refreshRequest()
+        persistSession({
+          id: String(refreshResponse.user.id),
+          name: refreshResponse.user.name,
+          email: refreshResponse.user.email,
+        })
       } catch {
         clearSession()
       } finally {
@@ -85,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/")
     }
   }, [isLoading, pathname, router, user])
+
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
+  const shouldRenderChildren = isPublicRoute ? !user : !isLoading && !!user
 
   const login = async (email: string, password: string): Promise<AuthActionResult> => {
     setIsLoading(true)
@@ -152,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
       }}
     >
-      {children}
+      {shouldRenderChildren ? children : null}
     </AuthContext.Provider>
   )
 }

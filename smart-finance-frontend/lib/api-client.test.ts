@@ -9,6 +9,7 @@ describe("auth service requests", () => {
 
   beforeEach(() => {
     mock = new MockAdapter(apiClient)
+    mock.onGet("/api/users/csrf").reply(200, { token: "csrf-token" })
   })
 
   afterEach(() => {

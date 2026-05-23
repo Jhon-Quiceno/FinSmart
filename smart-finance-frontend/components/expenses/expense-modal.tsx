@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getTodayDateInput } from "@/lib/date"
 import { expenseSchema } from "@/lib/schemas/expense.schema"
 import type { Expense } from "@/lib/types/expense"
 
@@ -29,7 +30,7 @@ interface ExpenseModalProps {
 const getDefaultValues = (expense?: Expense | null): ExpenseFormValues => ({
   amount: expense?.amount ?? 0,
   description: expense?.description ?? "",
-  date: expense?.date ?? new Date().toISOString().slice(0, 10),
+  date: expense?.date ?? getTodayDateInput(),
   isRecurring: expense?.isRecurring ?? false,
   paymentMethod: expense?.paymentMethod ?? "Efectivo",
   categoryId: expense?.categoryId ?? null,

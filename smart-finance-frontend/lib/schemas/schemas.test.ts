@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { categorySchema } from "./category.schema"
 import { incomeSchema } from "./income.schema"
 import { expenseSchema } from "./expense.schema"
+import { getTodayDateInput } from "../date"
 
 describe("categorySchema", () => {
   it("acepta una categoria valida", () => {
@@ -51,6 +52,19 @@ describe("incomeSchema", () => {
 
     expect(result.success).toBe(false)
   })
+
+  it("acepta la fecha actual", () => {
+    const result = incomeSchema.safeParse({
+      amount: 10,
+      description: "Ingreso rapido",
+      date: getTodayDateInput(),
+      isRecurring: false,
+      source: "Otros",
+      categoryId: null,
+    })
+
+    expect(result.success).toBe(true)
+  })
 })
 
 describe("expenseSchema", () => {
@@ -78,5 +92,18 @@ describe("expenseSchema", () => {
     })
 
     expect(result.success).toBe(false)
+  })
+
+  it("acepta la fecha actual", () => {
+    const result = expenseSchema.safeParse({
+      amount: 10,
+      description: "Cafe",
+      date: getTodayDateInput(),
+      isRecurring: false,
+      paymentMethod: "Efectivo",
+      categoryId: null,
+    })
+
+    expect(result.success).toBe(true)
   })
 })

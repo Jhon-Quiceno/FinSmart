@@ -77,7 +77,10 @@ export default function IngresosPage() {
   const oneOffIncome = totalIncome - recurringIncome
 
   const handleSubmit = async (values: IncomeFormValues) => {
-    const payload = incomeSchema.parse(values)
+    const payload = incomeSchema.parse({
+      ...values,
+      source: values.source?.trim() || "Salario",
+    })
 
     try {
       if (editingIncome) {

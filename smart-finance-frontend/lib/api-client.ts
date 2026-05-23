@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from "axios"
+import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from "axios"
 
 interface ApiErrorResponse {
   message?: string
@@ -6,11 +6,13 @@ interface ApiErrorResponse {
 
 interface RetryAxiosRequestConfig extends AxiosRequestConfig {
   _retry?: boolean
+  _csrfRetry?: boolean
   _skipAuthRefresh?: boolean
 }
 
 let accessToken: string | null = null
 let refreshPromise: Promise<string> | null = null
+let csrfPromise: Promise<void> | null = null
 
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
@@ -27,15 +29,45 @@ function getXsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-function setAuthorizationAndCsrfHeaders(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
+function isMutatingMethod(method?: string): boolean {
+  if (!method) return false
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase())
+}
+
+function isCsrfError(error: AxiosError): boolean {
+  if (error.response?.status !== 403) return false
+
+  const message = String((error.response.data as ApiErrorResponse | undefined)?.message ?? "").toLowerCase()
+  return message.includes("csrf")
+}
+
+async function ensureCsrfToken(): Promise<void> {
+  if (getXsrfToken()) return
+
+  if (!csrfPromise) {
+    csrfPromise = apiClient
+      .get("/api/users/csrf", { _skipAuthRefresh: true } as RetryAxiosRequestConfig)
+      .then(() => undefined)
+      .finally(() => {
+        csrfPromise = null
+      })
+  }
+
+  await csrfPromise
+}
+
+async function setAuthorizationAndCsrfHeaders(config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
   } else {
     delete config.headers.Authorization
   }
 
-  const method = config.method?.toUpperCase()
-  if (method && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+  if (isMutatingMethod(config.method) && !getXsrfToken()) {
+    await ensureCsrfToken()
+  }
+
+  if (isMutatingMethod(config.method)) {
     const xsrfToken = getXsrfToken()
     if (xsrfToken) {
       config.headers["X-XSRF-TOKEN"] = xsrfToken
@@ -57,6 +89,13 @@ function redirectToLogin() {
   }
 }
 
+function shouldTreatForbiddenAsUnauthenticated(error: AxiosError): boolean {
+  if (error.response?.status !== 403) return false
+
+  const message = String((error.response.data as ApiErrorResponse | undefined)?.message ?? "").toLowerCase()
+  return message.includes("no autenticado") || message.includes("autenticado invalido") || message.includes("autenticado inválido")
+}
+
 function showForbiddenToast() {
   if (typeof window === "undefined") return
   void import("sonner").then(({ toast }) => {
@@ -64,7 +103,7 @@ function showForbiddenToast() {
   })
 }
 
-apiClient.interceptors.request.use((config) => setAuthorizationAndCsrfHeaders(config))
+apiClient.interceptors.request.use(async (config) => setAuthorizationAndCsrfHeaders(config))
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -80,32 +119,51 @@ apiClient.interceptors.response.use(
       requestUrl.includes("/api/users/register") ||
       requestUrl.includes("/api/users/refresh") ||
       requestUrl.includes("/api/users/logout")
+    const status = error.response?.status
 
-    if (error.response?.status === 403) {
-      showForbiddenToast()
-      return Promise.reject(error)
-    }
-
-    if (error.response?.status !== 401 || originalRequest._retry || originalRequest._skipAuthRefresh || isAuthEndpoint) {
-      return Promise.reject(error)
-    }
-
-    originalRequest._retry = true
-
-    try {
-      const token = await refreshAccessToken()
-      if (!originalRequest.headers) {
-        originalRequest.headers = {}
-      }
-
-      originalRequest.headers.Authorization = `Bearer ${token}`
+    if (isCsrfError(error) && !originalRequest._csrfRetry && isMutatingMethod(originalRequest.method)) {
+      originalRequest._csrfRetry = true
+      await ensureCsrfToken()
       return await apiClient(originalRequest)
-    } catch (refreshError) {
+    }
+
+    const canAttemptAuthRecovery =
+      (status === 401 || status === 403) &&
+      !originalRequest._retry &&
+      !originalRequest._skipAuthRefresh &&
+      !isAuthEndpoint
+
+    if (canAttemptAuthRecovery) {
+      originalRequest._retry = true
+
+      try {
+        const token = await refreshAccessToken()
+        if (!originalRequest.headers) {
+          originalRequest.headers = {}
+        }
+
+        originalRequest.headers.Authorization = `Bearer ${token}`
+        return await apiClient(originalRequest)
+      } catch (refreshError) {
+        clearAccessToken()
+        clearClientSession()
+        redirectToLogin()
+        return Promise.reject(refreshError)
+      }
+    }
+
+    if (shouldTreatForbiddenAsUnauthenticated(error)) {
       clearAccessToken()
       clearClientSession()
       redirectToLogin()
-      return Promise.reject(refreshError)
+      return Promise.reject(error)
     }
+
+    if (status === 403) {
+      showForbiddenToast()
+    }
+
+    return Promise.reject(error)
   },
 )
 

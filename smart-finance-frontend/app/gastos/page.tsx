@@ -68,7 +68,10 @@ export default function GastosPage() {
   )
 
   const handleSubmit = async (values: ExpenseFormValues) => {
-    const payload = expenseSchema.parse(values)
+    const payload = expenseSchema.parse({
+      ...values,
+      paymentMethod: values.paymentMethod?.trim() || "Efectivo",
+    })
 
     try {
       if (editingExpense) {
