@@ -59,11 +59,11 @@ class CategoryControllerTest {
     private static final String AUTH_HEADER = "Bearer test-token";
 
     private final CategoryResponse salaryCategory = new CategoryResponse(
-            1L, "Salario", CategoryType.INCOME, "wallet", "#22C55E", false, Instant.now(), Instant.now()
+            1L, "Salario", CategoryType.INCOME, "wallet", "#22C55E", "Ingreso principal", false, Instant.now(), Instant.now()
     );
 
     private final CategoryResponse foodCategory = new CategoryResponse(
-            2L, "Alimentación", CategoryType.EXPENSE, "utensils", "#F59E0B", false, Instant.now(), Instant.now()
+            2L, "Alimentación", CategoryType.EXPENSE, "utensils", "#F59E0B", "Comidas y snacks", false, Instant.now(), Instant.now()
     );
 
     @BeforeEach
@@ -97,9 +97,9 @@ class CategoryControllerTest {
 
     @Test
     void createCategoryReturns201WhenValid() throws Exception {
-        CategoryRequest request = new CategoryRequest("Freelance", CategoryType.INCOME, "laptop", "#3B82F6");
+        CategoryRequest request = new CategoryRequest("Freelance", CategoryType.INCOME, "laptop", "#3B82F6", "Ingresos por proyectos");
         CategoryResponse response = new CategoryResponse(
-                10L, "Freelance", CategoryType.INCOME, "laptop", "#3B82F6", false, Instant.now(), Instant.now()
+                10L, "Freelance", CategoryType.INCOME, "laptop", "#3B82F6", "Ingresos por proyectos", false, Instant.now(), Instant.now()
         );
         when(categoryService.createCategory(any(CategoryRequest.class))).thenReturn(response);
 
@@ -115,7 +115,7 @@ class CategoryControllerTest {
 
     @Test
     void createCategoryReturns400WhenNameIsBlank() throws Exception {
-        CategoryRequest request = new CategoryRequest("", CategoryType.INCOME, "icon", "#3B82F6");
+        CategoryRequest request = new CategoryRequest("", CategoryType.INCOME, "icon", "#3B82F6", null);
 
         mockMvc.perform(post("/api/categories")
                         .header("Authorization", AUTH_HEADER)
@@ -127,9 +127,9 @@ class CategoryControllerTest {
 
     @Test
     void updateCategoryReturns200WhenUpdatingOwnCategory() throws Exception {
-        CategoryRequest request = new CategoryRequest("Salario Actualizado", CategoryType.INCOME, "wallet", "#22C55E");
+        CategoryRequest request = new CategoryRequest("Salario Actualizado", CategoryType.INCOME, "wallet", "#22C55E", "Ingreso mensual");
         CategoryResponse response = new CategoryResponse(
-                1L, "Salario Actualizado", CategoryType.INCOME, "wallet", "#22C55E", false, Instant.now(), Instant.now()
+                1L, "Salario Actualizado", CategoryType.INCOME, "wallet", "#22C55E", "Ingreso mensual", false, Instant.now(), Instant.now()
         );
         when(categoryService.updateCategory(eq(1L), any(CategoryRequest.class))).thenReturn(response);
 
@@ -144,7 +144,7 @@ class CategoryControllerTest {
 
     @Test
     void updateCategoryReturns403WhenUpdatingAnotherUsersCategory() throws Exception {
-        CategoryRequest request = new CategoryRequest("Hack", CategoryType.INCOME, "icon", "#000000");
+        CategoryRequest request = new CategoryRequest("Hack", CategoryType.INCOME, "icon", "#000000", null);
         when(categoryService.updateCategory(eq(99L), any(CategoryRequest.class)))
                 .thenThrow(new AccessDeniedException("No tienes permisos sobre esta categoría"));
 

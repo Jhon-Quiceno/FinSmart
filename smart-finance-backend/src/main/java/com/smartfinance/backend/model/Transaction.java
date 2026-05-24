@@ -3,6 +3,8 @@ package com.smartfinance.backend.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,6 +16,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -22,14 +26,17 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
+/**
+ * Represents a financial transaction recorded for a user.
+ */
 @Entity
-@Table(name = "expenses")
+@Table(name = "transactions")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Expense {
+public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,8 +47,17 @@ public class Expense {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "transaction_type")
+    private TransactionType type;
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
@@ -49,14 +65,16 @@ public class Expense {
     @Column(length = 255)
     private String description;
 
-    @Column(nullable = false)
-    private LocalDate date;
+    @Column(name = "transaction_date", nullable = false)
+    private LocalDate transactionDate;
 
-    @Column(name = "is_recurring", nullable = false)
-    private boolean isRecurring;
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "payment_method", columnDefinition = "payment_method_type")
+    private PaymentMethodType paymentMethod;
 
-    @Column(name = "payment_method", length = 30)
-    private String paymentMethod;
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)

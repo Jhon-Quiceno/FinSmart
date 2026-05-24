@@ -15,6 +15,8 @@ public record CategoryRequest(
         @Size(max = 50, message = "El ícono no puede superar 50 caracteres")
         String icon,
         @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "El color debe estar en formato hexadecimal #RRGGBB")
-        String color
+        String color,
+        @Size(max = 255, message = "La descripción no puede superar 255 caracteres")
+        String description
 ) {
 }

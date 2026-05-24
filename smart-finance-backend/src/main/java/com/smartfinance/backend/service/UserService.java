@@ -51,6 +51,7 @@ public class UserService {
         user.setName(request.name().trim());
         user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setActive(true);
 
         User createdUser = userRepository.save(user);
         return buildAuthSession(createdUser);
@@ -64,11 +65,16 @@ public class UserService {
                 .findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new InvalidCredentialsException("Correo o contraseña inválidos"));
 
+        if (!user.isActive()) {
+            throw new InvalidCredentialsException("Correo o contraseña inválidos");
+        }
+
         boolean isPasswordValid = passwordEncoder.matches(request.password(), user.getPasswordHash());
         if (!isPasswordValid) {
             throw new InvalidCredentialsException("Correo o contraseña inválidos");
         }
 
+        user.setLastLoginAt(java.time.Instant.now());
         return buildAuthSession(user);
     }
 

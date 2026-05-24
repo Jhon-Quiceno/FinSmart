@@ -52,6 +52,9 @@ public class Category {
     @Column(length = 7)
     private String color;
 
+    @Column(length = 255)
+    private String description;
+
     @Column(name = "is_system", nullable = false)
     private boolean isSystem;
 

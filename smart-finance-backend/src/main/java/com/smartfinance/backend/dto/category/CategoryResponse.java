@@ -10,6 +10,7 @@ public record CategoryResponse(
         CategoryType type,
         String icon,
         String color,
+        String description,
         boolean isSystem,
         Instant createdAt,
         Instant updatedAt

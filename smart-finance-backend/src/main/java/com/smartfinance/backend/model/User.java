@@ -41,6 +41,12 @@ public class User {
     @Column(nullable = false, length = 120)
     private String passwordHash;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean active;
+
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

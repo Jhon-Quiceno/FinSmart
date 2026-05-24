@@ -45,7 +45,7 @@ class CategoryServiceTest {
     @Test
     void createCategoryShouldSaveCategoryForCurrentUser() {
         setAuthenticatedUser(1L);
-        CategoryRequest request = new CategoryRequest("Alimentación", CategoryType.EXPENSE, "utensils", "#F59E0B");
+        CategoryRequest request = new CategoryRequest("Alimentación", CategoryType.EXPENSE, "utensils", "#F59E0B", "Gastos de comida");
         Category mappedCategory = new Category();
         Category savedCategory = new Category(
                 10L,
@@ -54,6 +54,7 @@ class CategoryServiceTest {
                 CategoryType.EXPENSE,
                 "utensils",
                 "#F59E0B",
+                "Gastos de comida",
                 false,
                 Instant.now(),
                 Instant.now()
@@ -64,6 +65,7 @@ class CategoryServiceTest {
                 CategoryType.EXPENSE,
                 "utensils",
                 "#F59E0B",
+                "Gastos de comida",
                 false,
                 savedCategory.getCreatedAt(),
                 savedCategory.getUpdatedAt()
@@ -84,7 +86,7 @@ class CategoryServiceTest {
     @Test
     void createCategoryShouldThrowWhenNameAlreadyExists() {
         setAuthenticatedUser(1L);
-        CategoryRequest request = new CategoryRequest("Salud", CategoryType.EXPENSE, null, "#EF4444");
+        CategoryRequest request = new CategoryRequest("Salud", CategoryType.EXPENSE, null, "#EF4444", null);
         when(categoryRepository.existsByUser_IdAndNameIgnoreCase(1L, "Salud")).thenReturn(true);
 
         Assertions.assertThrows(IllegalArgumentException.class, () -> categoryService.createCategory(request));
@@ -93,7 +95,7 @@ class CategoryServiceTest {
     @Test
     void updateCategoryShouldThrowWhenUserIsNotOwner() {
         setAuthenticatedUser(1L);
-        CategoryRequest request = new CategoryRequest("Renta", CategoryType.EXPENSE, null, "#6366F1");
+        CategoryRequest request = new CategoryRequest("Renta", CategoryType.EXPENSE, null, "#6366F1", null);
         Category category = new Category();
         category.setId(20L);
         category.setName("Renta");

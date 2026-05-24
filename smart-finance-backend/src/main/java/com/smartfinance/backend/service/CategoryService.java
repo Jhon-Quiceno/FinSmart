@@ -49,6 +49,7 @@ public class CategoryService {
 
         Category category = categoryMapper.toEntity(request);
         category.setName(normalizedName);
+        category.setDescription(normalizeDescription(request.description()));
         category.setSystem(false);
         category.setUser(buildUserReference(userId));
 
@@ -67,6 +68,7 @@ public class CategoryService {
 
         categoryMapper.updateEntityFromRequest(request, category);
         category.setName(request.name().trim());
+        category.setDescription(normalizeDescription(request.description()));
         Category updatedCategory = categoryRepository.save(category);
         return categoryMapper.toResponse(updatedCategory);
     }
@@ -106,5 +108,14 @@ public class CategoryService {
         User user = new User();
         user.setId(userId);
         return user;
+    }
+
+    private String normalizeDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+
+        String trimmed = description.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

@@ -17,6 +17,7 @@ public interface CategoryMapper {
     @Mapping(target = "updatedAt", ignore = true)
     Category toEntity(CategoryRequest request);
 
+    @Mapping(target = "isSystem", source = "system")
     CategoryResponse toResponse(Category category);
 
     @Mapping(target = "id", ignore = true)
