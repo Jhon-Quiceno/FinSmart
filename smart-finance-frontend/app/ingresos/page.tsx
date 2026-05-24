@@ -19,11 +19,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { useCreateIncome, useDeleteIncome, useIncomes, useUpdateIncome } from "@/hooks/use-incomes"
+import {
+  useCreateTransaction,
+  useDeleteTransaction,
+  useTransactions,
+  useUpdateTransaction,
+} from "@/hooks/use-transactions"
 import { getApiErrorMessage } from "@/lib/api-client"
-import type { Income } from "@/lib/types/income"
-import type { z } from "zod"
 import { incomeSchema } from "@/lib/schemas/income.schema"
+import type { Transaction } from "@/lib/types/transaction"
+import type { z } from "zod"
 
 const pageSize = 10
 
@@ -44,25 +49,47 @@ const monthOptions = [
 
 type IncomeFormValues = z.infer<typeof incomeSchema>
 
+function transactionToIncome(t: Transaction) {
+  return {
+    id: t.id,
+    amount: t.amount,
+    description: t.description,
+    date: t.transactionDate,
+    isRecurring: false,
+    source: t.notes,
+    categoryId: t.categoryId,
+    categoryName: t.categoryName,
+  }
+}
+
 export default function IngresosPage() {
   const now = new Date()
   const [page, setPage] = useState(1)
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1))
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()))
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingIncome, setEditingIncome] = useState<Income | null>(null)
-  const [deletingIncome, setDeletingIncome] = useState<Income | null>(null)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
 
-  const { incomes, isLoading } = useIncomes({
+  const { transactions, isLoading } = useTransactions({
     page: page - 1,
     size: pageSize,
+    type: "INCOME",
     month: Number(selectedMonth),
     year: Number(selectedYear),
   })
 
-  const { createIncome, isLoading: isCreating } = useCreateIncome()
-  const { updateIncome, isLoading: isUpdating } = useUpdateIncome()
-  const { deleteIncome, isLoading: isDeleting } = useDeleteIncome()
+  const incomes = useMemo(
+    () => ({
+      ...transactions,
+      content: transactions.content.map(transactionToIncome),
+    }),
+    [transactions],
+  )
+
+  const { createTransaction, isLoading: isCreating } = useCreateTransaction()
+  const { updateTransaction, isLoading: isUpdating } = useUpdateTransaction()
+  const { deleteTransaction, isLoading: isDeleting } = useDeleteTransaction()
 
   const totalIncome = useMemo(
     () => incomes.content.reduce((sum, income) => sum + income.amount, 0),
@@ -83,28 +110,42 @@ export default function IngresosPage() {
     })
 
     try {
-      if (editingIncome) {
-        await updateIncome(editingIncome.id, payload)
+      if (editingTransaction) {
+        await updateTransaction(editingTransaction.id, {
+          type: "INCOME",
+          amount: payload.amount,
+          description: payload.description,
+          transactionDate: payload.date,
+          categoryId: payload.categoryId ?? undefined,
+          notes: payload.source,
+        })
         toast.success("Ingreso actualizado correctamente")
       } else {
-        await createIncome(payload)
+        await createTransaction({
+          type: "INCOME",
+          amount: payload.amount,
+          description: payload.description,
+          transactionDate: payload.date,
+          categoryId: payload.categoryId ?? undefined,
+          notes: payload.source,
+        })
         toast.success("Ingreso creado correctamente")
       }
 
       setModalOpen(false)
-      setEditingIncome(null)
+      setEditingTransaction(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible guardar el ingreso"))
     }
   }
 
   const handleDelete = async () => {
-    if (!deletingIncome) return
+    if (!deletingTransaction) return
 
     try {
-      await deleteIncome(deletingIncome.id)
+      await deleteTransaction(deletingTransaction.id)
       toast.success("Ingreso eliminado correctamente")
-      setDeletingIncome(null)
+      setDeletingTransaction(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible eliminar el ingreso"))
     }
@@ -120,7 +161,7 @@ export default function IngresosPage() {
           </div>
           <Button
             onClick={() => {
-              setEditingIncome(null)
+              setEditingTransaction(null)
               setModalOpen(true)
             }}
           >
@@ -225,10 +266,18 @@ export default function IngresosPage() {
           incomes={incomes.content}
           isLoading={isLoading}
           onEdit={(income) => {
-            setEditingIncome(income)
-            setModalOpen(true)
+            const transaction = transactions.content.find((t) => t.id === income.id)
+            if (transaction) {
+              setEditingTransaction(transaction)
+              setModalOpen(true)
+            }
           }}
-          onDelete={(income) => setDeletingIncome(income)}
+          onDelete={(income) => {
+            const transaction = transactions.content.find((t) => t.id === income.id)
+            if (transaction) {
+              setDeletingTransaction(transaction)
+            }
+          }}
         />
       </div>
 
@@ -236,14 +285,27 @@ export default function IngresosPage() {
         open={modalOpen}
         onOpenChange={(nextOpen) => {
           setModalOpen(nextOpen)
-          if (!nextOpen) setEditingIncome(null)
+          if (!nextOpen) setEditingTransaction(null)
         }}
-        initialValue={editingIncome}
+        initialValue={
+          editingTransaction
+            ? {
+                id: editingTransaction.id,
+                amount: editingTransaction.amount,
+                description: editingTransaction.description,
+                date: editingTransaction.transactionDate,
+                isRecurring: false,
+                source: editingTransaction.notes,
+                categoryId: editingTransaction.categoryId,
+                categoryName: editingTransaction.categoryName,
+              }
+            : null
+        }
         onSubmit={handleSubmit}
         isSubmitting={isCreating || isUpdating}
       />
 
-      <AlertDialog open={!!deletingIncome} onOpenChange={(open) => !open && setDeletingIncome(null)}>
+      <AlertDialog open={!!deletingTransaction} onOpenChange={(open) => !open && setDeletingTransaction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar ingreso</AlertDialogTitle>

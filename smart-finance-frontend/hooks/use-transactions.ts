@@ -1,29 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
-  createIncome,
-  deleteIncome,
-  getIncomes,
-  updateIncome,
-} from "@/lib/services/income.service"
-import type { Income, IncomeFilters, IncomeRequest, PaginatedResponse } from "@/lib/types/income"
+  createTransaction,
+  deleteTransaction,
+  getTransactions,
+  updateTransaction,
+} from "@/lib/services/transaction.service"
+import type {
+  Transaction,
+  TransactionFilters,
+  TransactionRequest,
+  PaginatedResponse,
+} from "@/lib/types/transaction"
 
-const incomesCache = new Map<string, PaginatedResponse<Income>>()
-const incomeListeners = new Set<() => void>()
+const transactionsCache = new Map<string, PaginatedResponse<Transaction>>()
+const transactionListeners = new Set<() => void>()
 
-function notifyIncomeListeners() {
-  incomeListeners.forEach((listener) => listener())
+function notifyTransactionListeners() {
+  transactionListeners.forEach((listener) => listener())
 }
 
-export function invalidateIncomesCache() {
-  incomesCache.clear()
-  notifyIncomeListeners()
+export function invalidateTransactionsCache() {
+  transactionsCache.clear()
+  notifyTransactionListeners()
 }
 
-export function useIncomes(filters: IncomeFilters) {
+export function useTransactions(filters: TransactionFilters) {
   const cacheKey = useMemo(() => JSON.stringify(filters), [filters])
-  const cachedData = incomesCache.get(cacheKey)
+  const cachedData = transactionsCache.get(cacheKey)
 
-  const [data, setData] = useState<PaginatedResponse<Income>>({
+  const [data, setData] = useState<PaginatedResponse<Transaction>>({
     content: cachedData?.content ?? [],
     number: cachedData?.number ?? 0,
     size: filters.size ?? 10,
@@ -36,14 +41,14 @@ export function useIncomes(filters: IncomeFilters) {
 
   useEffect(() => {
     const listener = () => setRefreshIndex((value) => value + 1)
-    incomeListeners.add(listener)
+    transactionListeners.add(listener)
     return () => {
-      incomeListeners.delete(listener)
+      transactionListeners.delete(listener)
     }
   }, [])
 
   const refetch = useCallback(async () => {
-    const cached = incomesCache.get(cacheKey)
+    const cached = transactionsCache.get(cacheKey)
     if (cached) {
       setData(cached)
       setIsLoading(false)
@@ -54,11 +59,11 @@ export function useIncomes(filters: IncomeFilters) {
     setError(null)
 
     try {
-      const response = await getIncomes(filters)
-      incomesCache.set(cacheKey, response)
+      const response = await getTransactions(filters)
+      transactionsCache.set(cacheKey, response)
       setData(response)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible cargar los ingresos")
+      setError(err instanceof Error ? err.message : "No fue posible cargar las transacciones")
     } finally {
       setIsLoading(false)
     }
@@ -75,21 +80,21 @@ export function useIncomes(filters: IncomeFilters) {
   }, [cacheKey, refetch, refreshIndex])
 
   return {
-    incomes: data,
+    transactions: data,
     isLoading,
     error,
     refetch,
   }
 }
 
-export function useCreateIncome() {
+export function useCreateTransaction() {
   const [isLoading, setIsLoading] = useState(false)
 
-  const mutate = useCallback(async (payload: IncomeRequest) => {
+  const mutate = useCallback(async (payload: TransactionRequest) => {
     setIsLoading(true)
     try {
-      const response = await createIncome(payload)
-      invalidateIncomesCache()
+      const response = await createTransaction(payload)
+      invalidateTransactionsCache()
       return response
     } finally {
       setIsLoading(false)
@@ -97,19 +102,19 @@ export function useCreateIncome() {
   }, [])
 
   return {
-    createIncome: mutate,
+    createTransaction: mutate,
     isLoading,
   }
 }
 
-export function useUpdateIncome() {
+export function useUpdateTransaction() {
   const [isLoading, setIsLoading] = useState(false)
 
-  const mutate = useCallback(async (id: number, payload: IncomeRequest) => {
+  const mutate = useCallback(async (id: number, payload: TransactionRequest) => {
     setIsLoading(true)
     try {
-      const response = await updateIncome(id, payload)
-      invalidateIncomesCache()
+      const response = await updateTransaction(id, payload)
+      invalidateTransactionsCache()
       return response
     } finally {
       setIsLoading(false)
@@ -117,26 +122,26 @@ export function useUpdateIncome() {
   }, [])
 
   return {
-    updateIncome: mutate,
+    updateTransaction: mutate,
     isLoading,
   }
 }
 
-export function useDeleteIncome() {
+export function useDeleteTransaction() {
   const [isLoading, setIsLoading] = useState(false)
 
   const mutate = useCallback(async (id: number) => {
     setIsLoading(true)
     try {
-      await deleteIncome(id)
-      invalidateIncomesCache()
+      await deleteTransaction(id)
+      invalidateTransactionsCache()
     } finally {
       setIsLoading(false)
     }
   }, [])
 
   return {
-    deleteIncome: mutate,
+    deleteTransaction: mutate,
     isLoading,
   }
 }
