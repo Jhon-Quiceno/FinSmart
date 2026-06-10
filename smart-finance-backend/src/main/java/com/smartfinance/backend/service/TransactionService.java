@@ -34,10 +34,10 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
 
     public TransactionService(
-            TransactionRepository transactionRepository,
-            CategoryRepository categoryRepository,
-            AccountRepository accountRepository,
-            TransactionMapper transactionMapper
+        TransactionRepository transactionRepository,
+        CategoryRepository categoryRepository,
+        AccountRepository accountRepository,
+        TransactionMapper transactionMapper
     ) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
@@ -87,6 +87,15 @@ public class TransactionService {
         transaction.setUser(buildUserReference(userId));
         transaction.setCategory(resolveCategory(request.categoryId(), userId, request.type()));
         transaction.setAccount(resolveAccount(request.accountId(), userId));
+        
+        // Direct string assignment for simplified lookup fields
+        if (request.type() == TransactionType.INCOME) {
+            transaction.setIncomeSourceName(request.incomeSourceName());
+        }
+        if (request.type() == TransactionType.EXPENSE) {
+            transaction.setExpensePaymentMethodName(request.expensePaymentMethodName());
+            transaction.setExpenseTypeName(request.expenseTypeName());
+        }
 
         Transaction savedTransaction = transactionRepository.save(transaction);
         return transactionMapper.toResponse(savedTransaction);
@@ -107,6 +116,20 @@ public class TransactionService {
         transactionMapper.updateEntityFromRequest(request, transaction);
         transaction.setCategory(resolveCategory(request.categoryId(), userId, request.type()));
         transaction.setAccount(resolveAccount(request.accountId(), userId));
+        
+        // Direct string assignment for simplified lookup fields
+        if (request.type() == TransactionType.INCOME) {
+            transaction.setIncomeSourceName(request.incomeSourceName());
+        } else {
+            transaction.setIncomeSourceName(null);
+        }
+        if (request.type() == TransactionType.EXPENSE) {
+            transaction.setExpensePaymentMethodName(request.expensePaymentMethodName());
+            transaction.setExpenseTypeName(request.expenseTypeName());
+        } else {
+            transaction.setExpensePaymentMethodName(null);
+            transaction.setExpenseTypeName(null);
+        }
 
         Transaction updatedTransaction = transactionRepository.save(transaction);
         return transactionMapper.toResponse(updatedTransaction);

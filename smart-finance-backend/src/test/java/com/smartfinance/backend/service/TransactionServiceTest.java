@@ -65,6 +65,9 @@ class TransactionServiceTest {
                 "Supermercado",
                 LocalDate.now(),
                 PaymentMethodType.DEBIT_CARD,
+                null,
+                null,
+                null,
                 "Compra semanal"
         );
         Transaction mappedTransaction = new Transaction();
@@ -81,6 +84,9 @@ class TransactionServiceTest {
                 "Supermercado",
                 request.transactionDate(),
                 PaymentMethodType.DEBIT_CARD,
+                null,
+                null,
+                null,
                 "Compra semanal",
                 Instant.now(),
                 Instant.now()
@@ -96,6 +102,9 @@ class TransactionServiceTest {
                 "Supermercado",
                 request.transactionDate(),
                 PaymentMethodType.DEBIT_CARD,
+                null,
+                null,
+                null,
                 "Compra semanal",
                 savedTransaction.getCreatedAt(),
                 savedTransaction.getUpdatedAt()
@@ -126,6 +135,9 @@ class TransactionServiceTest {
                 "Taxi",
                 LocalDate.now(),
                 PaymentMethodType.CASH,
+                null,
+                null,
+                null,
                 null
         );
         when(transactionMapper.toEntity(request)).thenReturn(new Transaction());
@@ -146,6 +158,9 @@ class TransactionServiceTest {
                 "Pasaje",
                 LocalDate.now(),
                 PaymentMethodType.CASH,
+                null,
+                null,
+                null,
                 null
         );
         Transaction transaction = new Transaction();

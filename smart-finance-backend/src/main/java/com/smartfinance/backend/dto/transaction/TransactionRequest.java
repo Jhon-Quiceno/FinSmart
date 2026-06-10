@@ -29,8 +29,14 @@ public record TransactionRequest(
         @NotNull(message = "La fecha es obligatoria")
         @PastOrPresent(message = "La fecha no puede estar en el futuro")
         LocalDate transactionDate,
-        PaymentMethodType paymentMethod,
-        @Size(max = 1000, message = "Las notas no pueden superar 1000 caracteres")
-        String notes
+    PaymentMethodType paymentMethod,
+    @Size(max = 100, message = "El nombre de la fuente de ingreso no puede superar 100 caracteres")
+    String incomeSourceName,
+    @Size(max = 100, message = "El nombre del método de pago no puede superar 100 caracteres")
+    String expensePaymentMethodName,
+    @Size(max = 100, message = "El nombre del tipo de gasto no puede superar 100 caracteres")
+    String expenseTypeName,
+    @Size(max = 1000, message = "Las notas no pueden superar 1000 caracteres")
+    String notes
 ) {
 }

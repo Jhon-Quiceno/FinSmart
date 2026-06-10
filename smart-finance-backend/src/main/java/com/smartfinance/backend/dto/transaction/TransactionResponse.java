@@ -20,8 +20,11 @@ public record TransactionResponse(
         BigDecimal amount,
         String description,
         LocalDate transactionDate,
-        PaymentMethodType paymentMethod,
-        String notes,
+    PaymentMethodType paymentMethod,
+    String incomeSourceName,
+    String expensePaymentMethodName,
+    String expenseTypeName,
+    String notes,
         Instant createdAt,
         Instant updatedAt
 ) {

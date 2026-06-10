@@ -77,6 +77,9 @@ class TransactionControllerTest {
             LocalDate.of(2026, 3, 1),
             PaymentMethodType.TRANSFER,
             null,
+            null,
+            null,
+            null,
             Instant.now(),
             Instant.now()
     );
@@ -131,6 +134,9 @@ class TransactionControllerTest {
                 "Supermercado",
                 LocalDate.of(2026, 3, 10),
                 PaymentMethodType.CASH,
+                null,
+                null,
+                null,
                 "Compra del mes"
         );
         TransactionResponse response = new TransactionResponse(
@@ -144,6 +150,9 @@ class TransactionControllerTest {
                 "Supermercado",
                 LocalDate.of(2026, 3, 10),
                 PaymentMethodType.CASH,
+                null,
+                null,
+                null,
                 "Compra del mes",
                 Instant.now(),
                 Instant.now()
@@ -170,6 +179,9 @@ class TransactionControllerTest {
                 "Sin monto",
                 LocalDate.of(2026, 3, 10),
                 PaymentMethodType.CASH,
+                null,
+                null,
+                null,
                 null
         );
 
@@ -191,6 +203,9 @@ class TransactionControllerTest {
                 "Sin fecha",
                 null,
                 PaymentMethodType.CASH,
+                null,
+                null,
+                null,
                 null
         );
 
@@ -212,6 +227,9 @@ class TransactionControllerTest {
                 "Renta actualizada",
                 LocalDate.of(2026, 3, 1),
                 PaymentMethodType.TRANSFER,
+                null,
+                null,
+                null,
                 "Ajuste"
         );
         TransactionResponse response = new TransactionResponse(
@@ -225,6 +243,9 @@ class TransactionControllerTest {
                 "Renta actualizada",
                 LocalDate.of(2026, 3, 1),
                 PaymentMethodType.TRANSFER,
+                null,
+                null,
+                null,
                 "Ajuste",
                 Instant.now(),
                 Instant.now()
@@ -250,6 +271,9 @@ class TransactionControllerTest {
                 "Hack",
                 LocalDate.of(2026, 3, 1),
                 PaymentMethodType.CASH,
+                null,
+                null,
+                null,
                 null
         );
         when(transactionService.updateTransaction(eq(99L), any(TransactionRequest.class)))

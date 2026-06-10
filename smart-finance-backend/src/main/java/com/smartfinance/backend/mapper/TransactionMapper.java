@@ -22,6 +22,9 @@ public interface TransactionMapper {
     @Mapping(target = "accountName", expression = "java(transaction.getAccount() != null ? transaction.getAccount().getName() : null)")
     @Mapping(target = "categoryId", expression = "java(transaction.getCategory() != null ? transaction.getCategory().getId() : null)")
     @Mapping(target = "categoryName", expression = "java(transaction.getCategory() != null ? transaction.getCategory().getName() : null)")
+    @Mapping(target = "incomeSourceName", source = "incomeSourceName")
+    @Mapping(target = "expensePaymentMethodName", source = "expensePaymentMethodName")
+    @Mapping(target = "expenseTypeName", source = "expenseTypeName")
     TransactionResponse toResponse(Transaction transaction);
 
     @Mapping(target = "id", ignore = true)

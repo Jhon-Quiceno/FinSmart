@@ -73,6 +73,15 @@ public class Transaction {
     @Column(name = "payment_method", columnDefinition = "payment_method_type")
     private PaymentMethodType paymentMethod;
 
+    @Column(name = "income_source_name", length = 100)
+    private String incomeSourceName;
+
+    @Column(name = "expense_payment_method_name", length = 100)
+    private String expensePaymentMethodName;
+
+    @Column(name = "expense_type_name", length = 100)
+    private String expenseTypeName;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 
