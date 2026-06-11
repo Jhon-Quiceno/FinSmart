@@ -3,6 +3,8 @@ import type {
   Transaction,
   TransactionFilters,
   TransactionRequest,
+  TransactionType,
+  PaymentMethodType,
   PaginatedResponse,
 } from "../types/transaction"
 
@@ -50,9 +52,9 @@ function normalizeTransaction(item: Record<string, unknown>): Transaction {
     transactionDate: String(item.transactionDate ?? item.transaction_date ?? item.date ?? ""),
     paymentMethod:
       typeof item.paymentMethod === "string"
-        ? item.paymentMethod
+        ? (item.paymentMethod as PaymentMethodType)
         : typeof item.payment_method === "string"
-          ? item.payment_method
+          ? (item.payment_method as PaymentMethodType)
           : null,
     notes: typeof item.notes === "string" ? item.notes : typeof item.notes === "string" ? item.notes : null,
     createdAt: String(item.createdAt ?? item.created_at ?? ""),
