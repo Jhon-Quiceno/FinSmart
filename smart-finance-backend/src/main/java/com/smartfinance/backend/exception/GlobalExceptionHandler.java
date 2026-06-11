@@ -1,9 +1,12 @@
 package com.smartfinance.backend.exception;
 
 import com.smartfinance.backend.dto.error.ErrorResponse;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -50,6 +53,36 @@ public class GlobalExceptionHandler {
                 .orElse("Datos de entrada inválidos");
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI());
+    }
+
+    @ExceptionHandler({
+            IllegalArgumentException.class,
+            ConstraintViolationException.class
+    })
+    public ResponseEntity<ErrorResponse> handleBadRequest(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler({
+            ResourceNotFoundException.class,
+            EntityNotFoundException.class
+    })
+    public ResponseEntity<ErrorResponse> handleNotFound(
+            RuntimeException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)

@@ -2,14 +2,8 @@
 
 import { createContext, ReactNode, useContext, useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import {
-  clearAccessToken,
-  getApiErrorMessage,
-  loginRequest,
-  logoutRequest,
-  refreshRequest,
-  registerRequest,
-} from "@/lib/api-client"
+import { clearAccessToken, getApiErrorMessage } from "@/lib/api-client"
+import { loginRequest, logoutRequest, refreshRequest, registerRequest } from "@/lib/services/auth.service"
 
 interface User {
   id: string
@@ -64,9 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const parsedUser = JSON.parse(storedUser) as User
-        setUser(parsedUser)
-        await refreshRequest()
+        JSON.parse(storedUser) as User
+        const refreshResponse = await refreshRequest()
+        persistSession({
+          id: String(refreshResponse.user.id),
+          name: refreshResponse.user.name,
+          email: refreshResponse.user.email,
+        })
       } catch {
         clearSession()
       } finally {
@@ -78,9 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (isLoading) {
-      return
-    }
+    if (isLoading) return
 
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
 
@@ -93,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/")
     }
   }, [isLoading, pathname, router, user])
+
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
+  const shouldRenderChildren = isPublicRoute ? !user : !isLoading && !!user
 
   const login = async (email: string, password: string): Promise<AuthActionResult> => {
     setIsLoading(true)
@@ -109,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearSession()
       return {
         success: false,
-        error: getApiErrorMessage(error, "No fue posible iniciar sesión"),
+        error: getApiErrorMessage(error, "No fue posible iniciar sesion"),
       }
     } finally {
       setIsLoading(false)
@@ -160,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
       }}
     >
-      {children}
+      {shouldRenderChildren ? children : null}
     </AuthContext.Provider>
   )
 }
@@ -170,5 +169,6 @@ export function useAuth() {
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider")
   }
+
   return context
 }

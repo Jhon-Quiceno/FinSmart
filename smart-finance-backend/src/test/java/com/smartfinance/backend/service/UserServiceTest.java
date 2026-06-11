@@ -50,6 +50,7 @@ class UserServiceTest {
         when(passwordEncoder.encode("secret123")).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
+            Assertions.assertTrue(user.isActive());
             user.setId(10L);
             return user;
         });
@@ -82,6 +83,7 @@ class UserServiceTest {
         user.setName("John");
         user.setEmail("john@mail.com");
         user.setPasswordHash("hashed");
+        user.setActive(true);
         when(userRepository.findByEmailIgnoreCase("john@mail.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret123", "hashed")).thenReturn(true);
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
@@ -94,6 +96,7 @@ class UserServiceTest {
         Assertions.assertEquals("access-token", session.response().accessToken());
         Assertions.assertEquals(7L, session.response().user().id());
         Assertions.assertEquals("refresh-token", session.refreshToken());
+        Assertions.assertNotNull(user.getLastLoginAt());
     }
 
     @Test
@@ -103,11 +106,26 @@ class UserServiceTest {
         user.setName("John");
         user.setEmail("john@mail.com");
         user.setPasswordHash("hashed");
+        user.setActive(true);
         when(userRepository.findByEmailIgnoreCase("john@mail.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("bad-pass", "hashed")).thenReturn(false);
 
         Assertions.assertThrows(InvalidCredentialsException.class,
                 () -> userService.login(new LoginRequest("john@mail.com", "bad-pass")));
+    }
+
+    @Test
+    void loginShouldFailWhenUserIsInactive() {
+        User user = new User();
+        user.setId(9L);
+        user.setName("Inactive");
+        user.setEmail("inactive@mail.com");
+        user.setPasswordHash("hashed");
+        user.setActive(false);
+        when(userRepository.findByEmailIgnoreCase("inactive@mail.com")).thenReturn(Optional.of(user));
+
+        Assertions.assertThrows(InvalidCredentialsException.class,
+                () -> userService.login(new LoginRequest("inactive@mail.com", "secret123")));
     }
 
     @Test

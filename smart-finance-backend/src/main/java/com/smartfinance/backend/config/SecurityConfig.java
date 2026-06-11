@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/users/register",
                     "/api/users/login",
+                    "/api/users/csrf",
                     "/api/users/refresh",
                     "/api/users/logout",
                     "/v3/api-docs/**",
