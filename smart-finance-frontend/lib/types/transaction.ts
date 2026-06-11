@@ -48,6 +48,8 @@ export interface TransactionFilters {
   page?: number
   size?: number
   type?: TransactionType
+  month?: number
+  year?: number
   category?: number
   account?: number
   from?: string
