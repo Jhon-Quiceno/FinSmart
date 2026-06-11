@@ -54,6 +54,4 @@ export interface TransactionFilters {
   account?: number
   from?: string
   to?: string
-  month?: number
-  year?: number
 }
