@@ -1,2 +1,0 @@
-ALTER TABLE incomes
-    ADD COLUMN IF NOT EXISTS source VARCHAR(50);

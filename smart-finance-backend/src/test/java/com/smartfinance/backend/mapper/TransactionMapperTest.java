@@ -32,6 +32,9 @@ class TransactionMapperTest {
                 LocalDate.of(2026, 5, 18),
                 PaymentMethodType.CASH,
                 null,
+                null,
+                null,
+                null,
                 Instant.now(),
                 Instant.now()
         );
@@ -53,6 +56,9 @@ class TransactionMapperTest {
                 "Comida",
                 LocalDate.of(2026, 5, 18),
                 PaymentMethodType.CREDIT_CARD,
+                null,
+                null,
+                null,
                 "Cena"
         );
 
