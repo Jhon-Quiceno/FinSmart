@@ -1,7 +1,6 @@
 "use client"
 
 import { Pencil, Trash2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -23,7 +22,6 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
             <TableHead>Descripcion</TableHead>
             <TableHead>Categoria</TableHead>
             <TableHead>Fuente</TableHead>
-            <TableHead>Tipo</TableHead>
             <TableHead>Monto</TableHead>
             <TableHead>Fecha</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
@@ -33,7 +31,7 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
           {isLoading &&
             Array.from({ length: 6 }).map((_, index) => (
               <TableRow key={`income-skeleton-${index}`}>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={6}>
                   <Skeleton className="h-8 w-full" />
                 </TableCell>
               </TableRow>
@@ -41,7 +39,7 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
 
           {!isLoading && incomes.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
                 No hay ingresos para los filtros seleccionados.
               </TableCell>
             </TableRow>
@@ -53,11 +51,6 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
                 <TableCell className="font-medium">{income.description || "Sin descripcion"}</TableCell>
                 <TableCell>{income.categoryName || "Sin categoria"}</TableCell>
                 <TableCell>{income.source || "Sin fuente"}</TableCell>
-                <TableCell>
-                  <Badge variant={income.isRecurring ? "secondary" : "outline"}>
-                    {income.isRecurring ? "Recurrente" : "Unico"}
-                  </Badge>
-                </TableCell>
                 <TableCell className="font-semibold text-success">
                   +${income.amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                 </TableCell>

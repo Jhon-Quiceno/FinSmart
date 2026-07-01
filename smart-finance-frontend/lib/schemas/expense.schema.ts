@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { isFutureDateInput, isValidDateInput } from "../date"
+import { PAYMENT_METHODS } from "../types/expense"
 
 const optionalText = (maxLength: number) =>
   z.preprocess(
@@ -21,8 +22,7 @@ export const expenseSchema = z.object({
   amount: z.coerce.number().gt(0, "El monto debe ser mayor a 0"),
   description: optionalText(255),
   date: dateSchema,
-  isRecurring: z.boolean().default(false),
-  paymentMethod: z.string().trim().min(1, "El metodo de pago es obligatorio").max(30, "Maximo 30 caracteres"),
+  paymentMethod: z.enum(PAYMENT_METHODS, { message: "El metodo de pago es obligatorio" }),
   categoryId: z.preprocess(
     (value) => {
       if (value === null || value === undefined || value === "" || value === "none") return null

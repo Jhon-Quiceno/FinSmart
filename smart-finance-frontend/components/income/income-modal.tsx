@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { CategorySelect } from "@/components/shared/category-select"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -31,7 +30,6 @@ const getDefaultValues = (income?: Income | null): IncomeFormValues => ({
   amount: income?.amount ?? 0,
   description: income?.description ?? "",
   date: income?.date ?? getTodayDateInput(),
-  isRecurring: income?.isRecurring ?? false,
   source: income?.source ?? "Salario",
   categoryId: income?.categoryId ?? null,
 })
@@ -156,19 +154,6 @@ export function IncomeModal({ open, onOpenChange, initialValue, isSubmitting, on
                     <Input type="date" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="isRecurring"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center gap-2">
-                  <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(Boolean(checked))} />
-                  </FormControl>
-                  <FormLabel>Es un ingreso recurrente</FormLabel>
                 </FormItem>
               )}
             />
