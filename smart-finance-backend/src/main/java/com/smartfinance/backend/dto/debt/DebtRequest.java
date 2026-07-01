@@ -1,0 +1,30 @@
+package com.smartfinance.backend.dto.debt;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+/**
+ * Payload to create a {@link com.smartfinance.backend.model.Debt}.
+ *
+ * @param name         debt name/description
+ * @param totalAmount  total amount owed, must be strictly positive; also seeds
+ *                     {@code remainingAmount} on creation
+ * @param interestRate optional interest rate percentage
+ * @param dueDate      optional due date
+ */
+public record DebtRequest(
+        @NotBlank(message = "El nombre de la deuda es obligatorio")
+        @Size(max = 150, message = "El nombre no puede superar 150 caracteres")
+        String name,
+        @NotNull(message = "El monto total es obligatorio")
+        @Positive(message = "El monto total debe ser mayor a cero")
+        BigDecimal totalAmount,
+        BigDecimal interestRate,
+        LocalDate dueDate
+) {
+}

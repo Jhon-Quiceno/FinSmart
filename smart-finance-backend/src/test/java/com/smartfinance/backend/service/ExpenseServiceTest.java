@@ -68,7 +68,7 @@ class ExpenseServiceTest {
         Expense savedExpense = new Expense();
         savedExpense.setId(10L);
         ExpenseResponse response = new ExpenseResponse(
-                10L, BigDecimal.valueOf(200), "Super", LocalDate.now(), PaymentMethodType.CASH, null, null
+                10L, BigDecimal.valueOf(200), "Super", LocalDate.now(), PaymentMethodType.CASH, null, null, null
         );
 
         when(expenseMapper.toEntity(request)).thenReturn(mappedExpense);
@@ -100,7 +100,7 @@ class ExpenseServiceTest {
         when(expenseRepository.save(mappedExpense)).thenReturn(mappedExpense);
         when(expenseMapper.toResponse(mappedExpense)).thenReturn(
                 new ExpenseResponse(1L, BigDecimal.valueOf(200), "Super", LocalDate.now(),
-                        PaymentMethodType.DEBIT_CARD, 4L, "Alimentación")
+                        PaymentMethodType.DEBIT_CARD, 4L, "Alimentación", null)
         );
 
         ExpenseResponse createdExpense = expenseService.createExpense(request);
@@ -163,7 +163,7 @@ class ExpenseServiceTest {
         Expense expense = new Expense();
         Page<Expense> page = new PageImpl<>(List.of(expense), pageable, 1);
         ExpenseResponse response = new ExpenseResponse(
-                1L, BigDecimal.TEN, null, LocalDate.now(), PaymentMethodType.CASH, 4L, "Alimentación"
+                1L, BigDecimal.TEN, null, LocalDate.now(), PaymentMethodType.CASH, 4L, "Alimentación", null
         );
         LocalDate from = LocalDate.of(2026, 1, 1);
         LocalDate to = LocalDate.of(2026, 1, 31);
