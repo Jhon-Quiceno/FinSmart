@@ -16,6 +16,7 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 4. **`recurring_payments` y `expenses` quedan conectadas** mediante la columna `recurring_payment_id` (Sprint 3) y el endpoint `PATCH /api/recurring/{id}/pay`, que genera el gasto correspondiente al marcar un servicio como pagado. Antes eran dos formas de "gasto recurrente" sin relación entre sí.
 5. **Nueva tabla `ai_messages`** (Sprint 5) — el frontend promete "historial de conversación" en el asistente IA, pero no existía dónde guardarlo.
 6. **`notifications` se movió de Sprint 1 a Sprint 5**, porque ahí es donde se crea la entidad `Notification` y el panel del navbar que la consume.
+7. **Sprint 2 sumó gestión completa de categorías en el frontend** (crear/editar/eliminar en `/categorias`, con alta rápida desde el propio selector de categoría en los formularios de ingreso/gasto), más allá del alcance original que solo pedía cargar categorías reales en los formularios. El backend ya lo soportaba desde el inicio (`/api/categories` con CRUD completo); solo faltaba la capa de UI, que fue verificada end-to-end (build, lint y tests en verde) antes de darse por completada.
 
 ---
 
