@@ -1,0 +1,115 @@
+package com.smartfinance.backend.service;
+
+import com.smartfinance.backend.dto.expense.ExpenseRequest;
+import com.smartfinance.backend.dto.expense.ExpenseResponse;
+import com.smartfinance.backend.exception.ResourceNotFoundException;
+import com.smartfinance.backend.mapper.ExpenseMapper;
+import com.smartfinance.backend.model.Category;
+import com.smartfinance.backend.model.Expense;
+import com.smartfinance.backend.model.PaymentMethodType;
+import com.smartfinance.backend.repository.CategoryRepository;
+import com.smartfinance.backend.repository.ExpenseRepository;
+import com.smartfinance.backend.repository.UserRepository;
+import com.smartfinance.backend.repository.specification.ExpenseSpecifications;
+import com.smartfinance.backend.security.SecurityUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+
+/**
+ * Business logic for managing the current user's {@link Expense} records.
+ *
+ * <p>Every operation resolves the caller via {@link SecurityUtils#getCurrentUserId()} and
+ * scopes reads/writes strictly to that user. Mutations on an expense owned by another user,
+ * or a {@code categoryId} referencing a category owned by another user, raise
+ * {@link ResourceNotFoundException} (HTTP 404) rather than a 403, so existence is never
+ * leaked to a non-owner.
+ */
+@Service
+public class ExpenseService {
+
+    private final ExpenseRepository expenseRepository;
+    private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
+    private final ExpenseMapper expenseMapper;
+
+    public ExpenseService(
+            ExpenseRepository expenseRepository,
+            CategoryRepository categoryRepository,
+            UserRepository userRepository,
+            ExpenseMapper expenseMapper
+    ) {
+        this.expenseRepository = expenseRepository;
+        this.categoryRepository = categoryRepository;
+        this.userRepository = userRepository;
+        this.expenseMapper = expenseMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ExpenseResponse> getExpenses(
+            Long categoryId,
+            LocalDate from,
+            LocalDate to,
+            PaymentMethodType paymentMethod,
+            Pageable pageable
+    ) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        Specification<Expense> spec = ExpenseSpecifications.ownedBy(userId)
+                .and(ExpenseSpecifications.hasCategory(categoryId))
+                .and(ExpenseSpecifications.dateFrom(from))
+                .and(ExpenseSpecifications.dateTo(to))
+                .and(ExpenseSpecifications.hasPaymentMethod(paymentMethod));
+
+        return expenseRepository.findAll(spec, pageable)
+                .map(expenseMapper::toResponse);
+    }
+
+    @Transactional
+    public ExpenseResponse createExpense(ExpenseRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        Expense expense = expenseMapper.toEntity(request);
+        expense.setUser(userRepository.getReferenceById(userId));
+        expense.setCategory(resolveOwnedCategory(request.categoryId(), userId));
+
+        Expense savedExpense = expenseRepository.save(expense);
+        return expenseMapper.toResponse(savedExpense);
+    }
+
+    @Transactional
+    public ExpenseResponse updateExpense(Long expenseId, ExpenseRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        Expense expense = findOwnedExpense(expenseId, userId);
+
+        expenseMapper.updateEntityFromRequest(request, expense);
+        expense.setCategory(resolveOwnedCategory(request.categoryId(), userId));
+
+        Expense updatedExpense = expenseRepository.save(expense);
+        return expenseMapper.toResponse(updatedExpense);
+    }
+
+    @Transactional
+    public void deleteExpense(Long expenseId) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        Expense expense = findOwnedExpense(expenseId, userId);
+        expenseRepository.delete(expense);
+    }
+
+    private Expense findOwnedExpense(Long expenseId, Long userId) {
+        return expenseRepository.findByIdAndUser_Id(expenseId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado"));
+    }
+
+    private Category resolveOwnedCategory(Long categoryId, Long userId) {
+        if (categoryId == null) {
+            return null;
+        }
+
+        return categoryRepository.findByIdAndUser_Id(categoryId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+    }
+}
