@@ -19,40 +19,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  useCreateTransaction,
-  useDeleteTransaction,
-  useTransactions,
-  useUpdateTransaction,
-} from "@/hooks/use-transactions"
+import { useCreateExpense, useDeleteExpense, useExpenses, useUpdateExpense } from "@/hooks/use-expenses"
 import { getApiErrorMessage } from "@/lib/api-client"
-import { expenseSchema } from "@/lib/schemas/expense.schema"
-import type { Transaction } from "@/lib/types/transaction"
-import type { z } from "zod"
+import type { ExpenseFormValues } from "@/lib/schemas/expense.schema"
+import type { Expense, ExpenseRequest } from "@/lib/types/expense"
 
 const pageSize = 10
-type ExpenseFormValues = z.infer<typeof expenseSchema>
-
-function transactionToExpense(t: Transaction) {
-  const paymentMethodMap: Record<string, string> = {
-    CASH: "Efectivo",
-    DEBIT_CARD: "Tarjeta de Debito",
-    CREDIT_CARD: "Tarjeta de Credito",
-    TRANSFER: "Transferencia",
-    DIGITAL_WALLET: "Billetera Digital",
-  }
-
-  return {
-    id: t.id,
-    amount: t.amount,
-    description: t.description,
-    date: t.transactionDate,
-    isRecurring: false,
-    paymentMethod: t.paymentMethod ? paymentMethodMap[t.paymentMethod] || t.paymentMethod : "Efectivo",
-    categoryId: t.categoryId,
-    categoryName: t.categoryName,
-  }
-}
 
 export default function GastosPage() {
   const [page, setPage] = useState(1)
@@ -61,29 +33,20 @@ export default function GastosPage() {
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null)
 
-  const { transactions, isLoading } = useTransactions({
+  const { expenses, isLoading } = useExpenses({
     page: page - 1,
     size: pageSize,
-    type: "EXPENSE",
-    category: selectedCategory !== "none" ? Number(selectedCategory) : undefined,
+    categoryId: selectedCategory !== "none" ? Number(selectedCategory) : undefined,
     from: from || undefined,
     to: to || undefined,
   })
 
-  const expenses = useMemo(
-    () => ({
-      ...transactions,
-      content: transactions.content.map(transactionToExpense),
-    }),
-    [transactions],
-  )
-
-  const { createTransaction, isLoading: isCreating } = useCreateTransaction()
-  const { updateTransaction, isLoading: isUpdating } = useUpdateTransaction()
-  const { deleteTransaction, isLoading: isDeleting } = useDeleteTransaction()
+  const { createExpense, isLoading: isCreating } = useCreateExpense()
+  const { updateExpense, isLoading: isUpdating } = useUpdateExpense()
+  const { deleteExpense, isLoading: isDeleting } = useDeleteExpense()
 
   const filteredExpenses = useMemo(() => {
     const normalizedQuery = searchQuery.toLowerCase().trim()
@@ -102,56 +65,37 @@ export default function GastosPage() {
   )
 
   const handleSubmit = async (values: ExpenseFormValues) => {
-    const payload = expenseSchema.parse({
-      ...values,
-      paymentMethod: values.paymentMethod?.trim() || "Efectivo",
-    })
-
-    const paymentMethodMap: Record<string, string> = {
-      Efectivo: "CASH",
-      "Tarjeta de Debito": "DEBIT_CARD",
-      "Tarjeta de Credito": "CREDIT_CARD",
-      Transferencia: "TRANSFER",
-      "Billetera Digital": "DIGITAL_WALLET",
+    const payload: ExpenseRequest = {
+      amount: values.amount,
+      description: values.description,
+      date: values.date,
+      paymentMethod: values.paymentMethod,
+      categoryId: values.categoryId ?? undefined,
     }
 
     try {
-      if (editingTransaction) {
-        await updateTransaction(editingTransaction.id, {
-          type: "EXPENSE",
-          amount: payload.amount,
-          description: payload.description,
-          transactionDate: payload.date,
-          categoryId: payload.categoryId ?? undefined,
-          paymentMethod: (paymentMethodMap[payload.paymentMethod!] || "CASH") as any,
-        })
+      if (editingExpense) {
+        await updateExpense(editingExpense.id, payload)
         toast.success("Gasto actualizado correctamente")
       } else {
-        await createTransaction({
-          type: "EXPENSE",
-          amount: payload.amount,
-          description: payload.description,
-          transactionDate: payload.date,
-          categoryId: payload.categoryId ?? undefined,
-          paymentMethod: (paymentMethodMap[payload.paymentMethod!] || "CASH") as any,
-        })
+        await createExpense(payload)
         toast.success("Gasto creado correctamente")
       }
 
       setModalOpen(false)
-      setEditingTransaction(null)
+      setEditingExpense(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible guardar el gasto"))
     }
   }
 
   const handleDelete = async () => {
-    if (!deletingTransaction) return
+    if (!deletingExpense) return
 
     try {
-      await deleteTransaction(deletingTransaction.id)
+      await deleteExpense(deletingExpense.id)
       toast.success("Gasto eliminado correctamente")
-      setDeletingTransaction(null)
+      setDeletingExpense(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible eliminar el gasto"))
     }
@@ -167,7 +111,7 @@ export default function GastosPage() {
           </div>
           <Button
             onClick={() => {
-              setEditingTransaction(null)
+              setEditingExpense(null)
               setModalOpen(true)
             }}
           >
@@ -240,18 +184,10 @@ export default function GastosPage() {
           expenses={filteredExpenses}
           isLoading={isLoading}
           onEdit={(expense) => {
-            const transaction = transactions.content.find((t) => t.id === expense.id)
-            if (transaction) {
-              setEditingTransaction(transaction)
-              setModalOpen(true)
-            }
+            setEditingExpense(expense)
+            setModalOpen(true)
           }}
-          onDelete={(expense) => {
-            const transaction = transactions.content.find((t) => t.id === expense.id)
-            if (transaction) {
-              setDeletingTransaction(transaction)
-            }
-          }}
+          onDelete={(expense) => setDeletingExpense(expense)}
         />
       </div>
 
@@ -259,36 +195,14 @@ export default function GastosPage() {
         open={modalOpen}
         onOpenChange={(nextOpen) => {
           setModalOpen(nextOpen)
-          if (!nextOpen) setEditingTransaction(null)
+          if (!nextOpen) setEditingExpense(null)
         }}
-        initialValue={
-          editingTransaction
-            ? {
-                id: editingTransaction.id,
-                amount: editingTransaction.amount,
-                description: editingTransaction.description,
-                date: editingTransaction.transactionDate,
-                isRecurring: false,
-                paymentMethod:
-                  editingTransaction.paymentMethod === "CREDIT_CARD"
-                    ? "Tarjeta de Credito"
-                    : editingTransaction.paymentMethod === "DEBIT_CARD"
-                      ? "Tarjeta de Debito"
-                      : editingTransaction.paymentMethod === "DIGITAL_WALLET"
-                        ? "Billetera Digital"
-                        : editingTransaction.paymentMethod === "TRANSFER"
-                          ? "Transferencia"
-                          : "Efectivo",
-                categoryId: editingTransaction.categoryId,
-                categoryName: editingTransaction.categoryName,
-              }
-            : null
-        }
+        initialValue={editingExpense}
         onSubmit={handleSubmit}
         isSubmitting={isCreating || isUpdating}
       />
 
-      <AlertDialog open={!!deletingTransaction} onOpenChange={(open) => !open && setDeletingTransaction(null)}>
+      <AlertDialog open={!!deletingExpense} onOpenChange={(open) => !open && setDeletingExpense(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar gasto</AlertDialogTitle>

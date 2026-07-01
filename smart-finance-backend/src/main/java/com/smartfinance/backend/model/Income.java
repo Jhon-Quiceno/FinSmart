@@ -3,8 +3,6 @@ package com.smartfinance.backend.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,26 +14,30 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 /**
- * Represents a financial account that holds user balances and transaction origins.
+ * A single income record owned by a {@link User}.
+ *
+ * <p>{@link #category} is optional: a user may record income without classifying it, and
+ * deleting a category does not delete the income history that referenced it (the database
+ * foreign key uses {@code ON DELETE SET NULL}, see
+ * {@code V3__create_categories_incomes_expenses.sql}).
  */
 @Entity
-@Table(name = "accounts")
+@Table(name = "incomes")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Account {
+public class Income {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,25 +47,21 @@ public class Account {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 100)
-    private String name;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false, columnDefinition = "account_type")
-    private AccountType type;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal balance;
+    private BigDecimal amount;
 
-    @Column(nullable = false, length = 3)
-    private String currency;
+    @Column(length = 255)
+    private String description;
 
-    @Column(length = 7)
-    private String color;
+    @Column(name = "date", nullable = false)
+    private LocalDate date;
 
-    @Column(name = "is_active", nullable = false)
-    private boolean active;
+    @Column(length = 100)
+    private String source;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)

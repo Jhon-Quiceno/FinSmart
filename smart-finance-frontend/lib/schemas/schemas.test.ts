@@ -9,18 +9,15 @@ describe("categorySchema", () => {
     const result = categorySchema.safeParse({
       name: "Salario",
       type: "INCOME",
-      icon: "briefcase",
-      color: "#10B981",
     })
 
     expect(result.success).toBe(true)
   })
 
-  it("rechaza colores invalidos", () => {
+  it("rechaza un tipo invalido", () => {
     const result = categorySchema.safeParse({
       name: "Transporte",
-      type: "EXPENSE",
-      color: "green",
+      type: "OTHER",
     })
 
     expect(result.success).toBe(false)
@@ -33,7 +30,6 @@ describe("incomeSchema", () => {
       amount: 1000,
       description: "Freelance",
       date: "2026-03-01",
-      isRecurring: true,
       source: "Freelance",
       categoryId: 2,
     })
@@ -45,7 +41,6 @@ describe("incomeSchema", () => {
     const result = incomeSchema.safeParse({
       amount: 0,
       date: "2026-03-01",
-      isRecurring: false,
       source: "Salario",
       categoryId: null,
     })
@@ -58,7 +53,6 @@ describe("incomeSchema", () => {
       amount: 10,
       description: "Ingreso rapido",
       date: getTodayDateInput(),
-      isRecurring: false,
       source: "Otros",
       categoryId: null,
     })
@@ -73,20 +67,18 @@ describe("expenseSchema", () => {
       amount: 900,
       description: "Supermercado",
       date: "2026-03-01",
-      isRecurring: false,
-      paymentMethod: "Efectivo",
+      paymentMethod: "CASH",
       categoryId: 3,
     })
 
     expect(result.success).toBe(true)
   })
 
-  it("requiere metodo de pago", () => {
+  it("requiere un metodo de pago valido", () => {
     const result = expenseSchema.safeParse({
       amount: 900,
       description: "Supermercado",
       date: "2026-03-01",
-      isRecurring: false,
       paymentMethod: "",
       categoryId: 3,
     })
@@ -99,8 +91,7 @@ describe("expenseSchema", () => {
       amount: 10,
       description: "Cafe",
       date: getTodayDateInput(),
-      isRecurring: false,
-      paymentMethod: "Efectivo",
+      paymentMethod: "CASH",
       categoryId: null,
     })
 

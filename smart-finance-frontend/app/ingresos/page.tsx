@@ -19,16 +19,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  useCreateTransaction,
-  useDeleteTransaction,
-  useTransactions,
-  useUpdateTransaction,
-} from "@/hooks/use-transactions"
+import { useCreateIncome, useDeleteIncome, useIncomes, useUpdateIncome } from "@/hooks/use-incomes"
 import { getApiErrorMessage } from "@/lib/api-client"
-import { incomeSchema } from "@/lib/schemas/income.schema"
-import type { Transaction } from "@/lib/types/transaction"
-import type { z } from "zod"
+import type { IncomeFormValues } from "@/lib/schemas/income.schema"
+import type { Income, IncomeRequest } from "@/lib/types/income"
 
 const pageSize = 10
 
@@ -47,105 +41,65 @@ const monthOptions = [
   { value: "12", label: "Diciembre" },
 ]
 
-type IncomeFormValues = z.infer<typeof incomeSchema>
-
-function transactionToIncome(t: Transaction) {
-  return {
-    id: t.id,
-    amount: t.amount,
-    description: t.description,
-    date: t.transactionDate,
-    isRecurring: false,
-    source: t.notes,
-    categoryId: t.categoryId,
-    categoryName: t.categoryName,
-  }
-}
-
 export default function IngresosPage() {
   const now = new Date()
   const [page, setPage] = useState(1)
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1))
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()))
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null)
+  const [deletingIncome, setDeletingIncome] = useState<Income | null>(null)
 
-  const { transactions, isLoading } = useTransactions({
+  const { incomes, isLoading } = useIncomes({
     page: page - 1,
     size: pageSize,
-    type: "INCOME",
     month: Number(selectedMonth),
     year: Number(selectedYear),
   })
 
-  const incomes = useMemo(
-    () => ({
-      ...transactions,
-      content: transactions.content.map(transactionToIncome),
-    }),
-    [transactions],
-  )
-
-  const { createTransaction, isLoading: isCreating } = useCreateTransaction()
-  const { updateTransaction, isLoading: isUpdating } = useUpdateTransaction()
-  const { deleteTransaction, isLoading: isDeleting } = useDeleteTransaction()
+  const { createIncome, isLoading: isCreating } = useCreateIncome()
+  const { updateIncome, isLoading: isUpdating } = useUpdateIncome()
+  const { deleteIncome, isLoading: isDeleting } = useDeleteIncome()
 
   const totalIncome = useMemo(
     () => incomes.content.reduce((sum, income) => sum + income.amount, 0),
     [incomes.content],
   )
 
-  const recurringIncome = useMemo(
-    () => incomes.content.filter((income) => income.isRecurring).reduce((sum, income) => sum + income.amount, 0),
-    [incomes.content],
-  )
-
-  const oneOffIncome = totalIncome - recurringIncome
+  const averageIncome = incomes.content.length > 0 ? totalIncome / incomes.content.length : 0
 
   const handleSubmit = async (values: IncomeFormValues) => {
-    const payload = incomeSchema.parse({
-      ...values,
+    const payload: IncomeRequest = {
+      amount: values.amount,
+      description: values.description,
+      date: values.date,
       source: values.source?.trim() || "Salario",
-    })
+      categoryId: values.categoryId ?? undefined,
+    }
 
     try {
-      if (editingTransaction) {
-        await updateTransaction(editingTransaction.id, {
-          type: "INCOME",
-          amount: payload.amount,
-          description: payload.description,
-          transactionDate: payload.date,
-          categoryId: payload.categoryId ?? undefined,
-          notes: payload.source,
-        })
+      if (editingIncome) {
+        await updateIncome(editingIncome.id, payload)
         toast.success("Ingreso actualizado correctamente")
       } else {
-        await createTransaction({
-          type: "INCOME",
-          amount: payload.amount,
-          description: payload.description,
-          transactionDate: payload.date,
-          categoryId: payload.categoryId ?? undefined,
-          notes: payload.source,
-        })
+        await createIncome(payload)
         toast.success("Ingreso creado correctamente")
       }
 
       setModalOpen(false)
-      setEditingTransaction(null)
+      setEditingIncome(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible guardar el ingreso"))
     }
   }
 
   const handleDelete = async () => {
-    if (!deletingTransaction) return
+    if (!deletingIncome) return
 
     try {
-      await deleteTransaction(deletingTransaction.id)
+      await deleteIncome(deletingIncome.id)
       toast.success("Ingreso eliminado correctamente")
-      setDeletingTransaction(null)
+      setDeletingIncome(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible eliminar el ingreso"))
     }
@@ -161,7 +115,7 @@ export default function IngresosPage() {
           </div>
           <Button
             onClick={() => {
-              setEditingTransaction(null)
+              setEditingIncome(null)
               setModalOpen(true)
             }}
           >
@@ -172,9 +126,9 @@ export default function IngresosPage() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {[
-            { label: "Total ingresos", value: totalIncome, color: "text-success" },
-            { label: "Ingresos recurrentes", value: recurringIncome, color: "text-primary" },
-            { label: "Ingresos unicos", value: oneOffIncome, color: "text-warning" },
+            { label: "Total ingresos", value: totalIncome },
+            { label: "Cantidad de ingresos", value: incomes.content.length },
+            { label: "Promedio por ingreso", value: averageIncome },
           ].map((item) => (
             <div key={item.label} className="rounded-xl border border-border bg-card p-5">
               {isLoading ? (
@@ -189,8 +143,10 @@ export default function IngresosPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{item.label}</p>
-                    <p className={`text-xl font-semibold ${item.color}`}>
-                      +${item.value.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                    <p className="text-xl font-semibold text-success">
+                      {item.label === "Cantidad de ingresos"
+                        ? item.value.toLocaleString("es-MX")
+                        : `+$${item.value.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`}
                     </p>
                   </div>
                 </div>
@@ -266,18 +222,10 @@ export default function IngresosPage() {
           incomes={incomes.content}
           isLoading={isLoading}
           onEdit={(income) => {
-            const transaction = transactions.content.find((t) => t.id === income.id)
-            if (transaction) {
-              setEditingTransaction(transaction)
-              setModalOpen(true)
-            }
+            setEditingIncome(income)
+            setModalOpen(true)
           }}
-          onDelete={(income) => {
-            const transaction = transactions.content.find((t) => t.id === income.id)
-            if (transaction) {
-              setDeletingTransaction(transaction)
-            }
-          }}
+          onDelete={(income) => setDeletingIncome(income)}
         />
       </div>
 
@@ -285,27 +233,14 @@ export default function IngresosPage() {
         open={modalOpen}
         onOpenChange={(nextOpen) => {
           setModalOpen(nextOpen)
-          if (!nextOpen) setEditingTransaction(null)
+          if (!nextOpen) setEditingIncome(null)
         }}
-        initialValue={
-          editingTransaction
-            ? {
-                id: editingTransaction.id,
-                amount: editingTransaction.amount,
-                description: editingTransaction.description,
-                date: editingTransaction.transactionDate,
-                isRecurring: false,
-                source: editingTransaction.notes,
-                categoryId: editingTransaction.categoryId,
-                categoryName: editingTransaction.categoryName,
-              }
-            : null
-        }
+        initialValue={editingIncome}
         onSubmit={handleSubmit}
         isSubmitting={isCreating || isUpdating}
       />
 
-      <AlertDialog open={!!deletingTransaction} onOpenChange={(open) => !open && setDeletingTransaction(null)}>
+      <AlertDialog open={!!deletingIncome} onOpenChange={(open) => !open && setDeletingIncome(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar ingreso</AlertDialogTitle>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import type { Category, CategoryType } from "@/lib/types/category"
-import { getCategories } from "@/lib/services/category.service"
+import type { Category, CategoryRequest, CategoryType } from "@/lib/types/category"
+import { createCategory, deleteCategory, getCategories, updateCategory } from "@/lib/services/category.service"
 
 const categoriesCache = new Map<string, Category[]>()
 const categoryListeners = new Set<() => void>()
@@ -64,5 +64,64 @@ export function useCategories(type?: CategoryType) {
     isLoading,
     error,
     refetch,
+  }
+}
+
+export function useCreateCategory() {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const mutate = useCallback(async (payload: CategoryRequest) => {
+    setIsLoading(true)
+    try {
+      const response = await createCategory(payload)
+      invalidateCategoriesCache()
+      return response
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  return {
+    createCategory: mutate,
+    isLoading,
+  }
+}
+
+export function useUpdateCategory() {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const mutate = useCallback(async (id: number, payload: CategoryRequest) => {
+    setIsLoading(true)
+    try {
+      const response = await updateCategory(id, payload)
+      invalidateCategoriesCache()
+      return response
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  return {
+    updateCategory: mutate,
+    isLoading,
+  }
+}
+
+export function useDeleteCategory() {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const mutate = useCallback(async (id: number) => {
+    setIsLoading(true)
+    try {
+      await deleteCategory(id)
+      invalidateCategoriesCache()
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  return {
+    deleteCategory: mutate,
+    isLoading,
   }
 }

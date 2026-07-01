@@ -22,6 +22,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
+/**
+ * A user-owned category used to classify {@link Income} and {@link Expense} records.
+ *
+ * <p>Each user manages their own set of categories (no shared/system categories in this
+ * sprint); a category belongs to exactly one {@link User} and is unique per
+ * {@code (user, name, type)} triple, enforced by {@code uk_categories_user_name_type}.
+ */
 @Entity
 @Table(name = "categories")
 @EntityListeners(AuditingEntityListener.class)
@@ -35,8 +42,8 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(nullable = false, length = 100)
@@ -45,18 +52,6 @@ public class Category {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CategoryType type;
-
-    @Column(length = 50)
-    private String icon;
-
-    @Column(length = 7)
-    private String color;
-
-    @Column(length = 255)
-    private String description;
-
-    @Column(name = "is_system", nullable = false)
-    private boolean isSystem;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)

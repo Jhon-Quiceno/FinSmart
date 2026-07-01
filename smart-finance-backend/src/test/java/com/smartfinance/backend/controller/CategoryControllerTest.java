@@ -3,6 +3,7 @@ package com.smartfinance.backend.controller;
 import com.smartfinance.backend.config.SecurityConfig;
 import com.smartfinance.backend.dto.category.CategoryRequest;
 import com.smartfinance.backend.dto.category.CategoryResponse;
+import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.model.CategoryType;
 import com.smartfinance.backend.repository.UserRepository;
 import com.smartfinance.backend.service.CategoryService;
@@ -17,10 +18,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -42,7 +41,7 @@ class CategoryControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @MockitoBean
     private CategoryService categoryService;
@@ -58,13 +57,8 @@ class CategoryControllerTest {
 
     private static final String AUTH_HEADER = "Bearer test-token";
 
-    private final CategoryResponse salaryCategory = new CategoryResponse(
-            1L, "Salario", CategoryType.INCOME, "wallet", "#22C55E", "Ingreso principal", false, Instant.now(), Instant.now()
-    );
-
-    private final CategoryResponse foodCategory = new CategoryResponse(
-            2L, "Alimentación", CategoryType.EXPENSE, "utensils", "#F59E0B", "Comidas y snacks", false, Instant.now(), Instant.now()
-    );
+    private final CategoryResponse salaryCategory = new CategoryResponse(1L, "Salario", CategoryType.INCOME);
+    private final CategoryResponse foodCategory = new CategoryResponse(2L, "Alimentación", CategoryType.EXPENSE);
 
     @BeforeEach
     void setUp() {
@@ -97,10 +91,8 @@ class CategoryControllerTest {
 
     @Test
     void createCategoryReturns201WhenValid() throws Exception {
-        CategoryRequest request = new CategoryRequest("Freelance", CategoryType.INCOME, "laptop", "#3B82F6", "Ingresos por proyectos");
-        CategoryResponse response = new CategoryResponse(
-                10L, "Freelance", CategoryType.INCOME, "laptop", "#3B82F6", "Ingresos por proyectos", false, Instant.now(), Instant.now()
-        );
+        CategoryRequest request = new CategoryRequest("Freelance", CategoryType.INCOME);
+        CategoryResponse response = new CategoryResponse(10L, "Freelance", CategoryType.INCOME);
         when(categoryService.createCategory(any(CategoryRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/categories")
@@ -115,7 +107,7 @@ class CategoryControllerTest {
 
     @Test
     void createCategoryReturns400WhenNameIsBlank() throws Exception {
-        CategoryRequest request = new CategoryRequest("", CategoryType.INCOME, "icon", "#3B82F6", null);
+        CategoryRequest request = new CategoryRequest("", CategoryType.INCOME);
 
         mockMvc.perform(post("/api/categories")
                         .header("Authorization", AUTH_HEADER)
@@ -126,11 +118,21 @@ class CategoryControllerTest {
     }
 
     @Test
+    void createCategoryReturns400WhenTypeIsMissing() throws Exception {
+        String invalidBody = "{\"name\":\"Freelance\"}";
+
+        mockMvc.perform(post("/api/categories")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void updateCategoryReturns200WhenUpdatingOwnCategory() throws Exception {
-        CategoryRequest request = new CategoryRequest("Salario Actualizado", CategoryType.INCOME, "wallet", "#22C55E", "Ingreso mensual");
-        CategoryResponse response = new CategoryResponse(
-                1L, "Salario Actualizado", CategoryType.INCOME, "wallet", "#22C55E", "Ingreso mensual", false, Instant.now(), Instant.now()
-        );
+        CategoryRequest request = new CategoryRequest("Salario Actualizado", CategoryType.INCOME);
+        CategoryResponse response = new CategoryResponse(1L, "Salario Actualizado", CategoryType.INCOME);
         when(categoryService.updateCategory(eq(1L), any(CategoryRequest.class))).thenReturn(response);
 
         mockMvc.perform(put("/api/categories/1")
@@ -143,17 +145,17 @@ class CategoryControllerTest {
     }
 
     @Test
-    void updateCategoryReturns403WhenUpdatingAnotherUsersCategory() throws Exception {
-        CategoryRequest request = new CategoryRequest("Hack", CategoryType.INCOME, "icon", "#000000", null);
+    void updateCategoryReturns404WhenUpdatingAnotherUsersCategory() throws Exception {
+        CategoryRequest request = new CategoryRequest("Hack", CategoryType.INCOME);
         when(categoryService.updateCategory(eq(99L), any(CategoryRequest.class)))
-                .thenThrow(new AccessDeniedException("No tienes permisos sobre esta categoría"));
+                .thenThrow(new ResourceNotFoundException("Categoría no encontrada"));
 
         mockMvc.perform(put("/api/categories/99")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -165,14 +167,14 @@ class CategoryControllerTest {
     }
 
     @Test
-    void deleteCategoryReturns403WhenDeletingSystemCategory() throws Exception {
-        doThrow(new AccessDeniedException("No se pueden modificar categorías del sistema"))
+    void deleteCategoryReturns404WhenDeletingAnotherUsersCategory() throws Exception {
+        doThrow(new ResourceNotFoundException("Categoría no encontrada"))
                 .when(categoryService).deleteCategory(1L);
 
         mockMvc.perform(delete("/api/categories/1")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test

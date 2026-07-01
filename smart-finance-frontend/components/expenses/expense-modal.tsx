@@ -6,16 +6,21 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { CategorySelect } from "@/components/shared/category-select"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getTodayDateInput } from "@/lib/date"
 import { expenseSchema } from "@/lib/schemas/expense.schema"
-import type { Expense } from "@/lib/types/expense"
+import type { Expense, PaymentMethodType } from "@/lib/types/expense"
 
-const paymentMethods = ["Efectivo", "Tarjeta de Debito", "Tarjeta de Credito", "Transferencia"]
+const paymentMethods: { value: PaymentMethodType; label: string }[] = [
+  { value: "CASH", label: "Efectivo" },
+  { value: "DEBIT_CARD", label: "Tarjeta de Debito" },
+  { value: "CREDIT_CARD", label: "Tarjeta de Credito" },
+  { value: "TRANSFER", label: "Transferencia" },
+  { value: "OTHER", label: "Otro" },
+]
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>
 
@@ -31,8 +36,7 @@ const getDefaultValues = (expense?: Expense | null): ExpenseFormValues => ({
   amount: expense?.amount ?? 0,
   description: expense?.description ?? "",
   date: expense?.date ?? getTodayDateInput(),
-  isRecurring: expense?.isRecurring ?? false,
-  paymentMethod: expense?.paymentMethod ?? "Efectivo",
+  paymentMethod: expense?.paymentMethod ?? "CASH",
   categoryId: expense?.categoryId ?? null,
 })
 
@@ -134,8 +138,8 @@ export function ExpenseModal({ open, onOpenChange, initialValue, isSubmitting, o
                     <SelectContent>
                       <SelectGroup>
                         {paymentMethods.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {method}
+                          <SelectItem key={method.value} value={method.value}>
+                            {method.label}
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -156,19 +160,6 @@ export function ExpenseModal({ open, onOpenChange, initialValue, isSubmitting, o
                     <Input type="date" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="isRecurring"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center gap-2">
-                  <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(Boolean(checked))} />
-                  </FormControl>
-                  <FormLabel>Es un gasto recurrente</FormLabel>
                 </FormItem>
               )}
             />

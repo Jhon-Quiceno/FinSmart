@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * REST endpoints for the current user's {@link com.smartfinance.backend.model.Category} records.
+ */
 @RestController
 @RequestMapping("/api/categories")
 public class CategoryController {

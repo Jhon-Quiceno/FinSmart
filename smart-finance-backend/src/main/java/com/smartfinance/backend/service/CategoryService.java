@@ -6,23 +6,36 @@ import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.CategoryMapper;
 import com.smartfinance.backend.model.Category;
 import com.smartfinance.backend.model.CategoryType;
-import com.smartfinance.backend.model.User;
 import com.smartfinance.backend.repository.CategoryRepository;
+import com.smartfinance.backend.repository.UserRepository;
 import com.smartfinance.backend.security.SecurityUtils;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Business logic for managing the current user's {@link Category} records.
+ *
+ * <p>Every operation resolves the caller via {@link SecurityUtils#getCurrentUserId()} and
+ * scopes reads/writes strictly to that user. Mutations on a category owned by another user
+ * raise {@link ResourceNotFoundException} (HTTP 404) rather than a 403, so category
+ * existence is never leaked to a non-owner.
+ */
 @Service
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
     private final CategoryMapper categoryMapper;
 
-    public CategoryService(CategoryRepository categoryRepository, CategoryMapper categoryMapper) {
+    public CategoryService(
+            CategoryRepository categoryRepository,
+            UserRepository userRepository,
+            CategoryMapper categoryMapper
+    ) {
         this.categoryRepository = categoryRepository;
+        this.userRepository = userRepository;
         this.categoryMapper = categoryMapper;
     }
 
@@ -30,8 +43,8 @@ public class CategoryService {
     public List<CategoryResponse> getCategories(CategoryType type) {
         Long userId = SecurityUtils.getCurrentUserId();
         List<Category> categories = type == null
-                ? categoryRepository.findAllAccessibleByUserId(userId)
-                : categoryRepository.findAllAccessibleByUserIdAndType(userId, type);
+                ? categoryRepository.findAllByUser_IdOrderByNameAsc(userId)
+                : categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(userId, type);
 
         return categories.stream()
                 .map(categoryMapper::toResponse)
@@ -42,16 +55,11 @@ public class CategoryService {
     public CategoryResponse createCategory(CategoryRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         String normalizedName = request.name().trim();
-
-        if (categoryRepository.existsByUser_IdAndNameIgnoreCase(userId, normalizedName)) {
-            throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
-        }
+        validateNameNotDuplicated(userId, normalizedName, request.type(), null);
 
         Category category = categoryMapper.toEntity(request);
         category.setName(normalizedName);
-        category.setDescription(normalizeDescription(request.description()));
-        category.setSystem(false);
-        category.setUser(buildUserReference(userId));
+        category.setUser(userRepository.getReferenceById(userId));
 
         Category savedCategory = categoryRepository.save(category);
         return categoryMapper.toResponse(savedCategory);
@@ -60,15 +68,14 @@ public class CategoryService {
     @Transactional
     public CategoryResponse updateCategory(Long categoryId, CategoryRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+        Category category = findOwnedCategory(categoryId, userId);
 
-        validateOwnershipForMutation(category, userId);
-        validateDuplicateName(category, userId, request.name().trim());
+        String normalizedName = request.name().trim();
+        validateNameNotDuplicated(userId, normalizedName, request.type(), category);
 
         categoryMapper.updateEntityFromRequest(request, category);
-        category.setName(request.name().trim());
-        category.setDescription(normalizeDescription(request.description()));
+        category.setName(normalizedName);
+
         Category updatedCategory = categoryRepository.save(category);
         return categoryMapper.toResponse(updatedCategory);
     }
@@ -76,46 +83,25 @@ public class CategoryService {
     @Transactional
     public void deleteCategory(Long categoryId) {
         Long userId = SecurityUtils.getCurrentUserId();
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
-
-        validateOwnershipForMutation(category, userId);
+        Category category = findOwnedCategory(categoryId, userId);
         categoryRepository.delete(category);
     }
 
-    private void validateOwnershipForMutation(Category category, Long userId) {
-        if (category.isSystem()) {
-            throw new AccessDeniedException("No se pueden modificar categorías del sistema");
-        }
-
-        Long ownerId = category.getUser() == null ? null : category.getUser().getId();
-        if (!userId.equals(ownerId)) {
-            throw new AccessDeniedException("No tienes permisos sobre esta categoría");
-        }
+    private Category findOwnedCategory(Long categoryId, Long userId) {
+        return categoryRepository.findByIdAndUser_Id(categoryId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
     }
 
-    private void validateDuplicateName(Category category, Long userId, String newName) {
-        if (category.getName().equalsIgnoreCase(newName)) {
+    private void validateNameNotDuplicated(Long userId, String name, CategoryType type, Category categoryBeingUpdated) {
+        boolean unchanged = categoryBeingUpdated != null
+                && categoryBeingUpdated.getName().equalsIgnoreCase(name)
+                && categoryBeingUpdated.getType() == type;
+        if (unchanged) {
             return;
         }
 
-        if (categoryRepository.existsByUser_IdAndNameIgnoreCase(userId, newName)) {
-            throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
+        if (categoryRepository.existsByUser_IdAndNameIgnoreCaseAndType(userId, name, type)) {
+            throw new IllegalArgumentException("Ya existe una categoría con ese nombre y tipo");
         }
-    }
-
-    private User buildUserReference(Long userId) {
-        User user = new User();
-        user.setId(userId);
-        return user;
-    }
-
-    private String normalizeDescription(String description) {
-        if (description == null) {
-            return null;
-        }
-
-        String trimmed = description.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

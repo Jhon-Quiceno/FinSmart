@@ -16,8 +16,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -27,16 +25,25 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * Represents a financial transaction recorded for a user.
+ * A single expense record owned by a {@link User}.
+ *
+ * <p>{@link #category} is optional, mirroring {@link Income}: deleting a category does not
+ * delete expense history that referenced it (database foreign key uses
+ * {@code ON DELETE SET NULL}). {@link #paymentMethod} is required from this entity's
+ * introduction, unlike {@link #category} which may be left unclassified.
+ *
+ * <p>Note: unlike {@link Income}, this entity intentionally has no {@code source} field —
+ * "source of funds" is an income-only concept and is not part of the {@code ExpenseResponse}
+ * contract for this sprint.
  */
 @Entity
-@Table(name = "transactions")
+@Table(name = "expenses")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Transaction {
+public class Expense {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,17 +54,8 @@ public class Transaction {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id")
-    private Account account;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false, columnDefinition = "transaction_type")
-    private TransactionType type;
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
@@ -65,25 +63,12 @@ public class Transaction {
     @Column(length = 255)
     private String description;
 
-    @Column(name = "transaction_date", nullable = false)
-    private LocalDate transactionDate;
+    @Column(name = "date", nullable = false)
+    private LocalDate date;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "payment_method", columnDefinition = "payment_method_type")
+    @Column(name = "payment_method", nullable = false, length = 20)
     private PaymentMethodType paymentMethod;
-
-    @Column(name = "income_source_name", length = 100)
-    private String incomeSourceName;
-
-    @Column(name = "expense_payment_method_name", length = 100)
-    private String expensePaymentMethodName;
-
-    @Column(name = "expense_type_name", length = 100)
-    private String expenseTypeName;
-
-    @Column(columnDefinition = "TEXT")
-    private String notes;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)

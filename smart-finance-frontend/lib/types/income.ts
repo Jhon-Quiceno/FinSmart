@@ -3,8 +3,15 @@ export interface Income {
   amount: number
   description: string | null
   date: string
-  isRecurring: boolean
   source: string | null
   categoryId: number | null
   categoryName: string | null
+}
+
+export interface IncomeRequest {
+  amount: number
+  description?: string
+  date: string
+  source?: string
+  categoryId?: number | null
 }
