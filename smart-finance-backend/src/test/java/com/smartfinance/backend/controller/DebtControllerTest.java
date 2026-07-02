@@ -131,6 +131,18 @@ class DebtControllerTest {
     }
 
     @Test
+    void createDebtReturns400WhenInterestRateIsNegative() throws Exception {
+        DebtRequest request = new DebtRequest("Tarjeta de crédito", BigDecimal.valueOf(1000), BigDecimal.valueOf(-1), null);
+
+        mockMvc.perform(post("/api/debts")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void updateDebtReturns200WhenUpdatingOwnDebt() throws Exception {
         DebtUpdateRequest request = new DebtUpdateRequest("Tarjeta actualizada", BigDecimal.valueOf(3.0), LocalDate.of(2026, 12, 15));
         when(debtService.updateDebt(eq(1L), any(DebtUpdateRequest.class))).thenReturn(creditCardDebt);
@@ -177,7 +189,7 @@ class DebtControllerTest {
     }
 
     @Test
-    void getDebtsReturns401WithoutAuthToken() throws Exception {
+    void getDebtsReturns403WithoutAuthToken() throws Exception {
         mockMvc.perform(get("/api/debts"))
                 .andExpect(status().isForbidden());
     }

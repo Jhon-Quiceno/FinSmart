@@ -7,6 +7,7 @@ import com.smartfinance.backend.dto.recurring.RecurringPaymentPayResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentRequest;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentUpdateRequest;
+import com.smartfinance.backend.exception.RecurringPaymentAlreadyPaidException;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.model.RecurringFrequency;
 import com.smartfinance.backend.repository.UserRepository;
@@ -238,7 +239,18 @@ class RecurringPaymentControllerTest {
     }
 
     @Test
-    void getRecurringPaymentsReturns401WithoutAuthToken() throws Exception {
+    void payRecurringPaymentReturns409WhenAlreadyPaidConcurrently() throws Exception {
+        when(recurringPaymentService.payRecurringPayment(1L))
+                .thenThrow(new RecurringPaymentAlreadyPaidException("Este servicio ya fue marcado como pagado"));
+
+        mockMvc.perform(patch("/api/recurring/1/pay")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void getRecurringPaymentsReturns403WithoutAuthToken() throws Exception {
         mockMvc.perform(get("/api/recurring"))
                 .andExpect(status().isForbidden());
     }

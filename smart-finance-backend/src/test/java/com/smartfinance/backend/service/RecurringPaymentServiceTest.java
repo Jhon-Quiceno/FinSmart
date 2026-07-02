@@ -4,6 +4,7 @@ import com.smartfinance.backend.dto.recurring.RecurringPaymentPayResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentRequest;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentUpdateRequest;
+import com.smartfinance.backend.exception.RecurringPaymentAlreadyPaidException;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.RecurringPaymentMapper;
 import com.smartfinance.backend.model.Expense;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -183,6 +185,8 @@ class RecurringPaymentServiceTest {
         savedExpense.setId(77L);
 
         when(recurringPaymentRepository.findByIdAndUser_Id(20L, 1L)).thenReturn(Optional.of(recurringPayment));
+        when(recurringPaymentRepository.advanceNextPaymentDate(20L, LocalDate.of(2026, 6, 15), LocalDate.of(2026, 7, 15)))
+                .thenReturn(1);
         when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
         when(expenseRepository.save(org.mockito.ArgumentMatchers.any(Expense.class))).thenReturn(savedExpense);
         when(recurringPaymentRepository.save(recurringPayment)).thenReturn(recurringPayment);
@@ -195,6 +199,7 @@ class RecurringPaymentServiceTest {
 
         RecurringPaymentPayResponse result = recurringPaymentService.payRecurringPayment(20L);
 
+        verify(recurringPaymentRepository).advanceNextPaymentDate(20L, LocalDate.of(2026, 6, 15), LocalDate.of(2026, 7, 15));
         verify(expenseRepository).save(expenseCaptor.capture());
         Expense capturedExpense = expenseCaptor.getValue();
         Assertions.assertEquals("Netflix", capturedExpense.getDescription());
@@ -220,6 +225,8 @@ class RecurringPaymentServiceTest {
         savedExpense.setId(78L);
 
         when(recurringPaymentRepository.findByIdAndUser_Id(21L, 1L)).thenReturn(Optional.of(recurringPayment));
+        when(recurringPaymentRepository.advanceNextPaymentDate(21L, LocalDate.of(2026, 6, 15), LocalDate.of(2026, 6, 22)))
+                .thenReturn(1);
         when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
         when(expenseRepository.save(org.mockito.ArgumentMatchers.any(Expense.class))).thenReturn(savedExpense);
         when(recurringPaymentRepository.save(recurringPayment)).thenReturn(recurringPayment);
@@ -239,6 +246,7 @@ class RecurringPaymentServiceTest {
         // so it must NOT equal LocalDate.now().plusMonths(1) unless that happens to coincide.
         setAuthenticatedUser(1L);
         LocalDate longOverdueNextPaymentDate = LocalDate.of(2020, 1, 15);
+        LocalDate expectedNewNextPaymentDate = LocalDate.of(2020, 2, 15);
         RecurringPayment recurringPayment = buildRecurringPayment(22L, 1L, RecurringFrequency.MONTHLY, longOverdueNextPaymentDate, true);
         recurringPayment.setName("Seguro");
         recurringPayment.setAmount(BigDecimal.valueOf(50));
@@ -247,17 +255,42 @@ class RecurringPaymentServiceTest {
         savedExpense.setId(79L);
 
         when(recurringPaymentRepository.findByIdAndUser_Id(22L, 1L)).thenReturn(Optional.of(recurringPayment));
+        when(recurringPaymentRepository.advanceNextPaymentDate(22L, longOverdueNextPaymentDate, expectedNewNextPaymentDate))
+                .thenReturn(1);
         when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
         when(expenseRepository.save(org.mockito.ArgumentMatchers.any(Expense.class))).thenReturn(savedExpense);
         when(recurringPaymentRepository.save(recurringPayment)).thenReturn(recurringPayment);
         when(recurringPaymentMapper.toResponse(recurringPayment)).thenReturn(
                 new RecurringPaymentResponse(22L, "Seguro", BigDecimal.valueOf(50), RecurringFrequency.MONTHLY,
-                        LocalDate.of(2020, 2, 15), true, null, null)
+                        expectedNewNextPaymentDate, true, null, null)
         );
 
         recurringPaymentService.payRecurringPayment(22L);
 
-        Assertions.assertEquals(LocalDate.of(2020, 2, 15), recurringPayment.getNextPaymentDate());
+        Assertions.assertEquals(expectedNewNextPaymentDate, recurringPayment.getNextPaymentDate());
+    }
+
+    @Test
+    void payRecurringPaymentShouldThrowConflictAndNotCreateExpenseWhenAlreadyPaidConcurrently() {
+        // Regression test for the duplicate-/pay race: another concurrent execution already
+        // advanced nextPaymentDate in the database (advanceNextPaymentDate affects zero rows),
+        // so this call must reject with a 409-mapped exception and must NOT create an Expense.
+        setAuthenticatedUser(1L);
+        RecurringPayment recurringPayment = buildRecurringPayment(20L, 1L, RecurringFrequency.MONTHLY, LocalDate.of(2026, 6, 15), true);
+        recurringPayment.setName("Netflix");
+        recurringPayment.setAmount(BigDecimal.valueOf(15));
+
+        when(recurringPaymentRepository.findByIdAndUser_Id(20L, 1L)).thenReturn(Optional.of(recurringPayment));
+        when(recurringPaymentRepository.advanceNextPaymentDate(20L, LocalDate.of(2026, 6, 15), LocalDate.of(2026, 7, 15)))
+                .thenReturn(0);
+
+        Assertions.assertThrows(
+                RecurringPaymentAlreadyPaidException.class,
+                () -> recurringPaymentService.payRecurringPayment(20L)
+        );
+        verifyNoInteractions(expenseRepository);
+        // Only the failed atomic advance ran; no subsequent .save() persisting a "new" state.
+        verify(recurringPaymentRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test

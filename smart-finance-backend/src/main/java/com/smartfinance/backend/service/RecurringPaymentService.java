@@ -4,6 +4,7 @@ import com.smartfinance.backend.dto.recurring.RecurringPaymentPayResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentRequest;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentUpdateRequest;
+import com.smartfinance.backend.exception.RecurringPaymentAlreadyPaidException;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.RecurringPaymentMapper;
 import com.smartfinance.backend.model.Expense;
@@ -31,8 +32,12 @@ import java.time.LocalDate;
  * <p>{@link #payRecurringPayment} creates an {@link Expense} linked back to the recurring
  * payment (see {@link Expense#getRecurringPayment()}) and recalculates
  * {@code nextPaymentDate} from the <em>current</em> {@code nextPaymentDate} — never from
- * {@link LocalDate#now()} — so a late execution does not compress the following cycle. Both
- * the new expense and the updated recurring payment are saved in the same transaction.
+ * {@link LocalDate#now()} — so a late execution does not compress the following cycle. The date
+ * advance is applied first via {@link RecurringPaymentRepository#advanceNextPaymentDate} (an
+ * atomic conditional {@code UPDATE}, not a read-then-write), so a duplicate {@code /pay} call
+ * (client retry, double-click, two tabs) cannot race past this guard and create a second
+ * {@link Expense} for the same logical payment — a losing call gets
+ * {@link RecurringPaymentAlreadyPaidException} (HTTP 409) instead.
  */
 @Service
 public class RecurringPaymentService {
@@ -108,6 +113,18 @@ public class RecurringPaymentService {
         Long userId = SecurityUtils.getCurrentUserId();
         RecurringPayment recurringPayment = findOwnedRecurringPayment(recurringPaymentId, userId);
 
+        LocalDate currentNextPaymentDate = recurringPayment.getNextPaymentDate();
+        LocalDate newNextPaymentDate = computeNextPaymentDate(recurringPayment);
+
+        int updatedRows = recurringPaymentRepository.advanceNextPaymentDate(
+                recurringPaymentId, currentNextPaymentDate, newNextPaymentDate
+        );
+        if (updatedRows == 0) {
+            // Another concurrent /pay call already advanced nextPaymentDate first; do not
+            // create a duplicate Expense for the same logical payment.
+            throw new RecurringPaymentAlreadyPaidException("Este servicio ya fue marcado como pagado");
+        }
+
         Expense expense = new Expense();
         expense.setUser(userRepository.getReferenceById(userId));
         expense.setDescription(recurringPayment.getName());
@@ -118,7 +135,10 @@ public class RecurringPaymentService {
         expense.setRecurringPayment(recurringPayment);
         Expense savedExpense = expenseRepository.save(expense);
 
-        recurringPayment.setNextPaymentDate(computeNextPaymentDate(recurringPayment));
+        // The atomic UPDATE above already persisted the new date; keep the in-memory entity in
+        // sync (rather than relying on a stale nextPaymentDate) so the response DTO reflects
+        // the real post-advance value.
+        recurringPayment.setNextPaymentDate(newNextPaymentDate);
         RecurringPayment updatedRecurringPayment = recurringPaymentRepository.save(recurringPayment);
 
         return new RecurringPaymentPayResponse(

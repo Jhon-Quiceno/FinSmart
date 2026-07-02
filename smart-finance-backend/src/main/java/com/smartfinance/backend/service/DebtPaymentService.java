@@ -21,9 +21,11 @@ import java.time.LocalDate;
  * {@link Debt} owned by the current user.
  *
  * <p>{@link #createPayment} is the only place {@link Debt#getRemainingAmount()} is decremented
- * — it validates the debt belongs to the current user, rejects a payment amount greater than
- * the debt's current remaining balance, then saves both the new payment and the updated debt
- * in the same transaction.
+ * — it validates the debt belongs to the current user, then decrements the remaining balance
+ * via {@link DebtRepository#decrementRemainingAmount} (an atomic conditional {@code UPDATE},
+ * not a read-then-write) before persisting the {@link DebtPayment}, so two concurrent payments
+ * against the same debt cannot both pass validation against the same stale balance and cause a
+ * lost update.
  */
 @Service
 public class DebtPaymentService {
@@ -56,16 +58,23 @@ public class DebtPaymentService {
         Long userId = SecurityUtils.getCurrentUserId();
         Debt debt = findOwnedDebt(debtId, userId);
 
+        // Cheap fast-path check for a clearer error on the common case. This is NOT the real
+        // enforcement — debt.getRemainingAmount() here can be stale under concurrent payments,
+        // which is exactly the race the atomic UPDATE below closes.
         if (request.amount().compareTo(debt.getRemainingAmount()) > 0) {
+            throw new IllegalArgumentException("El abono no puede superar el saldo restante de la deuda");
+        }
+
+        int updatedRows = debtRepository.decrementRemainingAmount(debtId, request.amount());
+        if (updatedRows == 0) {
+            // Another concurrent payment consumed the remaining balance between our read above
+            // and this atomic update; reject without persisting the DebtPayment.
             throw new IllegalArgumentException("El abono no puede superar el saldo restante de la deuda");
         }
 
         DebtPayment payment = debtPaymentMapper.toEntity(request);
         payment.setDebt(debt);
         payment.setPaymentDate(request.paymentDate() != null ? request.paymentDate() : LocalDate.now());
-
-        debt.setRemainingAmount(debt.getRemainingAmount().subtract(request.amount()));
-        debtRepository.save(debt);
 
         DebtPayment savedPayment = debtPaymentRepository.save(payment);
         return debtPaymentMapper.toResponse(savedPayment);

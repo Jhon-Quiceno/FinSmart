@@ -28,7 +28,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +55,7 @@ class DebtPaymentServiceTest {
     }
 
     @Test
-    void createPaymentShouldDecrementRemainingAmountAndSaveBoth() {
+    void createPaymentShouldDecrementRemainingAmountAtomicallyAndSavePayment() {
         setAuthenticatedUser(1L);
         Debt debt = buildDebt(10L, 1L, BigDecimal.valueOf(1000), BigDecimal.valueOf(600));
         DebtPaymentRequest request = new DebtPaymentRequest(BigDecimal.valueOf(200), LocalDate.of(2026, 6, 1), "Abono mensual");
@@ -62,18 +65,18 @@ class DebtPaymentServiceTest {
         DebtPaymentResponse response = new DebtPaymentResponse(5L, 10L, BigDecimal.valueOf(200), LocalDate.of(2026, 6, 1), "Abono mensual", null);
 
         when(debtRepository.findByIdAndUser_Id(10L, 1L)).thenReturn(Optional.of(debt));
+        when(debtRepository.decrementRemainingAmount(10L, BigDecimal.valueOf(200))).thenReturn(1);
         when(debtPaymentMapper.toEntity(request)).thenReturn(mappedPayment);
-        when(debtRepository.save(debt)).thenReturn(debt);
         when(debtPaymentRepository.save(mappedPayment)).thenReturn(savedPayment);
         when(debtPaymentMapper.toResponse(savedPayment)).thenReturn(response);
 
         DebtPaymentResponse createdPayment = debtPaymentService.createPayment(10L, request);
 
         Assertions.assertEquals(5L, createdPayment.id());
-        Assertions.assertEquals(BigDecimal.valueOf(400), debt.getRemainingAmount());
         Assertions.assertEquals(debt, mappedPayment.getDebt());
         Assertions.assertEquals(LocalDate.of(2026, 6, 1), mappedPayment.getPaymentDate());
-        verify(debtRepository).save(debt);
+        verify(debtRepository).decrementRemainingAmount(10L, BigDecimal.valueOf(200));
+        verify(debtPaymentRepository).save(mappedPayment);
     }
 
     @Test
@@ -84,8 +87,8 @@ class DebtPaymentServiceTest {
         DebtPayment mappedPayment = new DebtPayment();
 
         when(debtRepository.findByIdAndUser_Id(10L, 1L)).thenReturn(Optional.of(debt));
+        when(debtRepository.decrementRemainingAmount(10L, BigDecimal.valueOf(100))).thenReturn(1);
         when(debtPaymentMapper.toEntity(request)).thenReturn(mappedPayment);
-        when(debtRepository.save(debt)).thenReturn(debt);
         when(debtPaymentRepository.save(mappedPayment)).thenReturn(mappedPayment);
         when(debtPaymentMapper.toResponse(mappedPayment)).thenReturn(
                 new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(100), LocalDate.now(), null, null)
@@ -97,7 +100,7 @@ class DebtPaymentServiceTest {
     }
 
     @Test
-    void createPaymentShouldThrowWhenAmountExceedsRemainingAmount() {
+    void createPaymentShouldThrowWhenAmountExceedsRemainingAmountOnFastPathCheck() {
         setAuthenticatedUser(1L);
         Debt debt = buildDebt(10L, 1L, BigDecimal.valueOf(1000), BigDecimal.valueOf(150));
         DebtPaymentRequest request = new DebtPaymentRequest(BigDecimal.valueOf(200), LocalDate.now(), null);
@@ -109,7 +112,32 @@ class DebtPaymentServiceTest {
                 () -> debtPaymentService.createPayment(10L, request)
         );
         Assertions.assertEquals("El abono no puede superar el saldo restante de la deuda", exception.getMessage());
-        Assertions.assertEquals(BigDecimal.valueOf(150), debt.getRemainingAmount());
+        // Rejected on the cheap fast-path check, so the atomic UPDATE (the real guard) is
+        // never even attempted, and nothing is persisted.
+        verify(debtRepository, never()).decrementRemainingAmount(any(), any());
+        verifyNoInteractions(debtPaymentRepository);
+    }
+
+    @Test
+    void createPaymentShouldRejectAndNotPersistWhenConcurrentDecrementLosesRace() {
+        // Regression test for the lost-update race: the in-memory debt.getRemainingAmount()
+        // looks sufficient (fast-path check passes), but a concurrent payment already consumed
+        // the balance in the database, so the atomic UPDATE affects zero rows. The service must
+        // reject the payment and must NOT persist a DebtPayment in that case.
+        setAuthenticatedUser(1L);
+        Debt debt = buildDebt(10L, 1L, BigDecimal.valueOf(1000), BigDecimal.valueOf(600));
+        DebtPaymentRequest request = new DebtPaymentRequest(BigDecimal.valueOf(200), LocalDate.now(), null);
+
+        when(debtRepository.findByIdAndUser_Id(10L, 1L)).thenReturn(Optional.of(debt));
+        when(debtRepository.decrementRemainingAmount(10L, BigDecimal.valueOf(200))).thenReturn(0);
+
+        IllegalArgumentException exception = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> debtPaymentService.createPayment(10L, request)
+        );
+        Assertions.assertEquals("El abono no puede superar el saldo restante de la deuda", exception.getMessage());
+        verify(debtRepository).decrementRemainingAmount(10L, BigDecimal.valueOf(200));
+        verifyNoInteractions(debtPaymentRepository);
     }
 
     @Test
@@ -120,8 +148,8 @@ class DebtPaymentServiceTest {
         DebtPayment mappedPayment = new DebtPayment();
 
         when(debtRepository.findByIdAndUser_Id(10L, 1L)).thenReturn(Optional.of(debt));
+        when(debtRepository.decrementRemainingAmount(10L, BigDecimal.valueOf(150))).thenReturn(1);
         when(debtPaymentMapper.toEntity(request)).thenReturn(mappedPayment);
-        when(debtRepository.save(debt)).thenReturn(debt);
         when(debtPaymentRepository.save(mappedPayment)).thenReturn(mappedPayment);
         when(debtPaymentMapper.toResponse(mappedPayment)).thenReturn(
                 new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(150), LocalDate.now(), null, null)
@@ -129,7 +157,8 @@ class DebtPaymentServiceTest {
 
         debtPaymentService.createPayment(10L, request);
 
-        Assertions.assertEquals(BigDecimal.ZERO, debt.getRemainingAmount());
+        verify(debtRepository).decrementRemainingAmount(10L, BigDecimal.valueOf(150));
+        verify(debtPaymentRepository).save(mappedPayment);
     }
 
     @Test

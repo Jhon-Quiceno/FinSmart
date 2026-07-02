@@ -1,5 +1,6 @@
 package com.smartfinance.backend.dto.debt;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -16,13 +17,14 @@ import java.time.LocalDate;
  * remaining amount are immutable after creation via this endpoint.
  *
  * @param name         debt name/description
- * @param interestRate optional interest rate percentage
+ * @param interestRate optional interest rate percentage, cannot be negative
  * @param dueDate      optional due date
  */
 public record DebtUpdateRequest(
         @NotBlank(message = "El nombre de la deuda es obligatorio")
         @Size(max = 150, message = "El nombre no puede superar 150 caracteres")
         String name,
+        @DecimalMin(value = "0.0", inclusive = true, message = "La tasa de interés no puede ser negativa")
         BigDecimal interestRate,
         LocalDate dueDate
 ) {

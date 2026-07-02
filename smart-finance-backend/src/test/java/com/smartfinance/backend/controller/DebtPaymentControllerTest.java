@@ -138,7 +138,7 @@ class DebtPaymentControllerTest {
     }
 
     @Test
-    void getPaymentsReturns401WithoutAuthToken() throws Exception {
+    void getPaymentsReturns403WithoutAuthToken() throws Exception {
         mockMvc.perform(get("/api/debts/10/payments"))
                 .andExpect(status().isForbidden());
     }
