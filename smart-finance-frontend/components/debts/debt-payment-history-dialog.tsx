@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -28,10 +29,16 @@ function formatDate(value: string): string {
 export function DebtPaymentHistoryDialog({ open, onOpenChange, debt }: DebtPaymentHistoryDialogProps) {
   const [page, setPage] = useState(1)
 
-  const { payments, isLoading } = useDebtPayments(open ? (debt?.id ?? null) : null, {
+  const { payments, isLoading, error } = useDebtPayments(open ? (debt?.id ?? null) : null, {
     page: page - 1,
     size: pageSize,
   })
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
 
   return (
     <Dialog

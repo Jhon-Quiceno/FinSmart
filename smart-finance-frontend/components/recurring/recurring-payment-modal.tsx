@@ -2,14 +2,14 @@
 
 import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, type Resolver } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getTodayDateInput } from "@/lib/date"
-import { recurringPaymentSchema } from "@/lib/schemas/recurring-payment.schema"
+import { recurringPaymentEditSchema, recurringPaymentSchema } from "@/lib/schemas/recurring-payment.schema"
 import type { RecurringPaymentFormValues } from "@/lib/schemas/recurring-payment.schema"
 import { RECURRING_FREQUENCIES } from "@/lib/types/recurring-payment"
 import type { RecurringFrequency, RecurringPayment } from "@/lib/types/recurring-payment"
@@ -19,7 +19,7 @@ interface RecurringPaymentModalProps {
   onOpenChange: (open: boolean) => void
   initialValue?: RecurringPayment | null
   isSubmitting: boolean
-  onSubmit: (values: RecurringPaymentFormValues) => Promise<void>
+  onSubmit: (values: RecurringPaymentFormValues) => Promise<boolean>
 }
 
 const frequencyOptions: { value: RecurringFrequency; label: string }[] = [
@@ -43,8 +43,14 @@ export function RecurringPaymentModal({
 }: RecurringPaymentModalProps) {
   const isEditing = !!initialValue
 
+  // Edit mode validates against recurringPaymentEditSchema (firstPaymentDate omitted,
+  // since it's locked and not sent to the backend); create mode validates the full schema.
+  const resolver = (
+    isEditing ? zodResolver(recurringPaymentEditSchema) : zodResolver(recurringPaymentSchema)
+  ) as unknown as Resolver<RecurringPaymentFormValues>
+
   const form = useForm<RecurringPaymentFormValues>({
-    resolver: zodResolver(recurringPaymentSchema),
+    resolver,
     mode: "onSubmit",
     reValidateMode: "onBlur",
     defaultValues: getDefaultValues(initialValue),
@@ -57,8 +63,10 @@ export function RecurringPaymentModal({
   }, [form, initialValue, open])
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    await onSubmit(values)
-    form.reset(getDefaultValues(null))
+    const success = await onSubmit(values)
+    if (success) {
+      form.reset(getDefaultValues(null))
+    }
   })
 
   return (

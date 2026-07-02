@@ -10,6 +10,7 @@ export interface Expense {
   paymentMethod: PaymentMethodType
   categoryId: number | null
   categoryName: string | null
+  recurringPaymentId: number | null
 }
 
 export interface ExpenseRequest {

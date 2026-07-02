@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Plus, Repeat, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -36,19 +36,30 @@ import type {
 
 const pageSize = 9
 
+// A month averages 52/12 ≈ 4.33 weeks. Used only to estimate the display total
+// for weekly recurring payments; the backend's actual nextPaymentDate recalculation
+// uses an exact plusWeeks(1), this constant is UI-only.
+const WEEKS_PER_MONTH_ESTIMATE = 52 / 12
+
 export default function ServiciosPage() {
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<RecurringPayment | null>(null)
   const [deletingItem, setDeletingItem] = useState<RecurringPayment | null>(null)
 
-  const { recurringPayments, isLoading } = useRecurringPayments({ page: page - 1, size: pageSize })
+  const { recurringPayments, isLoading, error } = useRecurringPayments({ page: page - 1, size: pageSize })
 
   const { createRecurringPayment, isLoading: isCreating } = useCreateRecurringPayment()
   const { updateRecurringPayment, isLoading: isUpdating } = useUpdateRecurringPayment()
   const { deleteRecurringPayment, isLoading: isDeleting } = useDeleteRecurringPayment()
   const { toggleRecurringPayment, isLoading: isToggling } = useToggleRecurringPayment()
   const { payRecurringPayment, isLoading: isMarkingAsPaid } = usePayRecurringPayment()
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
 
   const activeCount = useMemo(
     () => recurringPayments.content.filter((item) => item.isActive).length,
@@ -58,11 +69,15 @@ export default function ServiciosPage() {
     () =>
       recurringPayments.content
         .filter((item) => item.isActive)
-        .reduce((sum, item) => sum + (item.frequency === "MONTHLY" ? item.amount : item.amount * 4), 0),
+        .reduce(
+          (sum, item) =>
+            sum + (item.frequency === "MONTHLY" ? item.amount : item.amount * WEEKS_PER_MONTH_ESTIMATE),
+          0,
+        ),
     [recurringPayments.content],
   )
 
-  const handleSubmit = async (values: RecurringPaymentFormValues) => {
+  const handleSubmit = async (values: RecurringPaymentFormValues): Promise<boolean> => {
     try {
       if (editingItem) {
         const payload: RecurringPaymentUpdateRequest = {
@@ -85,8 +100,10 @@ export default function ServiciosPage() {
 
       setModalOpen(false)
       setEditingItem(null)
+      return true
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible guardar el servicio"))
+      return false
     }
   }
 
@@ -166,7 +183,9 @@ export default function ServiciosPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Estimado mensual</p>
-                    <p className="text-xl font-bold text-foreground">${monthlyTotal.toLocaleString("es-MX")}</p>
+                    <p className="text-xl font-bold text-foreground">
+                      ${monthlyTotal.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AlertCircle, CreditCard, Plus, TrendingDown } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -38,12 +38,18 @@ export default function DeudasPage() {
   const [payingDebt, setPayingDebt] = useState<Debt | null>(null)
   const [historyDebt, setHistoryDebt] = useState<Debt | null>(null)
 
-  const { debts, isLoading } = useDebts({ page: page - 1, size: pageSize })
+  const { debts, isLoading, error } = useDebts({ page: page - 1, size: pageSize })
 
   const { createDebt, isLoading: isCreating } = useCreateDebt()
   const { updateDebt, isLoading: isUpdating } = useUpdateDebt()
   const { deleteDebt, isLoading: isDeleting } = useDeleteDebt()
   const { createDebtPayment, isLoading: isPaying } = useCreateDebtPayment()
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
 
   const totalDebt = useMemo(() => debts.content.reduce((sum, debt) => sum + debt.totalAmount, 0), [debts.content])
   const totalRemaining = useMemo(
@@ -53,7 +59,7 @@ export default function DeudasPage() {
   const totalPaid = totalDebt - totalRemaining
   const overallProgress = totalDebt > 0 ? (totalPaid / totalDebt) * 100 : 0
 
-  const handleSubmit = async (values: DebtFormValues) => {
+  const handleSubmit = async (values: DebtFormValues): Promise<boolean> => {
     try {
       if (editingDebt) {
         const payload: DebtUpdateRequest = {
@@ -76,8 +82,10 @@ export default function DeudasPage() {
 
       setModalOpen(false)
       setEditingDebt(null)
+      return true
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible guardar la deuda"))
+      return false
     }
   }
 
@@ -93,8 +101,8 @@ export default function DeudasPage() {
     }
   }
 
-  const handleRegisterPayment = async (values: DebtPaymentFormValues) => {
-    if (!payingDebt) return
+  const handleRegisterPayment = async (values: DebtPaymentFormValues): Promise<boolean> => {
+    if (!payingDebt) return false
 
     const payload: DebtPaymentRequest = {
       amount: values.amount,
@@ -106,8 +114,10 @@ export default function DeudasPage() {
       await createDebtPayment(payingDebt.id, payload)
       toast.success("Pago registrado correctamente")
       setPayingDebt(null)
+      return true
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No fue posible registrar el pago"))
+      return false
     }
   }
 

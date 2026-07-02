@@ -2,12 +2,12 @@
 
 import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, type Resolver } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { debtSchema } from "@/lib/schemas/debt.schema"
+import { debtEditSchema, debtSchema } from "@/lib/schemas/debt.schema"
 import type { DebtFormValues } from "@/lib/schemas/debt.schema"
 import type { Debt } from "@/lib/types/debt"
 
@@ -16,7 +16,7 @@ interface DebtModalProps {
   onOpenChange: (open: boolean) => void
   initialValue?: Debt | null
   isSubmitting: boolean
-  onSubmit: (values: DebtFormValues) => Promise<void>
+  onSubmit: (values: DebtFormValues) => Promise<boolean>
 }
 
 const getDefaultValues = (debt?: Debt | null): DebtFormValues => ({
@@ -29,8 +29,14 @@ const getDefaultValues = (debt?: Debt | null): DebtFormValues => ({
 export function DebtModal({ open, onOpenChange, initialValue, isSubmitting, onSubmit }: DebtModalProps) {
   const isEditing = !!initialValue
 
+  // Edit mode validates against debtEditSchema (totalAmount omitted, since it's
+  // locked and not sent to the backend); create mode validates the full debtSchema.
+  const resolver = (
+    isEditing ? zodResolver(debtEditSchema) : zodResolver(debtSchema)
+  ) as unknown as Resolver<DebtFormValues>
+
   const form = useForm<DebtFormValues>({
-    resolver: zodResolver(debtSchema),
+    resolver,
     mode: "onSubmit",
     reValidateMode: "onBlur",
     defaultValues: getDefaultValues(initialValue),
@@ -43,8 +49,10 @@ export function DebtModal({ open, onOpenChange, initialValue, isSubmitting, onSu
   }, [form, initialValue, open])
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    await onSubmit(values)
-    form.reset(getDefaultValues(null))
+    const success = await onSubmit(values)
+    if (success) {
+      form.reset(getDefaultValues(null))
+    }
   })
 
   return (

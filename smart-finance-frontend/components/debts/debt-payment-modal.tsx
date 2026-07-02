@@ -18,7 +18,7 @@ interface DebtPaymentModalProps {
   onOpenChange: (open: boolean) => void
   debt: Debt | null
   isSubmitting: boolean
-  onSubmit: (values: DebtPaymentFormValues) => Promise<void>
+  onSubmit: (values: DebtPaymentFormValues) => Promise<boolean>
 }
 
 const getDefaultValues = (): DebtPaymentFormValues => ({
@@ -42,8 +42,10 @@ export function DebtPaymentModal({ open, onOpenChange, debt, isSubmitting, onSub
   }, [form, open])
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    await onSubmit(values)
-    form.reset(getDefaultValues())
+    const success = await onSubmit(values)
+    if (success) {
+      form.reset(getDefaultValues())
+    }
   })
 
   return (
