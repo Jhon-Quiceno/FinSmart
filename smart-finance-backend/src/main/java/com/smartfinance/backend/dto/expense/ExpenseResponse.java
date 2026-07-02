@@ -13,8 +13,10 @@ import java.time.LocalDate;
  * @param description   optional free-text note
  * @param date          date the expense was paid
  * @param paymentMethod method used to pay the expense
- * @param categoryId    identifier of the associated category, or {@code null} if unclassified
- * @param categoryName  name of the associated category, or {@code null} if unclassified
+ * @param categoryId          identifier of the associated category, or {@code null} if unclassified
+ * @param categoryName        name of the associated category, or {@code null} if unclassified
+ * @param recurringPaymentId  identifier of the recurring payment this expense was generated
+ *                            from, or {@code null} for a manually created expense
  */
 public record ExpenseResponse(
         Long id,
@@ -23,6 +25,7 @@ public record ExpenseResponse(
         LocalDate date,
         PaymentMethodType paymentMethod,
         Long categoryId,
-        String categoryName
+        String categoryName,
+        Long recurringPaymentId
 ) {
 }

@@ -3,12 +3,12 @@ package com.smartfinance.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.smartfinance.backend.config.SecurityConfig;
-import com.smartfinance.backend.dto.expense.ExpenseRequest;
-import com.smartfinance.backend.dto.expense.ExpenseResponse;
+import com.smartfinance.backend.dto.debt.DebtRequest;
+import com.smartfinance.backend.dto.debt.DebtResponse;
+import com.smartfinance.backend.dto.debt.DebtUpdateRequest;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
-import com.smartfinance.backend.model.PaymentMethodType;
 import com.smartfinance.backend.repository.UserRepository;
-import com.smartfinance.backend.service.ExpenseService;
+import com.smartfinance.backend.service.DebtService;
 import com.smartfinance.backend.service.JwtService;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +30,6 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -41,9 +40,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ExpenseController.class)
+@WebMvcTest(DebtController.class)
 @Import(SecurityConfig.class)
-class ExpenseControllerTest {
+class DebtControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -51,7 +50,7 @@ class ExpenseControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @MockitoBean
-    private ExpenseService expenseService;
+    private DebtService debtService;
 
     @MockitoBean
     private JwtService jwtService;
@@ -64,9 +63,9 @@ class ExpenseControllerTest {
 
     private static final String AUTH_HEADER = "Bearer test-token";
 
-    private final ExpenseResponse groceriesExpense = new ExpenseResponse(
-            1L, BigDecimal.valueOf(85), "Supermercado", LocalDate.of(2026, 6, 5),
-            PaymentMethodType.DEBIT_CARD, 2L, "Alimentación", null
+    private final DebtResponse creditCardDebt = new DebtResponse(
+            1L, "Tarjeta de crédito", BigDecimal.valueOf(1000), BigDecimal.valueOf(1000),
+            BigDecimal.valueOf(2.5), LocalDate.of(2026, 12, 1), null, null
     );
 
     @BeforeEach
@@ -78,55 +77,52 @@ class ExpenseControllerTest {
     }
 
     @Test
-    void getExpensesReturns200WithPagedResults() throws Exception {
+    void getDebtsReturns200WithPagedResults() throws Exception {
         Pageable pageable = PageRequest.of(0, 20);
-        when(expenseService.getExpenses(isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(groceriesExpense), pageable, 1));
+        when(debtService.getDebts(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(creditCardDebt), pageable, 1));
 
-        mockMvc.perform(get("/api/expenses").header("Authorization", AUTH_HEADER))
+        mockMvc.perform(get("/api/debts").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].paymentMethod").value("DEBIT_CARD"))
+                .andExpect(jsonPath("$.content[0].name").value("Tarjeta de crédito"))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
-    void getExpensesFiltersByCategoryDateRangeAndPaymentMethod() throws Exception {
-        Pageable pageable = PageRequest.of(0, 20);
-        when(expenseService.getExpenses(
-                eq(2L), eq(LocalDate.of(2026, 6, 1)), eq(LocalDate.of(2026, 6, 30)),
-                eq(PaymentMethodType.DEBIT_CARD), any(Pageable.class)
-        )).thenReturn(new PageImpl<>(List.of(groceriesExpense), pageable, 1));
+    void createDebtReturns201WhenValid() throws Exception {
+        DebtRequest request = new DebtRequest("Tarjeta de crédito", BigDecimal.valueOf(1000), BigDecimal.valueOf(2.5), null);
+        when(debtService.createDebt(any(DebtRequest.class))).thenReturn(creditCardDebt);
 
-        mockMvc.perform(get("/api/expenses?categoryId=2&from=2026-06-01&to=2026-06-30&paymentMethod=DEBIT_CARD")
-                        .header("Authorization", AUTH_HEADER))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1));
-    }
-
-    @Test
-    void createExpenseReturns201WhenValid() throws Exception {
-        ExpenseRequest request = new ExpenseRequest(
-                BigDecimal.valueOf(85), "Supermercado", LocalDate.of(2026, 6, 5), PaymentMethodType.DEBIT_CARD, 2L
-        );
-        when(expenseService.createExpense(any(ExpenseRequest.class))).thenReturn(groceriesExpense);
-
-        mockMvc.perform(post("/api/expenses")
+        mockMvc.perform(post("/api/debts")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1L));
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.remainingAmount").value(1000));
     }
 
     @Test
-    void createExpenseReturns400WhenPaymentMethodIsMissing() throws Exception {
+    void createDebtReturns400WhenTotalAmountIsZero() throws Exception {
+        DebtRequest request = new DebtRequest("Tarjeta de crédito", BigDecimal.ZERO, null, null);
+
+        mockMvc.perform(post("/api/debts")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createDebtReturns400WhenNameIsMissing() throws Exception {
         String invalidBody = """
-                {"amount": 85, "description": "Super", "date": "2026-06-05", "categoryId": 2}
+                {"totalAmount": 1000}
                 """;
 
-        mockMvc.perform(post("/api/expenses")
+        mockMvc.perform(post("/api/debts")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -135,12 +131,10 @@ class ExpenseControllerTest {
     }
 
     @Test
-    void createExpenseReturns400WhenAmountIsZero() throws Exception {
-        ExpenseRequest request = new ExpenseRequest(
-                BigDecimal.ZERO, "Supermercado", LocalDate.of(2026, 6, 5), PaymentMethodType.CASH, null
-        );
+    void createDebtReturns400WhenInterestRateIsNegative() throws Exception {
+        DebtRequest request = new DebtRequest("Tarjeta de crédito", BigDecimal.valueOf(1000), BigDecimal.valueOf(-1), null);
 
-        mockMvc.perform(post("/api/expenses")
+        mockMvc.perform(post("/api/debts")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -149,14 +143,11 @@ class ExpenseControllerTest {
     }
 
     @Test
-    void updateExpenseReturns200WhenUpdatingOwnExpense() throws Exception {
-        ExpenseRequest request = new ExpenseRequest(
-                BigDecimal.valueOf(90), "Supermercado actualizado", LocalDate.of(2026, 6, 5),
-                PaymentMethodType.CREDIT_CARD, 2L
-        );
-        when(expenseService.updateExpense(eq(1L), any(ExpenseRequest.class))).thenReturn(groceriesExpense);
+    void updateDebtReturns200WhenUpdatingOwnDebt() throws Exception {
+        DebtUpdateRequest request = new DebtUpdateRequest("Tarjeta actualizada", BigDecimal.valueOf(3.0), LocalDate.of(2026, 12, 15));
+        when(debtService.updateDebt(eq(1L), any(DebtUpdateRequest.class))).thenReturn(creditCardDebt);
 
-        mockMvc.perform(put("/api/expenses/1")
+        mockMvc.perform(put("/api/debts/1")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -165,15 +156,12 @@ class ExpenseControllerTest {
     }
 
     @Test
-    void updateExpenseReturns404WhenUpdatingAnotherUsersExpense() throws Exception {
-        ExpenseRequest request = new ExpenseRequest(
-                BigDecimal.valueOf(90), "Supermercado actualizado", LocalDate.of(2026, 6, 5),
-                PaymentMethodType.CREDIT_CARD, null
-        );
-        when(expenseService.updateExpense(eq(99L), any(ExpenseRequest.class)))
-                .thenThrow(new ResourceNotFoundException("Gasto no encontrado"));
+    void updateDebtReturns404WhenUpdatingAnotherUsersDebt() throws Exception {
+        DebtUpdateRequest request = new DebtUpdateRequest("Tarjeta actualizada", null, null);
+        when(debtService.updateDebt(eq(99L), any(DebtUpdateRequest.class)))
+                .thenThrow(new ResourceNotFoundException("Deuda no encontrada"));
 
-        mockMvc.perform(put("/api/expenses/99")
+        mockMvc.perform(put("/api/debts/99")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -182,27 +170,27 @@ class ExpenseControllerTest {
     }
 
     @Test
-    void deleteExpenseReturns204WhenDeletingOwnExpense() throws Exception {
-        mockMvc.perform(delete("/api/expenses/1")
+    void deleteDebtReturns204WhenDeletingOwnDebt() throws Exception {
+        mockMvc.perform(delete("/api/debts/1")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void deleteExpenseReturns404WhenDeletingAnotherUsersExpense() throws Exception {
-        doThrow(new ResourceNotFoundException("Gasto no encontrado"))
-                .when(expenseService).deleteExpense(1L);
+    void deleteDebtReturns404WhenDeletingAnotherUsersDebt() throws Exception {
+        doThrow(new ResourceNotFoundException("Deuda no encontrada"))
+                .when(debtService).deleteDebt(1L);
 
-        mockMvc.perform(delete("/api/expenses/1")
+        mockMvc.perform(delete("/api/debts/1")
                         .header("Authorization", AUTH_HEADER)
                         .with(csrf()))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void getExpensesReturns401WithoutAuthToken() throws Exception {
-        mockMvc.perform(get("/api/expenses"))
+    void getDebtsReturns403WithoutAuthToken() throws Exception {
+        mockMvc.perform(get("/api/debts"))
                 .andExpect(status().isForbidden());
     }
 }

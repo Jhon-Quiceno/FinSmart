@@ -17,6 +17,7 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 5. **Nueva tabla `ai_messages`** (Sprint 5) — el frontend promete "historial de conversación" en el asistente IA, pero no existía dónde guardarlo.
 6. **`notifications` se movió de Sprint 1 a Sprint 5**, porque ahí es donde se crea la entidad `Notification` y el panel del navbar que la consume.
 7. **Sprint 2 sumó gestión completa de categorías en el frontend** (crear/editar/eliminar en `/categorias`, con alta rápida desde el propio selector de categoría en los formularios de ingreso/gasto), más allá del alcance original que solo pedía cargar categorías reales en los formularios. El backend ya lo soportaba desde el inicio (`/api/categories` con CRUD completo); solo faltaba la capa de UI, que fue verificada end-to-end (build, lint y tests en verde) antes de darse por completada.
+8. **Sprint 3 — decisiones no explícitas en el alcance original:** `total_amount`/`remaining_amount` de una deuda son inmutables desde `PUT /api/debts/{id}` (solo cambian por creación o por `DebtPayment`), para no romper la trazabilidad que pide la migración `V4`. `PATCH /api/recurring/{id}/pay` devuelve `{recurringPayment, expenseId}` en vez de solo el servicio actualizado, para que el cliente pueda navegar al gasto generado sin una consulta extra. El descuento de `remaining_amount` y el avance de `next_payment_date` se implementaron como `UPDATE` atómico condicional en el repositorio (no lectura-validación-escritura), tras detectarse en revisión que dos pagos concurrentes sobre la misma deuda o el mismo servicio podían pisarse entre sí y perder o duplicar movimientos.
 
 ---
 
@@ -86,31 +87,31 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 ---
 
 ## 🟨 Sprint 3 — Deudas y Servicios Recurrentes
-> Gestión de obligaciones, pagos periódicos, y trazabilidad de abonos y pagos generados · **18 tareas**
+> Gestión de obligaciones, pagos periódicos, y trazabilidad de abonos y pagos generados · **18/18 tareas**
 
 ### Backend
-- [ ] `[BE]` Entidad `Debt` + `DebtRepository` + `DebtService` — campos: nombre, monto total, restante, interés, vencimiento
-- [ ] `[BE]` CRUD endpoints `/api/debts` — `GET`, `POST`, `PUT`, `DELETE` (sin lógica de pago embebida; eso vive en `DebtPayment`)
-- [ ] `[BE]` Entidad `DebtPayment` + `DebtPaymentRepository` + `DebtPaymentService` — registra abonos individuales y actualiza `remaining_amount` de la deuda al crearse
-- [ ] `[BE]` Endpoints `/api/debts/{id}/payments` — `POST` (crear abono) y `GET` (historial de abonos de esa deuda)
-- [ ] `[BE]` Entidad `RecurringPayment` + Repository + Service — frecuencia `MONTHLY`/`WEEKLY`, `next_payment_date`, `is_active`
-- [ ] `[BE]` CRUD endpoints `/api/recurring` — calcular automáticamente `next_payment_date` al crear/actualizar
-- [ ] `[BE]` Lógica de activación/desactivación de servicios (`PATCH /api/recurring/{id}/toggle`)
-- [ ] `[BE]` Endpoint `PATCH /api/recurring/{id}/pay` — crea un `Expense` vinculado (`recurring_payment_id`) con el monto del servicio, y recalcula `next_payment_date`
+- [x] `[BE]` Entidad `Debt` + `DebtRepository` + `DebtService` — campos: nombre, monto total, restante, interés, vencimiento
+- [x] `[BE]` CRUD endpoints `/api/debts` — `GET`, `POST`, `PUT`, `DELETE` (sin lógica de pago embebida; eso vive en `DebtPayment`)
+- [x] `[BE]` Entidad `DebtPayment` + `DebtPaymentRepository` + `DebtPaymentService` — registra abonos individuales y actualiza `remaining_amount` de la deuda al crearse
+- [x] `[BE]` Endpoints `/api/debts/{id}/payments` — `POST` (crear abono) y `GET` (historial de abonos de esa deuda)
+- [x] `[BE]` Entidad `RecurringPayment` + Repository + Service — frecuencia `MONTHLY`/`WEEKLY`, `next_payment_date`, `is_active`
+- [x] `[BE]` CRUD endpoints `/api/recurring` — calcular automáticamente `next_payment_date` al crear/actualizar
+- [x] `[BE]` Lógica de activación/desactivación de servicios (`PATCH /api/recurring/{id}/toggle`)
+- [x] `[BE]` Endpoint `PATCH /api/recurring/{id}/pay` — crea un `Expense` vinculado (`recurring_payment_id`) con el monto del servicio, y recalcula `next_payment_date`
 
 ### Base de datos
-- [ ] `[DB]` **Migración `V4`** — tablas `debts`, `debt_payments`, `recurring_payments`
-- [ ] `[DB]` **Migración `V5`** — columna `recurring_payment_id` (FK nullable → `recurring_payments`, `ON DELETE SET NULL`) en `expenses`, para trazar qué gastos vinieron de un servicio recurrente
+- [x] `[DB]` **Migración `V4`** — tablas `debts`, `debt_payments`, `recurring_payments`
+- [x] `[DB]` **Migración `V5`** — columna `recurring_payment_id` (FK nullable → `recurring_payments`, `ON DELETE SET NULL`) en `expenses`, para trazar qué gastos vinieron de un servicio recurrente
 
 ### Frontend
-- [ ] `[FE]` Página `/deudas` conectada al backend — listado con progreso de pago (`remaining/total`)
-- [ ] `[FE]` Formulario crear/editar deuda — campos de tasa de interés y fecha de vencimiento
-- [ ] `[FE]` Panel de registro de abono a deuda — conectado a `POST /api/debts/{id}/payments`, refresca `remaining_amount` en tiempo real
-- [ ] `[FE]` Historial de abonos por deuda — conectado a `GET /api/debts/{id}/payments`
-- [ ] `[FE]` Página `/servicios` conectada al backend — tarjetas con próxima fecha de pago
-- [ ] `[FE]` Formulario crear/editar servicio recurrente — selector de frecuencia y monto
-- [ ] `[FE]` Toggle de activación/desactivación de servicios desde la UI con actualización inmediata
-- [ ] `[FE]` Botón "Marcar como pagado" en tarjeta de servicio — conectado a `PATCH /api/recurring/{id}/pay`
+- [x] `[FE]` Página `/deudas` conectada al backend — listado con progreso de pago (`remaining/total`)
+- [x] `[FE]` Formulario crear/editar deuda — campos de tasa de interés y fecha de vencimiento
+- [x] `[FE]` Panel de registro de abono a deuda — conectado a `POST /api/debts/{id}/payments`, refresca `remaining_amount` en tiempo real
+- [x] `[FE]` Historial de abonos por deuda — conectado a `GET /api/debts/{id}/payments`
+- [x] `[FE]` Página `/servicios` conectada al backend — tarjetas con próxima fecha de pago
+- [x] `[FE]` Formulario crear/editar servicio recurrente — selector de frecuencia y monto
+- [x] `[FE]` Toggle de activación/desactivación de servicios desde la UI con actualización inmediata
+- [x] `[FE]` Botón "Marcar como pagado" en tarjeta de servicio — conectado a `PATCH /api/recurring/{id}/pay`
 
 ---
 
@@ -201,7 +202,7 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 |--------|--------|--------|----|----|----|----|-------------|
 | 1 | Base del Sistema (JWT Real) | 15/15 | 7 | 5 | 0 | 3 | `V1`, `V2` |
 | 2 | Ingresos y Gastos | 17/17 | 9 | 7 | 0 | 1 | `V3` |
-| 3 | Deudas y Servicios | 18 | 8 | 8 | 0 | 2 | `V4`, `V5` |
+| 3 | Deudas y Servicios | 18/18 | 8 | 8 | 0 | 2 | `V4`, `V5` |
 | 4 | Motor Financiero + Dashboard | 15 | 8 | 6 | 0 | 1 | `V6` |
 | 5 | IA + n8n | 17 | 5 | 3 | 7 | 2 | `V7`, `V8` |
 | 6 | Reportes y Launch | 14 | 6 | 7 | 0 | 1 | `V9` |

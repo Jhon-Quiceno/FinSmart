@@ -1,9 +1,10 @@
 "use client"
 
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Repeat, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Expense, PaymentMethodType } from "@/lib/types/expense"
 
 const paymentMethodLabels: Record<PaymentMethodType, string> = {
@@ -56,7 +57,19 @@ export function ExpensesTable({ expenses, isLoading, onEdit, onDelete }: Expense
           {!isLoading &&
             expenses.map((expense) => (
               <TableRow key={expense.id}>
-                <TableCell className="font-medium">{expense.description || "Sin descripcion"}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <span>{expense.description || "Sin descripcion"}</span>
+                    {expense.recurringPaymentId !== null && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>Generado automaticamente por un servicio recurrente</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{expense.categoryName || "Sin categoria"}</TableCell>
                 <TableCell>{paymentMethodLabels[expense.paymentMethod] ?? expense.paymentMethod}</TableCell>
                 <TableCell className="font-semibold text-destructive">
