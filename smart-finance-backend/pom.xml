@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.6</version>
+		<version>4.0.7</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.smartfinance</groupId>
@@ -29,6 +29,20 @@
 		<java.version>21</java.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<!-- jjwt-jackson still depends on the classic Jackson 2.x line (com.fasterxml.jackson.core),
+			     which Spring Boot 4's BOM no longer manages since it moved to Jackson 3 (tools.jackson.core).
+			     Pin explicitly to the latest available 2.21.x patch to close CVE-2026-54512/54513/54514/54516/54517/54518.
+			     CVE-2026-54515 has no published 2.x fix yet (2.18.9/2.21.5 not released) - tracked as an accepted
+			     risk given jjwt-jackson only binds generic claim maps, not the annotated POJO shape the CVE requires. -->
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>2.21.4</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
