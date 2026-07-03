@@ -116,28 +116,30 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 ---
 
 ## 🟥 Sprint 4 — Motor Financiero + Dashboard Real
-> Cálculos automáticos y dashboard conectado · **15 tareas**
+> Cálculos automáticos y dashboard conectado · **15/15 tareas**
 
 ### Backend
-- [ ] `[BE]` `FinancialAnalysisService.java` — balance mensual (`totalIngresos - totalGastos`) por `userId` y periodo, incluyendo gastos generados por servicios recurrentes pagados
-- [ ] `[BE]` Cálculo porcentaje gasto/ingreso — alertar si supera el 80%
-- [ ] `[BE]` Cálculo nivel de endeudamiento — suma deudas activas vs ingresos
-- [ ] `[BE]` Cálculo ahorro mensual real y proyección de ahorro anual
-- [ ] `[BE]` Top categorías de gasto — ranking de categorías por monto mensual
-- [ ] `[BE]` Endpoint `GET /api/analysis/summary` — balance, ahorro, % gasto, endeudamiento, top categorías
-- [ ] `[BE]` Lógica de recomendaciones por reglas — si `gasto_comida > 30%` → recomendación específica
-- [ ] `[BE]` Endpoint `GET /api/analysis/recommendations` — lista de alertas y sugerencias del motor
+- [x] `[BE]` `FinancialAnalysisService.java` — balance mensual (`totalIngresos - totalGastos`) por `userId` y periodo, incluyendo gastos generados por servicios recurrentes pagados
+- [x] `[BE]` Cálculo porcentaje gasto/ingreso — alertar si supera el 80%
+- [x] `[BE]` Cálculo nivel de endeudamiento — suma deudas activas vs ingresos
+- [x] `[BE]` Cálculo ahorro mensual real y proyección de ahorro anual
+- [x] `[BE]` Top categorías de gasto — ranking de categorías por monto mensual
+- [x] `[BE]` Endpoint `GET /api/analysis/summary` — balance, ahorro, % gasto, endeudamiento, top categorías
+- [x] `[BE]` Lógica de recomendaciones por reglas — si `gasto_comida > 30%` → recomendación específica
+- [x] `[BE]` Endpoint `GET /api/analysis/recommendations` — lista de alertas y sugerencias del motor
 
 ### Base de datos
-- [ ] `[DB]` **Migración `V6`** — tabla `financial_analysis`: snapshot mensual por usuario (`total_income`, `total_expense`, `savings`, `expense_ratio`, `debt_ratio`, `top_category_id`, `period_year`, `period_month`), `UNIQUE(user_id, period_year, period_month)`
+- [x] `[DB]` **Migración `V6`** — tabla `financial_analysis`: snapshot mensual por usuario (`total_income`, `total_expense`, `savings`, `expense_ratio`, `debt_ratio`, `top_category_id`, `period_year`, `period_month`), `UNIQUE(user_id, period_year, period_month)`
 
 ### Frontend
-- [ ] `[FE]` Dashboard conectado a `GET /api/analysis/summary` — Balance Card con datos reales
-- [ ] `[FE]` Stats Cards de ingresos, gastos, deudas y ahorros con datos reales del backend
-- [ ] `[FE]` Gráfico Ingresos vs Gastos (Recharts) alimentado por datos reales del período
-- [ ] `[FE]` Gráfico de distribución por categoría con datos reales de top categorías
-- [ ] `[FE]` Panel de alertas y recomendaciones conectado a `GET /api/analysis/recommendations`
-- [ ] `[FE]` Transacciones recientes — últimos 10 movimientos combinados (ingresos + gastos)
+- [x] `[FE]` Dashboard conectado a `GET /api/analysis/summary` — Balance Card con datos reales
+- [x] `[FE]` Stats Cards de ingresos, gastos, deudas y ahorros con datos reales del backend
+- [x] `[FE]` Gráfico Ingresos vs Gastos (Recharts) alimentado por datos reales del período
+- [x] `[FE]` Gráfico de distribución por categoría con datos reales de top categorías
+- [x] `[FE]` Panel de alertas y recomendaciones conectado a `GET /api/analysis/recommendations`
+- [x] `[FE]` Transacciones recientes — últimos 10 movimientos combinados (ingresos + gastos)
+
+**Sprint 4 — decisiones no explícitas en el alcance original:** `GET /api/analysis/summary` embebe la serie de 6 meses, el ranking de top categorías y las últimas 10 transacciones combinadas (ingresos + gastos) en una sola respuesta, para que el dashboard completo se alimente con una única llamada en vez de múltiples endpoints. El motor de recomendaciones implementa la regla "gasto en comida > 30% del ingreso" como una combinación de (a) una regla genérica "la categoría con mayor gasto supera el 30% del ingreso" y (b) un match case-insensitive por nombre contra términos de comida (`comida`, `alimentación`, `mercado`, `supermercado`, `restaurante`), ya que las categorías son por-usuario y de nombre libre — no existe un set semilla global contra el cual matchear por id. El snapshot de `financial_analysis` se persiste con un `INSERT ... ON CONFLICT (user_id, period_year, period_month) DO UPDATE` atómico (mismo patrón de updates atómicos del Sprint 3), para que recalcular un período ya snapshoteado nunca produzca una fila duplicada. `GET /api/analysis/recommendations` reutiliza `getSummary()` internamente (evita recalcular dos veces) — como efecto colateral, cada llamada a `/recommendations` también refresca el snapshot, lo cual es intencional/inofensivo porque el upsert es idempotente para el mismo período. El balance y el ahorro ya cuentan los gastos generados por `PATCH /api/recurring/{id}/pay` sin lógica adicional, porque esos gastos ya son filas reales de `expenses` (Sprint 3) y quedan incluidos al sumar los gastos del período. El nivel de endeudamiento usa `debts.remaining_amount` (no `total_amount`) frente a los ingresos del período, ya que `Debt` no tiene un flag `status`/`isActive` — una deuda con `remaining_amount = 0` ya contribuye `0` a la suma sin necesitar un filtro aparte. El frontend expone `TopCategoryResponse.totalAmount` y `MonthlySeriesPoint.totalIncome`/`totalExpense` con esos nombres exactos (no `amount`/`income`/`expense`) para calzar 1:1 con los DTOs reales del backend — se detectó y corrigió un desvío de nombres entre lo que el agente de frontend infirió del plan y el DTO real ya construido por el agente de backend. Datos de ejemplo para Jhon Quiceno (`user_id=2`) cargados vía script SQL de desarrollo (`smart-finance-backend/src/main/resources/db/dev-seed/seed_jhon_quiceno.sql`, fuera de Flyway) y verificados end-to-end contra Postgres real + dashboard en navegador; se detectó y corrigió una categoría de ingreso duplicada (`Salario` vs. una `Salario Mensual` preexistente de pruebas manuales) y un ingreso de julio redundante que dicha categoría duplicada arrastraba. La verificación visual en navegador encontró y corrigió dos bugs reales del frontend: el listado de transacciones recientes usaba `transaction.id` como `key` de React sin distinguir tipo, colisionando cuando un ingreso y un gasto comparten el mismo id (secuencias independientes); y la leyenda del gráfico de categorías mostraba siempre `0%` porque `percentage` llega del backend como fracción (`0.32`) y el componente no la multiplicaba por 100. Una revisión independiente (agente en contexto limpio) encontró y se corrigieron además: un N+1 en `buildRecentTransactions` (`findTop10ByUser_IdOrderByDateDescIdDesc` sin `JOIN FETCH category`, hasta 20 SELECTs extra por llamada a `/summary`; reemplazado por `findRecentByUserId(userId, Pageable)` con `LEFT JOIN FETCH`), y dos indicadores de tendencia incorrectos en `StatsCards`: la card de "Deudas Totales" siempre se pintaba en rojo (`debtsChange < 0 ? "up" : "down"` con `debtsChange` fijo en `0`, ya que el backend no expone una serie histórica de deuda) y la card de "Ingresos del Mes" tenía `trend="up"` fijo sin mirar el signo real del cambio.
 
 ---
 
@@ -203,7 +205,7 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 | 1 | Base del Sistema (JWT Real) | 15/15 | 7 | 5 | 0 | 3 | `V1`, `V2` |
 | 2 | Ingresos y Gastos | 17/17 | 9 | 7 | 0 | 1 | `V3` |
 | 3 | Deudas y Servicios | 18/18 | 8 | 8 | 0 | 2 | `V4`, `V5` |
-| 4 | Motor Financiero + Dashboard | 15 | 8 | 6 | 0 | 1 | `V6` |
+| 4 | Motor Financiero + Dashboard | 15/15 | 8 | 6 | 0 | 1 | `V6` |
 | 5 | IA + n8n | 17 | 5 | 3 | 7 | 2 | `V7`, `V8` |
 | 6 | Reportes y Launch | 14 | 6 | 7 | 0 | 1 | `V9` |
 | **Total** | | **96** | **43** | **36** | **7** | **10** | **9 migraciones** |

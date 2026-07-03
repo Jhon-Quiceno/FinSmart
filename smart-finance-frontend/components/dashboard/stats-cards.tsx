@@ -63,7 +63,7 @@ export function StatsCards({
         value={`$${monthlyIncome.toLocaleString('es-MX')}`}
         change={incomeChange}
         icon={<TrendingUp className="h-5 w-5 text-success" />}
-        trend="up"
+        trend={incomeChange >= 0 ? "up" : "down"}
       />
       <StatCard
         title="Gastos del Mes"
@@ -77,7 +77,7 @@ export function StatsCards({
         value={`$${totalDebts.toLocaleString('es-MX')}`}
         change={debtsChange}
         icon={<CreditCard className="h-5 w-5 text-warning" />}
-        trend={debtsChange < 0 ? "up" : "down"}
+        trend={debtsChange === 0 ? "neutral" : debtsChange < 0 ? "up" : "down"}
       />
       <StatCard
         title="Ahorros"

@@ -1,5 +1,6 @@
 # Build
 FROM eclipse-temurin:21-jdk-alpine AS build
+RUN apk update && apk upgrade --no-cache
 WORKDIR /workspace
 COPY .mvn/ .mvn/
 COPY mvnw mvnw
@@ -10,6 +11,7 @@ RUN ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
 # Runtime
 FROM eclipse-temurin:21-jre-alpine
+RUN apk update && apk upgrade --no-cache
 WORKDIR /app
 
 RUN addgroup -S spring && adduser -S spring -G spring

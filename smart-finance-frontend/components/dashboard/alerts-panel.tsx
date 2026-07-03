@@ -1,53 +1,16 @@
 "use client"
 
-import { AlertTriangle, Calendar, CreditCard, Zap } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { AnalysisRecommendation } from "@/lib/types/analysis"
 
-interface Alert {
-  id: number
-  title: string
-  description: string
-  type: "warning" | "danger" | "info"
-  dueDate?: string
-  icon: React.ReactNode
+interface AlertsPanelProps {
+  recommendations: AnalysisRecommendation[]
 }
 
-const alerts: Alert[] = [
-  {
-    id: 1,
-    title: "Pago de Netflix",
-    description: "Vence en 3 dias",
-    type: "warning",
-    dueDate: "25 Mar",
-    icon: <Calendar className="h-4 w-4" />,
-  },
-  {
-    id: 2,
-    title: "Tarjeta de Credito",
-    description: "Pago minimo pendiente",
-    type: "danger",
-    dueDate: "20 Mar",
-    icon: <CreditCard className="h-4 w-4" />,
-  },
-  {
-    id: 3,
-    title: "Servicio de Luz",
-    description: "Vence en 5 dias",
-    type: "warning",
-    dueDate: "28 Mar",
-    icon: <Zap className="h-4 w-4" />,
-  },
-  {
-    id: 4,
-    title: "Prestamo Personal",
-    description: "Cuota mensual proxima",
-    type: "info",
-    dueDate: "01 Abr",
-    icon: <CreditCard className="h-4 w-4" />,
-  },
-]
+export function AlertsPanel({ recommendations }: AlertsPanelProps) {
+  const alerts = recommendations.filter((item) => item.type === "ALERT")
 
-export function AlertsPanel() {
   return (
     <div className="rounded-xl bg-card border border-border p-5">
       <div className="flex items-center gap-2 mb-4">
@@ -55,46 +18,35 @@ export function AlertsPanel() {
         <h3 className="text-lg font-semibold text-foreground">Alertas Proximas</h3>
       </div>
 
-      <div className="space-y-3">
-        {alerts.map((alert) => (
-          <div
-            key={alert.id}
-            className={cn(
-              "flex items-center gap-3 rounded-lg border p-3 transition-smooth",
-              alert.type === "danger" && "border-destructive/30 bg-destructive/5",
-              alert.type === "warning" && "border-warning/30 bg-warning/5",
-              alert.type === "info" && "border-primary/30 bg-primary/5"
-            )}
-          >
+      {alerts.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          No hay alertas activas por el momento.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {alerts.map((alert, index) => (
             <div
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
-                alert.type === "danger" && "bg-destructive/10 text-destructive",
-                alert.type === "warning" && "bg-warning/10 text-warning",
-                alert.type === "info" && "bg-primary/10 text-primary"
-              )}
+              key={`${alert.categoryId ?? "general"}-${index}`}
+              className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 transition-smooth"
             >
-              {alert.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{alert.title}</p>
-              <p className="text-xs text-muted-foreground">{alert.description}</p>
-            </div>
-            {alert.dueDate && (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0 bg-destructive/10 text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">{alert.message}</p>
+              </div>
               <span
                 className={cn(
                   "text-xs font-medium px-2 py-1 rounded-md shrink-0",
-                  alert.type === "danger" && "bg-destructive/10 text-destructive",
-                  alert.type === "warning" && "bg-warning/10 text-warning",
-                  alert.type === "info" && "bg-primary/10 text-primary"
+                  "bg-destructive/10 text-destructive",
                 )}
               >
-                {alert.dueDate}
+                {alert.severity}
               </span>
-            )}
-          </div>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

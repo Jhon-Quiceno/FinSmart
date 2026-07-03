@@ -38,4 +38,14 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     @Query("UPDATE Debt d SET d.remainingAmount = d.remainingAmount - :amount "
             + "WHERE d.id = :id AND d.remainingAmount >= :amount")
     int decrementRemainingAmount(@Param("id") Long id, @Param("amount") BigDecimal amount);
+
+    /**
+     * Sums {@code remainingAmount} across every debt owned by the user, used by
+     * {@code FinancialAnalysisService} as "total debt" for the debt-ratio calculation. There is
+     * no {@code status}/{@code isActive} flag on {@link Debt} (see the class Javadoc) — a debt
+     * with {@code remainingAmount = 0} contributes {@code 0} here, which is the correct "no
+     * longer active" behavior without needing a separate filter.
+     */
+    @Query("SELECT COALESCE(SUM(d.remainingAmount), 0) FROM Debt d WHERE d.user.id = :userId")
+    BigDecimal sumRemainingAmountByUser(@Param("userId") Long userId);
 }

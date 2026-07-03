@@ -1,9 +1,15 @@
 package com.smartfinance.backend.repository;
 
 import com.smartfinance.backend.model.Expense;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -13,8 +19,38 @@ import java.util.Optional;
  * {@link com.smartfinance.backend.repository.specification.ExpenseSpecifications} instead of a
  * static {@code @Query}, since a JPQL {@code :param IS NULL OR ...} pattern fails against
  * PostgreSQL when the parameter is null (the driver cannot infer its type).
+ *
+ * <p>{@link #sumAmountByUserAndPeriod}, {@link #findTopCategoriesByUserAndPeriod} and
+ * {@link #findRecentByUserId} back {@code FinancialAnalysisService} (Sprint 4) and are plain
+ * {@code @Query}/derived methods rather than
+ * {@link org.springframework.data.jpa.domain.Specification} builders, since their filters
+ * (userId + a fixed date range) are never optional.
  */
 public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpecificationExecutor<Expense> {
 
     Optional<Expense> findByIdAndUser_Id(Long id, Long userId);
+
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e "
+            + "WHERE e.user.id = :userId AND e.date >= :start AND e.date <= :end")
+    BigDecimal sumAmountByUserAndPeriod(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
+    );
+
+    @Query("SELECT e.category.id AS categoryId, e.category.name AS categoryName, SUM(e.amount) AS total "
+            + "FROM Expense e WHERE e.user.id = :userId AND e.date >= :start AND e.date <= :end "
+            + "GROUP BY e.category.id, e.category.name "
+            + "ORDER BY SUM(e.amount) DESC")
+    List<CategoryTotalProjection> findTopCategoriesByUserAndPeriod(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
+    );
+
+    /**
+     * {@code LEFT JOIN FETCH category} so rendering {@code category.name} for each of the (at
+     * most 10) rows returned doesn't trigger a lazy-load per row — without it, building the
+     * "recent transactions" list is an N+1 (one extra SELECT per row) on every
+     * {@code GET /api/analysis/summary} call.
+     */
+    @Query("SELECT e FROM Expense e LEFT JOIN FETCH e.category WHERE e.user.id = :userId "
+            + "ORDER BY e.date DESC, e.id DESC")
+    List<Expense> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
 }

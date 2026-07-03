@@ -23,25 +23,41 @@ import { useCreateExpense, useDeleteExpense, useExpenses, useUpdateExpense } fro
 import { getApiErrorMessage } from "@/lib/api-client"
 import type { ExpenseFormValues } from "@/lib/schemas/expense.schema"
 import type { Expense, ExpenseRequest } from "@/lib/types/expense"
+import { ALL_PERIODS_VALUE, getCurrentPeriodValue, periodToDateRange } from "@/lib/utils/period"
 
 const pageSize = 10
+// Large enough to cover a personal finance user's history in one page; only used to
+// compute the true filtered total/count below, never rendered as a paginated table.
+const summaryPageSize = 1000
 
 export default function GastosPage() {
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("none")
-  const [from, setFrom] = useState("")
-  const [to, setTo] = useState("")
+  const [period, setPeriod] = useState(getCurrentPeriodValue())
   const [modalOpen, setModalOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null)
 
+  const { from, to } = useMemo(() => periodToDateRange(period), [period])
+  const categoryId = selectedCategory !== "none" ? Number(selectedCategory) : undefined
+
   const { expenses, isLoading } = useExpenses({
     page: page - 1,
     size: pageSize,
-    categoryId: selectedCategory !== "none" ? Number(selectedCategory) : undefined,
-    from: from || undefined,
-    to: to || undefined,
+    categoryId,
+    from,
+    to,
+  })
+
+  // Separate fetch (same filters, no pagination) so the "Total gastos filtrados" card
+  // reflects every matching expense, not just the 10 shown on the current table page.
+  const { expenses: allFilteredExpenses, isLoading: isSummaryLoading } = useExpenses({
+    page: 0,
+    size: summaryPageSize,
+    categoryId,
+    from,
+    to,
   })
 
   const { createExpense, isLoading: isCreating } = useCreateExpense()
@@ -60,9 +76,18 @@ export default function GastosPage() {
   }, [expenses.content, searchQuery])
 
   const totalExpenses = useMemo(
-    () => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0),
-    [filteredExpenses],
+    () => allFilteredExpenses.content.reduce((sum, expense) => sum + expense.amount, 0),
+    [allFilteredExpenses.content],
   )
+
+  const hasActiveFilters = searchQuery.trim() !== "" || selectedCategory !== "none" || period !== ALL_PERIODS_VALUE
+
+  const handleClearFilters = () => {
+    setSearchQuery("")
+    setSelectedCategory("none")
+    setPeriod(ALL_PERIODS_VALUE)
+    setPage(1)
+  }
 
   const handleSubmit = async (values: ExpenseFormValues) => {
     const payload: ExpenseRequest = {
@@ -121,7 +146,7 @@ export default function GastosPage() {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">
-          {isLoading ? (
+          {isSummaryLoading ? (
             <div className="flex flex-col gap-2">
               <Skeleton className="h-4 w-40" />
               <Skeleton className="h-8 w-48" />
@@ -139,7 +164,9 @@ export default function GastosPage() {
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">{filteredExpenses.length} transacciones</p>
+              <p className="text-sm text-muted-foreground">
+                {allFilteredExpenses.totalElements} transacciones
+              </p>
             </div>
           )}
         </div>
@@ -152,16 +179,13 @@ export default function GastosPage() {
             setSelectedCategory(value)
             setPage(1)
           }}
-          from={from}
-          onFromChange={(value) => {
-            setFrom(value)
+          period={period}
+          onPeriodChange={(value) => {
+            setPeriod(value)
             setPage(1)
           }}
-          to={to}
-          onToChange={(value) => {
-            setTo(value)
-            setPage(1)
-          }}
+          onClearFilters={handleClearFilters}
+          hasActiveFilters={hasActiveFilters}
         />
 
         <div className="flex items-center justify-end gap-2">

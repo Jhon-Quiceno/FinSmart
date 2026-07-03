@@ -1,18 +1,23 @@
 "use client"
 
-import { CalendarDays, Search } from "lucide-react"
+import { FilterX, Search } from "lucide-react"
 import { CategorySelect } from "@/components/shared/category-select"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getRecentPeriodOptions } from "@/lib/utils/period"
+
+const periodOptions = getRecentPeriodOptions()
 
 interface ExpensesFiltersProps {
   searchQuery: string
   onSearchChange: (value: string) => void
   selectedCategory: string
   onCategoryChange: (value: string) => void
-  from: string
-  onFromChange: (value: string) => void
-  to: string
-  onToChange: (value: string) => void
+  period: string
+  onPeriodChange: (value: string) => void
+  onClearFilters: () => void
+  hasActiveFilters: boolean
 }
 
 export function ExpensesFilters({
@@ -20,10 +25,10 @@ export function ExpensesFilters({
   onSearchChange,
   selectedCategory,
   onCategoryChange,
-  from,
-  onFromChange,
-  to,
-  onToChange,
+  period,
+  onPeriodChange,
+  onClearFilters,
+  hasActiveFilters,
 }: ExpensesFiltersProps) {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
@@ -44,15 +49,28 @@ export function ExpensesFilters({
         placeholder="Todas las categorias"
       />
 
-      <div className="relative">
-        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input type="date" value={from} onChange={(event) => onFromChange(event.target.value)} className="pl-10" />
-      </div>
+      <Select value={period} onValueChange={onPeriodChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecciona un periodo" />
+        </SelectTrigger>
+        <SelectContent>
+          {periodOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <div className="relative">
-        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input type="date" value={to} onChange={(event) => onToChange(event.target.value)} className="pl-10" />
-      </div>
+      <Button
+        variant="outline"
+        onClick={onClearFilters}
+        disabled={!hasActiveFilters}
+        className="gap-2"
+      >
+        <FilterX data-icon="inline-start" />
+        Limpiar filtros
+      </Button>
     </div>
   )
 }
