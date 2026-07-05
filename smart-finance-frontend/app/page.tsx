@@ -11,6 +11,8 @@ import { ExpensesByCategoryChart } from "@/components/dashboard/expenses-by-cate
 import { AlertsPanel } from "@/components/dashboard/alerts-panel"
 import { AIRecommendations } from "@/components/dashboard/ai-recommendations"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
+import { MonthEndPredictionCard } from "@/components/dashboard/month-end-prediction-card"
+import { AiInsightsCard } from "@/components/dashboard/ai-insights-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { useAnalysisRecommendations, useAnalysisSummary } from "@/hooks/use-analysis"
@@ -152,6 +154,11 @@ export default function DashboardPage() {
               ) : (
                 <ExpensesByCategoryChart topCategories={summary.topCategories} />
               )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <MonthEndPredictionCard />
+              <AiInsightsCard />
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

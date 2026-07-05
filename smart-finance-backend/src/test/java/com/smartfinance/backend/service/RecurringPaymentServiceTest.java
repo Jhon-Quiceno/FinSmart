@@ -5,6 +5,7 @@ import com.smartfinance.backend.dto.recurring.RecurringPaymentRequest;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentUpdateRequest;
 import com.smartfinance.backend.exception.RecurringPaymentAlreadyPaidException;
+import com.smartfinance.backend.exception.RecurringPaymentNotDueYetException;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.RecurringPaymentMapper;
 import com.smartfinance.backend.model.Expense;
@@ -17,10 +18,10 @@ import com.smartfinance.backend.repository.RecurringPaymentRepository;
 import com.smartfinance.backend.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -31,16 +32,27 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RecurringPaymentServiceTest {
+
+    // "Today" for every test: on-or-after every existing pay-fixture's nextPaymentDate
+    // (2026-06-15, 2020-01-15) so the happy-path tests keep passing, and strictly before
+    // the future-dated fixture used by the new "not due yet" test.
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-07-15T08:00:00Z"), ZoneOffset.UTC
+    );
 
     @Mock
     private RecurringPaymentRepository recurringPaymentRepository;
@@ -54,8 +66,14 @@ class RecurringPaymentServiceTest {
     @Mock
     private RecurringPaymentMapper recurringPaymentMapper;
 
-    @InjectMocks
     private RecurringPaymentService recurringPaymentService;
+
+    @BeforeEach
+    void setUp() {
+        recurringPaymentService = new RecurringPaymentService(
+                recurringPaymentRepository, expenseRepository, userRepository, recurringPaymentMapper, FIXED_CLOCK
+        );
+    }
 
     @AfterEach
     void clearContext() {
@@ -204,7 +222,7 @@ class RecurringPaymentServiceTest {
         Expense capturedExpense = expenseCaptor.getValue();
         Assertions.assertEquals("Netflix", capturedExpense.getDescription());
         Assertions.assertEquals(BigDecimal.valueOf(15), capturedExpense.getAmount());
-        Assertions.assertEquals(LocalDate.now(), capturedExpense.getDate());
+        Assertions.assertEquals(LocalDate.now(FIXED_CLOCK), capturedExpense.getDate());
         Assertions.assertEquals(PaymentMethodType.OTHER, capturedExpense.getPaymentMethod());
         Assertions.assertNull(capturedExpense.getCategory());
         Assertions.assertEquals(recurringPayment, capturedExpense.getRecurringPayment());
@@ -291,6 +309,29 @@ class RecurringPaymentServiceTest {
         verifyNoInteractions(expenseRepository);
         // Only the failed atomic advance ran; no subsequent .save() persisting a "new" state.
         verify(recurringPaymentRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void payRecurringPaymentShouldThrowNotDueYetAndNotCreateExpenseOrAdvanceWhenNextPaymentDateIsInTheFuture() {
+        // FIXED_CLOCK's "today" is 2026-07-15; this fixture's nextPaymentDate is still in the
+        // future, so the call must be rejected before the atomic advance is even attempted.
+        setAuthenticatedUser(1L);
+        RecurringPayment recurringPayment = buildRecurringPayment(23L, 1L, RecurringFrequency.MONTHLY, LocalDate.of(2026, 8, 1), true);
+        recurringPayment.setName("Seguro de auto");
+        recurringPayment.setAmount(BigDecimal.valueOf(40));
+
+        when(recurringPaymentRepository.findByIdAndUser_Id(23L, 1L)).thenReturn(Optional.of(recurringPayment));
+
+        Assertions.assertThrows(
+                RecurringPaymentNotDueYetException.class,
+                () -> recurringPaymentService.payRecurringPayment(23L)
+        );
+        verify(recurringPaymentRepository, never()).advanceNextPaymentDate(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()
+        );
+        verifyNoInteractions(expenseRepository);
+        verify(recurringPaymentRepository, never()).save(org.mockito.ArgumentMatchers.any());
+        Assertions.assertEquals(LocalDate.of(2026, 8, 1), recurringPayment.getNextPaymentDate());
     }
 
     @Test

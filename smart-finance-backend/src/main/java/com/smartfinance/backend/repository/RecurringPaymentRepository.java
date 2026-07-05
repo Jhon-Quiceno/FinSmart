@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -19,6 +20,12 @@ public interface RecurringPaymentRepository extends JpaRepository<RecurringPayme
     Optional<RecurringPayment> findByIdAndUser_Id(Long id, Long userId);
 
     Page<RecurringPayment> findAllByUser_Id(Long userId, Pageable pageable);
+
+    /**
+     * Used by {@code com.smartfinance.backend.service.ai.FinancialContextBuilder} to list the
+     * active recurring payments included in the AI system prompt.
+     */
+    List<RecurringPayment> findAllByUser_IdAndActiveTrue(Long userId);
 
     /**
      * Atomically advances {@code nextPaymentDate} to {@code newDate}, but only if it still
@@ -38,5 +45,22 @@ public interface RecurringPaymentRepository extends JpaRepository<RecurringPayme
             @Param("id") Long id,
             @Param("currentDate") LocalDate currentDate,
             @Param("newDate") LocalDate newDate
+    );
+
+    /**
+     * Scans every active recurring payment (across all users) whose {@code nextPaymentDate}
+     * falls within {@code [start, end]}, backing {@code PaymentReminderJob} (Sprint 5, Batch 3).
+     * {@code JOIN FETCH r.user} avoids a lazy-load per row when the job reads
+     * {@code payment.getUser().getId()} to dispatch the reminder.
+     *
+     * <p>A single scan across all users, rather than one query per user, is what keeps this job
+     * cheap regardless of how many users the platform has — it relies on the
+     * {@code idx_recurring_payments_active_next_date} composite index (see
+     * {@code V10__add_performance_indexes.sql}).
+     */
+    @Query("SELECT r FROM RecurringPayment r JOIN FETCH r.user "
+            + "WHERE r.active = true AND r.nextPaymentDate BETWEEN :start AND :end")
+    List<RecurringPayment> findActiveByNextPaymentDateBetween(
+            @Param("start") LocalDate start, @Param("end") LocalDate end
     );
 }

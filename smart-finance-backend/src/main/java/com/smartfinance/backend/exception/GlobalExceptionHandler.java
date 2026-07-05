@@ -1,6 +1,7 @@
 package com.smartfinance.backend.exception;
 
 import com.smartfinance.backend.dto.error.ErrorResponse;
+import com.smartfinance.backend.service.ai.AiChatOrchestrator;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -94,12 +95,81 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(RecurringPaymentNotDueYetException.class)
+    public ResponseEntity<ErrorResponse> handleRecurringPaymentNotDueYet(
+            RecurringPaymentNotDueYetException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(
             AccessDeniedException ex,
             HttpServletRequest request
     ) {
         return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    /**
+     * Both exceptions are terminal failures of {@link AiChatOrchestrator#complete}: either no
+     * provider is configured at all, or every configured provider failed. Neither ever carries
+     * provider-specific detail, so both are mapped to the same 503 response with the exact same
+     * generic message, regardless of the exception's own message — this makes it impossible to
+     * leak which provider failed or why through this path.
+     */
+    @ExceptionHandler({
+            AiProviderNotConfiguredException.class,
+            AiProvidersExhaustedException.class
+    })
+    public ResponseEntity<ErrorResponse> handleAiUnavailable(
+            RuntimeException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, AiChatOrchestrator.GENERIC_MESSAGE, request.getRequestURI());
+    }
+
+    @ExceptionHandler({
+            AiProviderAuthException.class,
+            AiProviderModelNotFoundException.class
+    })
+    public ResponseEntity<ErrorResponse> handleAiProviderConfigurationError(
+            AiProviderException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(AiProviderRateLimitException.class)
+    public ResponseEntity<ErrorResponse> handleAiProviderRateLimit(
+            AiProviderRateLimitException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler({
+            AiProviderTimeoutException.class,
+            AiProviderUnavailableException.class
+    })
+    public ResponseEntity<ErrorResponse> handleAiProviderUnavailable(
+            AiProviderException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request.getRequestURI());
+    }
+
+    /**
+     * Fallback for any {@link AiProviderException} not covered by a more specific handler above
+     * (defensive — every concrete subtype currently thrown by {@code AiChatClient} is already
+     * handled explicitly).
+     */
+    @ExceptionHandler(AiProviderException.class)
+    public ResponseEntity<ErrorResponse> handleAiProviderGenericError(
+            AiProviderException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.BAD_GATEWAY, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)

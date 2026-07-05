@@ -1,31 +1,44 @@
 package com.smartfinance.backend.controller;
 
 import com.smartfinance.backend.dto.analysis.AnalysisSummaryResponse;
+import com.smartfinance.backend.dto.analysis.PredictionResponse;
 import com.smartfinance.backend.dto.analysis.RecommendationResponse;
+import com.smartfinance.backend.security.SecurityUtils;
 import com.smartfinance.backend.service.FinancialAnalysisService;
+import com.smartfinance.backend.service.MonthEndPredictionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
  * REST endpoints for the current user's financial analysis, backed by
- * {@link FinancialAnalysisService}.
+ * {@link FinancialAnalysisService} and {@link MonthEndPredictionService}.
  *
- * <p>{@code year}/{@code month} are optional on both endpoints and default to the current
- * calendar year/month when omitted.
+ * <p>{@code year}/{@code month} are optional on the summary/recommendations endpoints and
+ * default to the current calendar year/month when omitted.
  */
 @RestController
 @RequestMapping("/api/analysis")
 public class AnalysisController {
 
     private final FinancialAnalysisService financialAnalysisService;
+    private final MonthEndPredictionService monthEndPredictionService;
+    private final Clock clock;
 
-    public AnalysisController(FinancialAnalysisService financialAnalysisService) {
+    public AnalysisController(
+            FinancialAnalysisService financialAnalysisService,
+            MonthEndPredictionService monthEndPredictionService,
+            Clock clock
+    ) {
         this.financialAnalysisService = financialAnalysisService;
+        this.monthEndPredictionService = monthEndPredictionService;
+        this.clock = clock;
     }
 
     @GetMapping("/summary")
@@ -42,5 +55,15 @@ public class AnalysisController {
             @RequestParam(required = false) Integer month
     ) {
         return ResponseEntity.ok(financialAnalysisService.getRecommendations(year, month));
+    }
+
+    /**
+     * Month-end spending projection for the current user, computed as of today (see
+     * {@link MonthEndPredictionService#computePrediction}).
+     */
+    @GetMapping("/prediction")
+    public ResponseEntity<PredictionResponse> getPrediction() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(monthEndPredictionService.computePrediction(userId, LocalDate.now(clock)));
     }
 }

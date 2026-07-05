@@ -5,6 +5,7 @@ import com.smartfinance.backend.dto.recurring.RecurringPaymentRequest;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentResponse;
 import com.smartfinance.backend.dto.recurring.RecurringPaymentUpdateRequest;
 import com.smartfinance.backend.exception.RecurringPaymentAlreadyPaidException;
+import com.smartfinance.backend.exception.RecurringPaymentNotDueYetException;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.RecurringPaymentMapper;
 import com.smartfinance.backend.model.Expense;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 
 /**
@@ -38,6 +40,12 @@ import java.time.LocalDate;
  * (client retry, double-click, two tabs) cannot race past this guard and create a second
  * {@link Expense} for the same logical payment — a losing call gets
  * {@link RecurringPaymentAlreadyPaidException} (HTTP 409) instead.
+ *
+ * <p>{@link #payRecurringPayment} also rejects a call made before {@code nextPaymentDate} has
+ * arrived with {@link RecurringPaymentNotDueYetException} (HTTP 409). Unlike the race guard
+ * above, this is not about concurrency: two sequential clicks at different times each read a
+ * fresh, non-stale {@code nextPaymentDate} and would otherwise both succeed, creating a
+ * duplicate {@link Expense} every time the button is pressed.
  */
 @Service
 public class RecurringPaymentService {
@@ -46,17 +54,20 @@ public class RecurringPaymentService {
     private final ExpenseRepository expenseRepository;
     private final UserRepository userRepository;
     private final RecurringPaymentMapper recurringPaymentMapper;
+    private final Clock clock;
 
     public RecurringPaymentService(
             RecurringPaymentRepository recurringPaymentRepository,
             ExpenseRepository expenseRepository,
             UserRepository userRepository,
-            RecurringPaymentMapper recurringPaymentMapper
+            RecurringPaymentMapper recurringPaymentMapper,
+            Clock clock
     ) {
         this.recurringPaymentRepository = recurringPaymentRepository;
         this.expenseRepository = expenseRepository;
         this.userRepository = userRepository;
         this.recurringPaymentMapper = recurringPaymentMapper;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -113,6 +124,13 @@ public class RecurringPaymentService {
         Long userId = SecurityUtils.getCurrentUserId();
         RecurringPayment recurringPayment = findOwnedRecurringPayment(recurringPaymentId, userId);
 
+        if (LocalDate.now(clock).isBefore(recurringPayment.getNextPaymentDate())) {
+            throw new RecurringPaymentNotDueYetException(
+                    "Este servicio vence el " + recurringPayment.getNextPaymentDate()
+                            + "; no se puede marcar como pagado antes de esa fecha."
+            );
+        }
+
         LocalDate currentNextPaymentDate = recurringPayment.getNextPaymentDate();
         LocalDate newNextPaymentDate = computeNextPaymentDate(recurringPayment);
 
@@ -129,7 +147,7 @@ public class RecurringPaymentService {
         expense.setUser(userRepository.getReferenceById(userId));
         expense.setDescription(recurringPayment.getName());
         expense.setAmount(recurringPayment.getAmount());
-        expense.setDate(LocalDate.now());
+        expense.setDate(LocalDate.now(clock));
         expense.setPaymentMethod(PaymentMethodType.OTHER);
         expense.setCategory(null);
         expense.setRecurringPayment(recurringPayment);

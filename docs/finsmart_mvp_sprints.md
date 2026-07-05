@@ -1,8 +1,18 @@
-# 🏦 FinSmart — MVP Sprint Board (v2, corregido)
+# 🏦 FinSmart — MVP Sprint Board (v3, sin n8n)
 
-> **Stack:** Java + Spring Boot · PostgreSQL · Next.js · n8n
-> **Total:** 6 Sprints · 96 tareas
+> **Stack:** Java + Spring Boot · PostgreSQL · Next.js
+> **Total:** 6 Sprints · 105 tareas
 > **Estados:** `[ ]` Pendiente · `[~]` En progreso · `[x]` Completado
+
+---
+
+## 📝 Notas de la revisión v3
+
+1. **n8n se eliminó del stack.** Los 7 workflows del Sprint 5 se reemplazan por automatizaciones nativas del backend: jobs `@Scheduled`, eventos de aplicación (`ExpenseCreatedEvent`) y endpoints de IA multi-proveedor. Mismo resultado, menos infraestructura, y todo testeable con JUnit. Ver `docs/sprints/sprint5.md` para el detalle.
+2. **La IA es multi-proveedor por diseño, configurada a nivel de aplicación.** Un único cliente OpenAI-compatible (`RestClient`) cubre NVIDIA NIM, OpenCode Zen y OpenRouter. Las API keys las carga el operador de la app vía variables de entorno (no hay carga de key ni selección de proveedor por parte del usuario final); `AiProviderRegistry` resuelve los proveedores habilitados y `AiChatOrchestrator` reintenta automáticamente con el siguiente proveedor configurado si el actual falla, de forma transparente para el usuario.
+3. **El chat IA se movió de `/api/analysis/chat` a `/api/ai/*`**, porque la IA pasó a ser un dominio propio (chat, historial, insights, clasificación automática, estado de proveedores) y no un apéndice del motor de análisis.
+4. **Email de notificaciones via Brevo SMTP** (gratuito, 300/día, sin dominio propio), opcional y degradable: sin credenciales, la app funciona solo con notificaciones in-app. Otros canales evaluados quedan en `docs/notifications-future.md`.
+5. **Sprint 5 suma la migración `V10` (índices de salud del esquema)** sobre las ya previstas `V7` (notificaciones) y `V8` (mensajes de IA); no se crea tabla para los proveedores de IA (las API keys viven solo en variables de entorno del operador), por lo que el próximo número disponible para el Sprint 6 vuelve a ser `V11`.
 
 ---
 
@@ -27,7 +37,6 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 |----------|------|
 | `[BE]` | Backend — Spring Boot |
 | `[FE]` | Frontend — Next.js |
-| `[N8]` | Automatización — n8n |
 | `[DB]` | Base de datos — PostgreSQL |
 
 ---
@@ -143,33 +152,44 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 
 ---
 
-## 🟩 Sprint 5 — IA + Automatizaciones n8n
-> Notificaciones, historial de chat con IA, y workflows · **17 tareas**
+## 🟩 Sprint 5 — Asistente IA Multi-Proveedor + Notificaciones + Automatizaciones Nativas
+> IA conectada a los datos del usuario, notificaciones in-app + email, y jobs nativos que reemplazan n8n · **26/26 tareas** · Detalle en `docs/sprints/sprint5.md`
 
 ### Backend
-- [ ] `[BE]` Entidad `Notification` + Repository — guardar notificaciones del sistema por usuario (tipo, mensaje, leído)
-- [ ] `[BE]` Endpoint `GET /api/notifications` — listado de notificaciones, `PATCH` para marcar como leído
-- [ ] `[BE]` Endpoint `POST /api/analysis/chat` — recibe pregunta, construye contexto financiero, llama a IA y **persiste** el mensaje del usuario y la respuesta en `ai_messages`
-- [ ] `[BE]` Entidad `AiMessage` + `AiMessageRepository` — rol (`USER`/`ASSISTANT`), contenido, `userId`, timestamp
-- [ ] `[BE]` Endpoint `GET /api/analysis/chat/history` — recupera el historial de conversación del usuario, paginado
+- [x] `[BE]` Entidad `Notification` + Repository + Service — tipo, título, mensaje, `is_read`/`read_at` por usuario
+- [x] `[BE]` Endpoints `GET /api/notifications` (paginado), `GET /api/notifications/unread-count`, `PATCH /{id}/read`, `PATCH /read-all`
+- [x] `[BE]` Entidad `NotificationPreference` + `GET/PUT /api/notifications/preferences` — toggles por tipo + email
+- [x] `[BE]` `NotificationSender` (puerto) + adaptador in-app + `BrevoEmailAdapter` (`spring-boot-starter-mail`, `@Async`, degradable sin credenciales)
+- [x] `[BE]` `SupportedAiProvider` (catálogo) + `AiProviderProperties` (bindeo de variables de entorno) + `AiProviderRegistry` (proveedores habilitados + orden de prioridad) + `AiChatOrchestrator` (failover automático) + `GET /api/ai/providers/status` — solo lectura, nunca expone una key
+- [x] `[BE]` `AiChatClient` (`RestClient` → `{baseUrl}/chat/completions`, OpenAI-compatible) + jerarquía `AiProviderException` mapeada con mensajes claros en español
+- [x] `[BE]` `FinancialContextBuilder` — system prompt en español con resumen del motor financiero + movimientos recientes + deudas + servicios
+- [x] `[BE]` Entidad `AiMessage` (rol, `kind` `CHAT`/`INSIGHT`, proveedor, modelo) + `POST /api/ai/chat` (persiste pregunta y respuesta) + `GET /api/ai/chat/history`
+- [x] `[BE]` `GET /api/ai/insights` + `POST /api/ai/insights/generate` — recomendaciones personalizadas por IA con contexto del usuario
+- [x] `[BE]` `POST /api/ai/categorize` — clasificación automática: la IA sugiere categoría existente según la descripción del gasto
+- [x] `[BE]` `@EnableScheduling` + `PaymentReminderJob` — diario: servicios y deudas que vencen en 3-5 días → notificación + email
+- [x] `[BE]` Alerta de sobregasto por evento — `ExpenseCreatedEvent` al crear gasto: si gasto del mes > 80% del ingreso → alerta (una por período)
+- [x] `[BE]` `WeeklySummaryJob` (resumen semanal → notificación + email) + `InactivityReminderJob` (sin movimientos 3+ días, una por racha)
+- [x] `[BE]` `GET /api/analysis/prediction` — predicción fin de mes: saldo proyectado + gasto máximo diario recomendado; el job diario alerta si es negativa
+- [x] `[BE]` Tests unitarios + integración de servicios, controllers y jobs (clock/fixtures controlados)
 
 ### Base de datos
-- [ ] `[DB]` **Migración `V7`** — tabla `notifications`
-- [ ] `[DB]` **Migración `V8`** — tabla `ai_messages`
-
-### n8n Workflows
-- [ ] `[N8]` **Recordatorios de pagos:** Cron diario → consulta PostgreSQL → filtra pagos próximos (3-5 días) → envía email/WhatsApp
-- [ ] `[N8]` **Alertas de sobregasto:** Trigger nuevo gasto → suma gastos del mes → si >80% ingresos → envía alerta
-- [ ] `[N8]` **Resumen semanal:** Ingresos vs gastos, mayor categoría, ahorro del período, recomendación simple automática
-- [ ] `[N8]` **Predicción fin de mes:** Promedio gasto diario × días restantes → proyección → alerta si saldo negativo
-- [ ] `[N8]` **Motor de recomendaciones:** Contexto financiero del usuario → OpenAI/Claude API → recomendación personalizada
-- [ ] `[N8]` **Clasificación automática de gastos:** Descripción del gasto → IA o reglas → asigna categoría automáticamente
-- [ ] `[N8]` **Reactivación:** Si usuario sin actividad 3+ días → recordatorio de registro de gastos
+- [x] `[DB]` **Migración `V7`** — tablas `notifications` (índices `(user_id, is_read)`, `(user_id, created_at)`) y `notification_preferences` (`UNIQUE(user_id)`)
+- [x] `[DB]` **Migración `V8`** — tabla `ai_messages` (rol, kind, proveedor, modelo, índice `(user_id, created_at)`)
+- [x] `[DB]` **Migración `V10`** — índices de salud: `(user_id, date)` en `expenses`/`incomes`, `(is_active, next_payment_date)` en `recurring_payments`, `(user_id, due_date)` en `debts`
 
 ### Frontend
-- [ ] `[FE]` Página `/asistente-ia` conectada al backend — chat funcional, carga historial previo desde `GET /api/analysis/chat/history`
-- [ ] `[FE]` Navbar: badge de notificaciones no leídas + panel desplegable conectado a `/api/notifications`
-- [ ] `[FE]` Tarjeta de predicción fin de mes en dashboard — saldo proyectado y gasto máximo diario recomendado
+- [x] `[FE]` Página `/asistente-ia` conectada — chat real (`POST /api/ai/chat`), historial, selector de proveedor/modelo, errores en español
+- [x] `[FE]` Panel de insights financieros del asistente (`GET /api/ai/insights` + regenerar)
+- [x] `[FE]` Navbar: badge de no leídas real + panel conectado a `/api/notifications` + marcar leída/todas
+- [x] `[FE]` Tarjeta de predicción fin de mes en dashboard (`GET /api/analysis/prediction`)
+- [x] `[FE]` Sección de insights IA en dashboard (último insight + link al asistente)
+- [x] `[FE]` `/configuracion`: tarjeta de solo lectura con el estado de los proveedores IA (`GET /api/ai/providers/status`) + preferencias de notificación persistidas
+- [x] `[FE]` Botón "Sugerir categoría" (IA) en formulario de gasto (`POST /api/ai/categorize`)
+- [x] `[FE]` Tests de servicios/schemas nuevos (vitest)
+
+**Sprint 5 — decisiones no explícitas en el alcance original:** La revisión adversarial en contexto limpio encontró y se corrigieron bugs críticos invisibles para los tests con mocks: (1) el dedupe de notificaciones (`saveAndFlush` + catch de `DataIntegrityViolationException`) dentro de la misma transacción del gasto dejaba la transacción de Postgres abortada — el cliente recibía 200 OK pero el gasto no persistía; se corrigió moviendo el listener de sobregasto a `@TransactionalEventListener(AFTER_COMMIT)` + `REQUIRES_NEW` y aislando `createNotification` en su propia transacción; (2) el dispatcher pasaba un proxy lazy de Hibernate a través de la frontera `@Async` del email (`LazyInitializationException` silenciosa en el thread de mail) — ahora cruza un record `EmailRecipient` con valores planos. Además: la predicción de fin de mes ya no proyecta un día fantasma el último día del mes, y `MonthEndPredictionJob` pre-filtra usuarios con gastos en el mes en curso en lugar de escanear todos los usuarios activos. Decisión de producto pendiente registrada: si todos los proveedores de IA configurados fallan, el mensaje del usuario NO se persiste en `ai_messages` (la transacción del turno se revierte completa).
+
+**Segundo rediseño del asistente IA (post-implementación del Batch 1 BYOK):** el diseño inicial de este sprint implementó un modelo BYOK (Bring Your Own Key) — cada usuario cargaba su propia API key desde la UI de `/configuracion`, cifrada (AES-256-GCM) en la entidad `AiProviderSetting` (tabla `ai_provider_settings`, con un índice único parcial para garantizar un solo proveedor "default" por usuario). Antes de integrar la rama, el dueño de la app pidió cambiar el modelo de fondo: las API keys pasan a configurarse a nivel de aplicación, vía variables de entorno (`NVIDIA_API_KEY`, `OPENCODE_API_KEY`, `OPENROUTER_API_KEY`), resueltas por `AiProviderRegistry` y probadas en cadena por `AiChatOrchestrator` con failover automático y transparente entre proveedores. La razón es resiliencia: el usuario final nunca debería ver una caída del asistente si hay al menos un proveedor de respaldo configurado, y ya no tiene sentido pedirle que administre sus propias keys cuando el operador puede cubrir el costo con múltiples free tiers. Como nada de esto llegó a commitearse ni desplegarse, se eliminó el stack BYOK completo (entidad, cifrado, CRUD, migraciones `V9`/`V11`) en vez de mantenerlo como código muerto o migración histórica. El flujo BYOK previo al rediseño sí fue verificado end-to-end contra Postgres real con el usuario de desarrollo Jhon Quiceno (`user_id=2`) antes de descartarse (backend 267/267, frontend 86/86, lint y build limpios); el flujo con `AiProviderRegistry`/`AiChatOrchestrator` requiere su propia verificación focalizada (migraciones `V7`, `V8` y `V10` limpias, failover real entre proveedores, `GET /api/ai/providers/status` sin fuga de keys) antes de dar el sprint por cerrado.
 
 ---
 
@@ -179,13 +199,13 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 ### Backend
 - [ ] `[BE]` Endpoints de reportes por período — `GET /api/reports/monthly?month=X&year=Y` con breakdown completo
 - [ ] `[BE]` Endpoint de exportación — `GET /api/reports/export` → CSV o JSON con todos los movimientos del período
-- [ ] `[BE]` Dockerizar Spring Boot — `Dockerfile` + `docker-compose` con PostgreSQL y n8n
+- [ ] `[BE]` Dockerizar Spring Boot — `Dockerfile` + `docker-compose` con PostgreSQL
 - [ ] `[BE]` Variables de entorno para producción — `application.properties` separado para `prod`/`dev`
 - [ ] `[BE]` Validaciones exhaustivas en todos los endpoints — `@Valid`, mensajes de error claros en español
 - [ ] `[BE]` Smoke testing de todos los endpoints con colección de Postman documentada
 
 ### Base de datos
-- [ ] `[DB]` **Migración `V9`** — índices de cierre para consultas frecuentes: `user_id + date` en `expenses`/`incomes` (si no existen ya), `next_date` en `recurring_payments`, `debt_id + date` en `debt_payments`, `user_id + created_at` en `ai_messages`
+- [ ] `[DB]` **Migración `V11`** — índices de cierre restantes: `debt_id + payment_date` en `debt_payments` (los de `expenses`/`incomes`/`recurring_payments`/`ai_messages` ya quedaron cubiertos por `V8` y `V10` en Sprint 5)
 
 ### Frontend
 - [ ] `[FE]` Página `/reportes` conectada al backend — selector de período + gráficos mensuales/anuales
@@ -198,17 +218,17 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 
 ---
 
-## 📊 Resumen del MVP (v2)
+## 📊 Resumen del MVP (v3)
 
-| Sprint | Título | Tareas | BE | FE | N8 | DB | Migraciones |
-|--------|--------|--------|----|----|----|----|-------------|
-| 1 | Base del Sistema (JWT Real) | 15/15 | 7 | 5 | 0 | 3 | `V1`, `V2` |
-| 2 | Ingresos y Gastos | 17/17 | 9 | 7 | 0 | 1 | `V3` |
-| 3 | Deudas y Servicios | 18/18 | 8 | 8 | 0 | 2 | `V4`, `V5` |
-| 4 | Motor Financiero + Dashboard | 15/15 | 8 | 6 | 0 | 1 | `V6` |
-| 5 | IA + n8n | 17 | 5 | 3 | 7 | 2 | `V7`, `V8` |
-| 6 | Reportes y Launch | 14 | 6 | 7 | 0 | 1 | `V9` |
-| **Total** | | **96** | **43** | **36** | **7** | **10** | **9 migraciones** |
+| Sprint | Título | Tareas | BE | FE | DB | Migraciones |
+|--------|--------|--------|----|----|----|-------------|
+| 1 | Base del Sistema (JWT Real) | 15/15 | 7 | 5 | 3 | `V1`, `V2` |
+| 2 | Ingresos y Gastos | 17/17 | 9 | 7 | 1 | `V3` |
+| 3 | Deudas y Servicios | 18/18 | 8 | 8 | 2 | `V4`, `V5` |
+| 4 | Motor Financiero + Dashboard | 15/15 | 8 | 6 | 1 | `V6` |
+| 5 | IA Multi-Proveedor + Notificaciones | 26/26 | 15 | 8 | 3 | `V7`, `V8`, `V10` |
+| 6 | Reportes y Launch | 14 | 6 | 7 | 1 | `V11` |
+| **Total** | | **105** | **53** | **41** | **11** | **10 migraciones** |
 
 ---
 
@@ -258,12 +278,23 @@ PATCH  /api/recurring/{id}/pay
 # Motor financiero
 GET    /api/analysis/summary
 GET    /api/analysis/recommendations
-POST   /api/analysis/chat
-GET    /api/analysis/chat/history
+GET    /api/analysis/prediction
+
+# Asistente IA
+POST   /api/ai/chat
+GET    /api/ai/chat/history
+GET    /api/ai/insights
+POST   /api/ai/insights/generate
+POST   /api/ai/categorize
+GET    /api/ai/providers/status
 
 # Notificaciones
 GET    /api/notifications
+GET    /api/notifications/unread-count
 PATCH  /api/notifications/{id}/read
+PATCH  /api/notifications/read-all
+GET    /api/notifications/preferences
+PUT    /api/notifications/preferences
 
 # Reportes
 GET    /api/reports/monthly?month=X&year=Y
@@ -272,4 +303,4 @@ GET    /api/reports/export
 
 ---
 
-*FinSmart MVP Sprint Board v2 — tablas creadas de forma incremental, sprint por sprint*
+*FinSmart MVP Sprint Board v3 — tablas creadas de forma incremental, sprint por sprint, sin n8n*

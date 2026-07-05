@@ -2,6 +2,7 @@ package com.smartfinance.backend.service;
 
 import com.smartfinance.backend.dto.expense.ExpenseRequest;
 import com.smartfinance.backend.dto.expense.ExpenseResponse;
+import com.smartfinance.backend.event.ExpenseCreatedEvent;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.ExpenseMapper;
 import com.smartfinance.backend.model.Category;
@@ -15,9 +16,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +53,9 @@ class ExpenseServiceTest {
 
     @Mock
     private ExpenseMapper expenseMapper;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ExpenseService expenseService;
@@ -81,6 +88,51 @@ class ExpenseServiceTest {
         Assertions.assertEquals(10L, createdExpense.id());
         Assertions.assertNull(mappedExpense.getCategory());
         Assertions.assertEquals(1L, mappedExpense.getUser().getId());
+    }
+
+    @Test
+    void createExpenseShouldPublishExpenseCreatedEventWithOwnerAndSavedId() {
+        setAuthenticatedUser(1L);
+        ExpenseRequest request = new ExpenseRequest(
+                BigDecimal.valueOf(200), "Super", LocalDate.now(), PaymentMethodType.CASH, null
+        );
+        Expense mappedExpense = new Expense();
+        Expense savedExpense = new Expense();
+        savedExpense.setId(42L);
+
+        when(expenseMapper.toEntity(request)).thenReturn(mappedExpense);
+        when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
+        when(expenseRepository.save(mappedExpense)).thenReturn(savedExpense);
+        when(expenseMapper.toResponse(savedExpense)).thenReturn(
+                new ExpenseResponse(42L, BigDecimal.valueOf(200), "Super", LocalDate.now(), PaymentMethodType.CASH, null, null, null)
+        );
+
+        expenseService.createExpense(request);
+
+        ArgumentCaptor<ExpenseCreatedEvent> captor = ArgumentCaptor.forClass(ExpenseCreatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        Assertions.assertEquals(1L, captor.getValue().userId());
+        Assertions.assertEquals(42L, captor.getValue().expenseId());
+    }
+
+    @Test
+    void updateExpenseShouldNotPublishExpenseCreatedEvent() {
+        setAuthenticatedUser(1L);
+        ExpenseRequest request = new ExpenseRequest(
+                BigDecimal.valueOf(100), "Renta", LocalDate.now(), PaymentMethodType.CASH, null
+        );
+        Expense existing = new Expense();
+        existing.setId(20L);
+        existing.setUser(buildUser(1L));
+        when(expenseRepository.findByIdAndUser_Id(20L, 1L)).thenReturn(Optional.of(existing));
+        when(expenseRepository.save(existing)).thenReturn(existing);
+        when(expenseMapper.toResponse(existing)).thenReturn(
+                new ExpenseResponse(20L, BigDecimal.valueOf(100), "Renta", LocalDate.now(), PaymentMethodType.CASH, null, null, null)
+        );
+
+        expenseService.updateExpense(20L, request);
+
+        verify(eventPublisher, never()).publishEvent(any(ExpenseCreatedEvent.class));
     }
 
     @Test
