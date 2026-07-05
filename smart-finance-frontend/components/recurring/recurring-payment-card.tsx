@@ -37,6 +37,19 @@ function formatDate(value: string): string {
   return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
 }
 
+// Date-only comparison (ignores time-of-day) so a payment becomes payable the moment its due
+// date arrives, regardless of the current time. Mirrors formatDate's `T00:00:00` parsing so both
+// sides of the comparison are anchored to local midnight instead of drifting across timezones.
+function isPaymentDue(nextPaymentDate: string): boolean {
+  const dueDate = new Date(`${nextPaymentDate}T00:00:00`)
+  if (Number.isNaN(dueDate.getTime())) return true
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return dueDate.getTime() <= today.getTime()
+}
+
 export function RecurringPaymentCard({
   recurringPayment,
   onEdit,
@@ -46,6 +59,8 @@ export function RecurringPaymentCard({
   isToggling,
   isMarkingAsPaid,
 }: RecurringPaymentCardProps) {
+  const isDue = isPaymentDue(recurringPayment.nextPaymentDate)
+
   return (
     <div
       className={cn(
@@ -112,11 +127,16 @@ export function RecurringPaymentCard({
         variant="outline"
         className="w-full border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
         onClick={() => onMarkAsPaid(recurringPayment)}
-        disabled={isMarkingAsPaid || !recurringPayment.isActive}
+        disabled={isMarkingAsPaid || !recurringPayment.isActive || !isDue}
       >
         <CheckCircle2 className="h-4 w-4" />
         Marcar como pagado
       </Button>
+      {recurringPayment.isActive && !isDue && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Disponible desde el {formatDate(recurringPayment.nextPaymentDate)}
+        </p>
+      )}
     </div>
   )
 }
