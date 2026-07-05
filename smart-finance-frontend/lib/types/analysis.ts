@@ -55,3 +55,12 @@ export interface AnalysisRecommendation {
   categoryId: number | null
   message: string
 }
+
+export interface Prediction {
+  projectedExpense: number
+  projectedBalance: number
+  avgDailySpend: number
+  daysRemaining: number
+  recommendedDailyMax: number
+  alert: boolean
+}

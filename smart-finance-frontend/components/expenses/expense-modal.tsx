@@ -2,7 +2,9 @@
 
 import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Sparkles } from "lucide-react"
+import { useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
 import { z } from "zod"
 import { CategorySelect } from "@/components/shared/category-select"
 import { Button } from "@/components/ui/button"
@@ -10,9 +12,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useCategorize } from "@/hooks/use-ai"
+import { getApiErrorMessage } from "@/lib/api-client"
 import { getTodayDateInput } from "@/lib/date"
 import { expenseSchema } from "@/lib/schemas/expense.schema"
 import type { Expense, PaymentMethodType } from "@/lib/types/expense"
+
+const MIN_DESCRIPTION_LENGTH_FOR_SUGGESTION = 3
 
 const paymentMethods: { value: PaymentMethodType; label: string }[] = [
   { value: "CASH", label: "Efectivo" },
@@ -58,6 +64,35 @@ export function ExpenseModal({ open, onOpenChange, initialValue, isSubmitting, o
     await onSubmit(values)
     form.reset(getDefaultValues(null))
   })
+
+  const { categorize, isLoading: isCategorizing } = useCategorize()
+  const watchedDescription = useWatch({ control: form.control, name: "description" })
+  const watchedAmount = useWatch({ control: form.control, name: "amount" })
+
+  const trimmedDescription = typeof watchedDescription === "string" ? watchedDescription.trim() : ""
+  const canSuggestCategory = trimmedDescription.length >= MIN_DESCRIPTION_LENGTH_FOR_SUGGESTION
+
+  const handleSuggestCategory = async () => {
+    if (!canSuggestCategory || isCategorizing) return
+
+    const parsedAmount = typeof watchedAmount === "number" ? watchedAmount : Number(watchedAmount)
+
+    try {
+      const result = await categorize({
+        description: trimmedDescription,
+        amount: Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : undefined,
+      })
+
+      if (result.categoryId !== null) {
+        form.setValue("categoryId", result.categoryId, { shouldValidate: true })
+        toast.success(`Categoria sugerida: ${result.categoryName}`)
+      } else {
+        toast.info("No encontramos una categoria clara para esa descripcion")
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "No fue posible sugerir una categoria"))
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,7 +145,19 @@ export function ExpenseModal({ open, onOpenChange, initialValue, isSubmitting, o
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Categoria</FormLabel>
+                  <div className="flex items-center justify-between gap-2">
+                    <FormLabel>Categoria</FormLabel>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={!canSuggestCategory || isCategorizing}
+                      onClick={() => void handleSuggestCategory()}
+                    >
+                      <Sparkles data-icon="inline-start" />
+                      {isCategorizing ? "Sugiriendo..." : "Sugerir categoria"}
+                    </Button>
+                  </div>
                   <FormControl>
                     <CategorySelect
                       type="EXPENSE"

@@ -1,7 +1,7 @@
 import MockAdapter from "axios-mock-adapter"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { apiClient } from "../api-client"
-import { getAnalysisRecommendations, getAnalysisSummary } from "./analysis.service"
+import { getAnalysisRecommendations, getAnalysisSummary, getPrediction } from "./analysis.service"
 
 describe("analysis service", () => {
   let mock: MockAdapter
@@ -112,6 +112,50 @@ describe("analysis service", () => {
       const result = await getAnalysisRecommendations(2026, 3)
 
       expect(result).toEqual([])
+    })
+  })
+
+  describe("getPrediction", () => {
+    it("fetches the month-end prediction", async () => {
+      const mockData = {
+        projectedExpense: 25000,
+        projectedBalance: 5000,
+        avgDailySpend: 800,
+        daysRemaining: 10,
+        recommendedDailyMax: 500,
+        alert: false,
+      }
+
+      mock.onGet("/api/analysis/prediction").reply(200, mockData)
+
+      const result = await getPrediction()
+
+      expect(result.projectedBalance).toBe(5000)
+      expect(result.alert).toBe(false)
+    })
+
+    it("surfaces the alert flag when the projected balance is negative", async () => {
+      const mockData = {
+        projectedExpense: 40000,
+        projectedBalance: -3000,
+        avgDailySpend: 1200,
+        daysRemaining: 5,
+        recommendedDailyMax: 0,
+        alert: true,
+      }
+
+      mock.onGet("/api/analysis/prediction").reply(200, mockData)
+
+      const result = await getPrediction()
+
+      expect(result.alert).toBe(true)
+      expect(result.recommendedDailyMax).toBe(0)
+    })
+
+    it("propagates errors when the backend fails", async () => {
+      mock.onGet("/api/analysis/prediction").reply(500)
+
+      await expect(getPrediction()).rejects.toBeTruthy()
     })
   })
 })
