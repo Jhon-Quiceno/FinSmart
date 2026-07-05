@@ -5,6 +5,7 @@ export interface DebtPayment {
   paymentDate: string
   note: string | null
   createdAt: string
+  expenseId: number | null
 }
 
 export interface DebtPaymentRequest {
