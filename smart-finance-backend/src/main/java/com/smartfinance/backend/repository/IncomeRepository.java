@@ -44,4 +44,20 @@ public interface IncomeRepository extends JpaRepository<Income, Long>, JpaSpecif
     @Query("SELECT i FROM Income i LEFT JOIN FETCH i.category WHERE i.user.id = :userId "
             + "ORDER BY i.date DESC, i.id DESC")
     List<Income> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * Distinct user ids with at least one income in {@code [start, end]}, backing
+     * {@code WeeklySummaryJob} (Sprint 5, Batch 3). See
+     * {@link ExpenseRepository#findDistinctUserIdsByDateBetween} for the counterpart.
+     */
+    @Query("SELECT DISTINCT i.user.id FROM Income i WHERE i.date >= :start AND i.date <= :end")
+    List<Long> findDistinctUserIdsByDateBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    /**
+     * Most recent income date per user, across every user, in a single grouped query. Backs
+     * {@code InactivityReminderJob} (Sprint 5, Batch 3); see
+     * {@link ExpenseRepository#findLatestExpenseDatePerUser()} for the counterpart.
+     */
+    @Query("SELECT i.user.id AS userId, MAX(i.date) AS lastDate FROM Income i GROUP BY i.user.id")
+    List<UserLastActivityProjection> findLatestIncomeDatePerUser();
 }

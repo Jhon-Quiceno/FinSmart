@@ -2,6 +2,7 @@ package com.smartfinance.backend.service;
 
 import com.smartfinance.backend.dto.expense.ExpenseRequest;
 import com.smartfinance.backend.dto.expense.ExpenseResponse;
+import com.smartfinance.backend.event.ExpenseCreatedEvent;
 import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.ExpenseMapper;
 import com.smartfinance.backend.model.Category;
@@ -12,6 +13,7 @@ import com.smartfinance.backend.repository.ExpenseRepository;
 import com.smartfinance.backend.repository.UserRepository;
 import com.smartfinance.backend.repository.specification.ExpenseSpecifications;
 import com.smartfinance.backend.security.SecurityUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,6 +30,11 @@ import java.time.LocalDate;
  * or a {@code categoryId} referencing a category owned by another user, raise
  * {@link ResourceNotFoundException} (HTTP 404) rather than a 403, so existence is never
  * leaked to a non-owner.
+ *
+ * <p>{@link #createExpense} also publishes {@link ExpenseCreatedEvent} after a successful save,
+ * consumed by {@code OverspendAlertListener} (Sprint 5, Batch 3) to check the overspend
+ * threshold. Only creation publishes it (MVP scope, see {@code docs/sprints/sprint5.md}) —
+ * {@link #updateExpense} does not, even when the amount or date changes.
  */
 @Service
 public class ExpenseService {
@@ -36,17 +43,20 @@ public class ExpenseService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ExpenseMapper expenseMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ExpenseService(
             ExpenseRepository expenseRepository,
             CategoryRepository categoryRepository,
             UserRepository userRepository,
-            ExpenseMapper expenseMapper
+            ExpenseMapper expenseMapper,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.expenseRepository = expenseRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.expenseMapper = expenseMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -77,6 +87,7 @@ public class ExpenseService {
         expense.setCategory(resolveOwnedCategory(request.categoryId(), userId));
 
         Expense savedExpense = expenseRepository.save(expense);
+        eventPublisher.publishEvent(new ExpenseCreatedEvent(userId, savedExpense.getId()));
         return expenseMapper.toResponse(savedExpense);
     }
 

@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -19,6 +21,15 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     Optional<Debt> findByIdAndUser_Id(Long id, Long userId);
 
     Page<Debt> findAllByUser_Id(Long userId, Pageable pageable);
+
+    /**
+     * Unpaged variant of {@link #findAllByUser_Id(Long, Pageable)}, used by
+     * {@code com.smartfinance.backend.service.ai.FinancialContextBuilder} to list every debt for
+     * the AI system prompt (filtering to those with a positive {@code remainingAmount} happens
+     * in the caller, since there is no {@code isActive} flag on {@link Debt} — see the class
+     * Javadoc).
+     */
+    List<Debt> findAllByUser_Id(Long userId);
 
     /**
      * Atomically decrements {@code remainingAmount}, guarded by the {@code WHERE} clause so the
@@ -48,4 +59,18 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
      */
     @Query("SELECT COALESCE(SUM(d.remainingAmount), 0) FROM Debt d WHERE d.user.id = :userId")
     BigDecimal sumRemainingAmountByUser(@Param("userId") Long userId);
+
+    /**
+     * Scans every debt (across all users) with a positive {@code remainingAmount} whose
+     * {@code dueDate} falls within {@code [start, end]}, backing {@code PaymentReminderJob}
+     * (Sprint 5, Batch 3). {@code JOIN FETCH d.user} avoids a lazy-load per row, and excluding
+     * {@code remainingAmount <= 0} skips debts already paid off (see the class Javadoc on why
+     * there is no separate {@code isActive} flag).
+     *
+     * <p>Relies on the {@code idx_debts_user_due_date} composite index (see
+     * {@code V10__add_performance_indexes.sql}) to stay cheap as the number of debts grows.
+     */
+    @Query("SELECT d FROM Debt d JOIN FETCH d.user "
+            + "WHERE d.remainingAmount > 0 AND d.dueDate BETWEEN :start AND :end")
+    List<Debt> findWithBalanceByDueDateBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
 }

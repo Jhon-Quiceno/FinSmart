@@ -53,4 +53,23 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
     @Query("SELECT e FROM Expense e LEFT JOIN FETCH e.category WHERE e.user.id = :userId "
             + "ORDER BY e.date DESC, e.id DESC")
     List<Expense> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * Distinct user ids with at least one expense in {@code [start, end]}, backing
+     * {@code WeeklySummaryJob} (Sprint 5, Batch 3). Used together with
+     * {@link IncomeRepository#findDistinctUserIdsByDateBetween} to build the set of users with
+     * any activity in the period, avoiding a per-user existence check across every registered
+     * user.
+     */
+    @Query("SELECT DISTINCT e.user.id FROM Expense e WHERE e.date >= :start AND e.date <= :end")
+    List<Long> findDistinctUserIdsByDateBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    /**
+     * Most recent expense date per user, across every user, in a single grouped query. Backs
+     * {@code InactivityReminderJob} (Sprint 5, Batch 3), which combines this with
+     * {@link IncomeRepository#findLatestIncomeDatePerUser()} in memory instead of querying each
+     * user individually.
+     */
+    @Query("SELECT e.user.id AS userId, MAX(e.date) AS lastDate FROM Expense e GROUP BY e.user.id")
+    List<UserLastActivityProjection> findLatestExpenseDatePerUser();
 }

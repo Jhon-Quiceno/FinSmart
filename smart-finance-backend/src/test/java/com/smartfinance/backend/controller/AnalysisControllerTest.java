@@ -1,13 +1,17 @@
 package com.smartfinance.backend.controller;
 
+import com.smartfinance.backend.config.ClockConfig;
 import com.smartfinance.backend.config.SecurityConfig;
 import com.smartfinance.backend.dto.analysis.AnalysisSummaryResponse;
+import com.smartfinance.backend.dto.analysis.PredictionResponse;
 import com.smartfinance.backend.dto.analysis.RecommendationResponse;
 import com.smartfinance.backend.dto.analysis.RecommendationType;
 import com.smartfinance.backend.dto.analysis.Severity;
 import com.smartfinance.backend.repository.UserRepository;
+import com.smartfinance.backend.security.SecurityUtils;
 import com.smartfinance.backend.service.FinancialAnalysisService;
 import com.smartfinance.backend.service.JwtService;
+import com.smartfinance.backend.service.MonthEndPredictionService;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -30,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AnalysisController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, ClockConfig.class})
 class AnalysisControllerTest {
 
     @Autowired
@@ -38,6 +43,9 @@ class AnalysisControllerTest {
 
     @MockitoBean
     private FinancialAnalysisService financialAnalysisService;
+
+    @MockitoBean
+    private MonthEndPredictionService monthEndPredictionService;
 
     @MockitoBean
     private JwtService jwtService;
@@ -110,6 +118,30 @@ class AnalysisControllerTest {
     @Test
     void getRecommendationsReturns403WithoutAuthToken() throws Exception {
         mockMvc.perform(get("/api/analysis/recommendations"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getPredictionReturns200WithProjectionForCurrentUser() throws Exception {
+        PredictionResponse prediction = new PredictionResponse(
+                new BigDecimal("3100.00"), new BigDecimal("900.00"), new BigDecimal("100.00"),
+                30, new BigDecimal("130.00"), false
+        );
+        when(monthEndPredictionService.computePrediction(eq(1L), any(LocalDate.class))).thenReturn(prediction);
+
+        mockMvc.perform(get("/api/analysis/prediction").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.projectedExpense").value(3100.00))
+                .andExpect(jsonPath("$.projectedBalance").value(900.00))
+                .andExpect(jsonPath("$.avgDailySpend").value(100.00))
+                .andExpect(jsonPath("$.daysRemaining").value(30))
+                .andExpect(jsonPath("$.recommendedDailyMax").value(130.00))
+                .andExpect(jsonPath("$.alert").value(false));
+    }
+
+    @Test
+    void getPredictionReturns403WithoutAuthToken() throws Exception {
+        mockMvc.perform(get("/api/analysis/prediction"))
                 .andExpect(status().isForbidden());
     }
 }
