@@ -5,6 +5,9 @@ import com.smartfinance.backend.model.AiMessageKind;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -28,4 +31,13 @@ public interface AiMessageRepository extends JpaRepository<AiMessage, Long> {
     Page<AiMessage> findByUser_IdAndKindOrderByCreatedAtDesc(Long userId, AiMessageKind kind, Pageable pageable);
 
     Optional<AiMessage> findFirstByUser_IdAndKindOrderByCreatedAtDesc(Long userId, AiMessageKind kind);
+
+    /**
+     * Wipes the user's chat conversation on each new login (see {@code UserService#login}) so
+     * every session starts from a blank assistant chat. Scoped to {@link AiMessageKind#CHAT}
+     * only — {@link AiMessageKind#INSIGHT} rows (dashboard insights) must survive a login.
+     */
+    @Modifying
+    @Query("DELETE FROM AiMessage a WHERE a.user.id = :userId AND a.kind = :kind")
+    int deleteByUserIdAndKind(@Param("userId") Long userId, @Param("kind") AiMessageKind kind);
 }

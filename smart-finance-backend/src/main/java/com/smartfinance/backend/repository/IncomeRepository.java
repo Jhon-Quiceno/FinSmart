@@ -46,6 +46,18 @@ public interface IncomeRepository extends JpaRepository<Income, Long>, JpaSpecif
     List<Income> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
 
     /**
+     * Every income for the user in {@code [start, end]}, with category eagerly fetched (same
+     * N+1 rationale as {@link #findRecentByUserId}), ordered by date descending. Backs
+     * {@code ReportService#getMovements} (Sprint 6), which needs every movement in the period
+     * rather than a fixed-size "recent" window.
+     */
+    @Query("SELECT i FROM Income i LEFT JOIN FETCH i.category WHERE i.user.id = :userId "
+            + "AND i.date >= :start AND i.date <= :end ORDER BY i.date DESC, i.id DESC")
+    List<Income> findByUserAndPeriod(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
+    );
+
+    /**
      * Distinct user ids with at least one income in {@code [start, end]}, backing
      * {@code WeeklySummaryJob} (Sprint 5, Batch 3). See
      * {@link ExpenseRepository#findDistinctUserIdsByDateBetween} for the counterpart.

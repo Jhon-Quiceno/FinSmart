@@ -6,7 +6,10 @@ import com.smartfinance.backend.dto.analysis.RecommendationResponse;
 import com.smartfinance.backend.security.SecurityUtils;
 import com.smartfinance.backend.service.FinancialAnalysisService;
 import com.smartfinance.backend.service.MonthEndPredictionService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,6 +28,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/analysis")
+@Validated
 public class AnalysisController {
 
     private final FinancialAnalysisService financialAnalysisService;
@@ -43,16 +47,16 @@ public class AnalysisController {
 
     @GetMapping("/summary")
     public ResponseEntity<AnalysisSummaryResponse> getSummary(
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer year,
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month
     ) {
         return ResponseEntity.ok(financialAnalysisService.getSummary(year, month));
     }
 
     @GetMapping("/recommendations")
     public ResponseEntity<List<RecommendationResponse>> getRecommendations(
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer year,
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month
     ) {
         return ResponseEntity.ok(financialAnalysisService.getRecommendations(year, month));
     }

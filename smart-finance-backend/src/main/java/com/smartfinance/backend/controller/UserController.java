@@ -2,9 +2,13 @@ package com.smartfinance.backend.controller;
 
 import com.smartfinance.backend.config.JwtProperties;
 import com.smartfinance.backend.dto.auth.AuthResponse;
+import com.smartfinance.backend.dto.auth.ChangePasswordRequest;
 import com.smartfinance.backend.dto.auth.LoginRequest;
 import com.smartfinance.backend.dto.auth.RegisterRequest;
+import com.smartfinance.backend.dto.auth.UpdateProfileRequest;
+import com.smartfinance.backend.dto.auth.UserResponse;
 import com.smartfinance.backend.dto.error.ErrorResponse;
+import com.smartfinance.backend.security.SecurityUtils;
 import com.smartfinance.backend.service.AuthSession;
 import com.smartfinance.backend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -115,6 +120,35 @@ public class UserController {
                 .noContent()
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
                 .build();
+    }
+
+    @Operation(summary = "Actualizar perfil", description = "Actualiza el nombre y correo del usuario autenticado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Perfil actualizado exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Datos de entrada invalidos",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Ya existe un usuario con ese correo",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PutMapping("/profile")
+    public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(userService.updateProfile(userId, request));
+    }
+
+    @Operation(summary = "Cambiar contraseña", description = "Cambia la contraseña del usuario autenticado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Contraseña cambiada exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Datos de entrada invalidos",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "La contraseña actual no es correcta",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PutMapping("/password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        userService.changePassword(userId, request);
+        return ResponseEntity.noContent().build();
     }
 
     private String resolveRefreshToken(HttpServletRequest request) {
