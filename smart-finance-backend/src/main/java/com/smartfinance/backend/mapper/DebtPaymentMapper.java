@@ -12,6 +12,9 @@ import org.mapstruct.Mapping;
  * <p>{@link DebtPayment#getDebt()} and {@link DebtPayment#getPaymentDate()} are resolved and
  * assigned separately by {@code DebtPaymentService} — the debt must be validated against the
  * current user first, and the payment date defaults to today when omitted from the request.
+ * {@code expenseId} on {@link DebtPaymentResponse} is also set separately by the service, since
+ * it comes from the linked {@code Expense} created alongside the payment, not from the
+ * {@link DebtPayment} entity itself.
  */
 @Mapper(componentModel = "spring")
 public interface DebtPaymentMapper {
@@ -23,5 +26,6 @@ public interface DebtPaymentMapper {
     DebtPayment toEntity(DebtPaymentRequest request);
 
     @Mapping(target = "debtId", source = "debt.id")
+    @Mapping(target = "expenseId", ignore = true)
     DebtPaymentResponse toResponse(DebtPayment debtPayment);
 }

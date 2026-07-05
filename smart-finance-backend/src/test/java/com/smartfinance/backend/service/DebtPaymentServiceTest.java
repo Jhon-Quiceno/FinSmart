@@ -6,13 +6,18 @@ import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.DebtPaymentMapper;
 import com.smartfinance.backend.model.Debt;
 import com.smartfinance.backend.model.DebtPayment;
+import com.smartfinance.backend.model.Expense;
+import com.smartfinance.backend.model.PaymentMethodType;
 import com.smartfinance.backend.model.User;
 import com.smartfinance.backend.repository.DebtPaymentRepository;
 import com.smartfinance.backend.repository.DebtRepository;
+import com.smartfinance.backend.repository.ExpenseRepository;
+import com.smartfinance.backend.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,6 +49,12 @@ class DebtPaymentServiceTest {
     private DebtRepository debtRepository;
 
     @Mock
+    private ExpenseRepository expenseRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private DebtPaymentMapper debtPaymentMapper;
 
     @InjectMocks
@@ -58,17 +69,23 @@ class DebtPaymentServiceTest {
     void createPaymentShouldDecrementRemainingAmountAtomicallyAndSavePayment() {
         setAuthenticatedUser(1L);
         Debt debt = buildDebt(10L, 1L, BigDecimal.valueOf(1000), BigDecimal.valueOf(600));
+        debt.setName("Tarjeta Visa");
         DebtPaymentRequest request = new DebtPaymentRequest(BigDecimal.valueOf(200), LocalDate.of(2026, 6, 1), "Abono mensual");
         DebtPayment mappedPayment = new DebtPayment();
         DebtPayment savedPayment = new DebtPayment();
         savedPayment.setId(5L);
-        DebtPaymentResponse response = new DebtPaymentResponse(5L, 10L, BigDecimal.valueOf(200), LocalDate.of(2026, 6, 1), "Abono mensual", null);
+        DebtPaymentResponse response = new DebtPaymentResponse(5L, 10L, BigDecimal.valueOf(200), LocalDate.of(2026, 6, 1), "Abono mensual", null, null);
+
+        Expense savedExpense = new Expense();
+        savedExpense.setId(77L);
 
         when(debtRepository.findByIdAndUser_Id(10L, 1L)).thenReturn(Optional.of(debt));
         when(debtRepository.decrementRemainingAmount(10L, BigDecimal.valueOf(200))).thenReturn(1);
         when(debtPaymentMapper.toEntity(request)).thenReturn(mappedPayment);
         when(debtPaymentRepository.save(mappedPayment)).thenReturn(savedPayment);
         when(debtPaymentMapper.toResponse(savedPayment)).thenReturn(response);
+        when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         DebtPaymentResponse createdPayment = debtPaymentService.createPayment(10L, request);
 
@@ -77,6 +94,18 @@ class DebtPaymentServiceTest {
         Assertions.assertEquals(LocalDate.of(2026, 6, 1), mappedPayment.getPaymentDate());
         verify(debtRepository).decrementRemainingAmount(10L, BigDecimal.valueOf(200));
         verify(debtPaymentRepository).save(mappedPayment);
+
+        ArgumentCaptor<Expense> expenseCaptor = ArgumentCaptor.forClass(Expense.class);
+        verify(expenseRepository).save(expenseCaptor.capture());
+        Expense capturedExpense = expenseCaptor.getValue();
+        Assertions.assertEquals("Abono a deuda: Tarjeta Visa", capturedExpense.getDescription());
+        Assertions.assertEquals(BigDecimal.valueOf(200), capturedExpense.getAmount());
+        Assertions.assertEquals(LocalDate.of(2026, 6, 1), capturedExpense.getDate());
+        Assertions.assertEquals(PaymentMethodType.OTHER, capturedExpense.getPaymentMethod());
+        Assertions.assertNull(capturedExpense.getCategory());
+        Assertions.assertEquals(savedPayment, capturedExpense.getDebtPayment());
+
+        Assertions.assertEquals(77L, createdPayment.expenseId());
     }
 
     @Test
@@ -91,8 +120,10 @@ class DebtPaymentServiceTest {
         when(debtPaymentMapper.toEntity(request)).thenReturn(mappedPayment);
         when(debtPaymentRepository.save(mappedPayment)).thenReturn(mappedPayment);
         when(debtPaymentMapper.toResponse(mappedPayment)).thenReturn(
-                new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(100), LocalDate.now(), null, null)
+                new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(100), LocalDate.now(), null, null, null)
         );
+        when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(new Expense());
 
         debtPaymentService.createPayment(10L, request);
 
@@ -152,8 +183,10 @@ class DebtPaymentServiceTest {
         when(debtPaymentMapper.toEntity(request)).thenReturn(mappedPayment);
         when(debtPaymentRepository.save(mappedPayment)).thenReturn(mappedPayment);
         when(debtPaymentMapper.toResponse(mappedPayment)).thenReturn(
-                new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(150), LocalDate.now(), null, null)
+                new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(150), LocalDate.now(), null, null, null)
         );
+        when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(new Expense());
 
         debtPaymentService.createPayment(10L, request);
 
@@ -186,7 +219,7 @@ class DebtPaymentServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         DebtPayment payment = new DebtPayment();
         Page<DebtPayment> page = new PageImpl<>(List.of(payment), pageable, 1);
-        DebtPaymentResponse response = new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(100), LocalDate.now(), null, null);
+        DebtPaymentResponse response = new DebtPaymentResponse(1L, 10L, BigDecimal.valueOf(100), LocalDate.now(), null, null, null);
 
         when(debtRepository.findByIdAndUser_Id(10L, 1L)).thenReturn(Optional.of(debt));
         when(debtPaymentRepository.findAllByDebt_IdOrderByPaymentDateDescIdDesc(10L, pageable)).thenReturn(page);
@@ -201,6 +234,12 @@ class DebtPaymentServiceTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(userId, null)
         );
+    }
+
+    private User buildUser(Long userId) {
+        User user = new User();
+        user.setId(userId);
+        return user;
     }
 
     private Debt buildDebt(Long debtId, Long userId, BigDecimal totalAmount, BigDecimal remainingAmount) {

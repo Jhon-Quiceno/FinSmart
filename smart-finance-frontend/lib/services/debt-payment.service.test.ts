@@ -27,6 +27,7 @@ describe("debt payment service", () => {
             paymentDate: "2026-06-15",
             note: "Pago mensual",
             createdAt: "2026-06-15T00:00:00Z",
+            expenseId: null,
           },
         ],
         number: 0,
@@ -60,6 +61,7 @@ describe("debt payment service", () => {
         paymentDate: "2026-06-20",
         note: "Abono extra",
         createdAt: "2026-06-20T00:00:00Z",
+        expenseId: 42,
       }
 
       mock.onPost("/api/debts/1/payments").reply(201, mockResponse)
@@ -68,6 +70,7 @@ describe("debt payment service", () => {
 
       expect(result.id).toBe(11)
       expect(result.amount).toBe(2000)
+      expect(result.expenseId).toBe(42)
     })
   })
 })

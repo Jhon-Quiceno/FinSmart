@@ -106,6 +106,18 @@ class AnalysisControllerTest {
     }
 
     @Test
+    void getSummaryReturns400WhenMonthIsOutOfRange() throws Exception {
+        mockMvc.perform(get("/api/analysis/summary?year=2026&month=13").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getSummaryReturns400WhenYearIsOutOfRange() throws Exception {
+        mockMvc.perform(get("/api/analysis/summary?year=1999&month=6").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void getRecommendationsReturns200WithRuleResults() throws Exception {
         when(financialAnalysisService.getRecommendations(isNull(), isNull())).thenReturn(recommendationsResponse);
 
@@ -119,6 +131,12 @@ class AnalysisControllerTest {
     void getRecommendationsReturns403WithoutAuthToken() throws Exception {
         mockMvc.perform(get("/api/analysis/recommendations"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getRecommendationsReturns400WhenMonthIsOutOfRange() throws Exception {
+        mockMvc.perform(get("/api/analysis/recommendations?year=2026&month=0").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

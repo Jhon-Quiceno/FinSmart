@@ -55,6 +55,18 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
     List<Expense> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
 
     /**
+     * Every expense for the user in {@code [start, end]}, with category eagerly fetched (same
+     * N+1 rationale as {@link #findRecentByUserId}), ordered by date descending. Backs
+     * {@code ReportService#getMovements} (Sprint 6), which needs every movement in the period
+     * rather than a fixed-size "recent" window.
+     */
+    @Query("SELECT e FROM Expense e LEFT JOIN FETCH e.category WHERE e.user.id = :userId "
+            + "AND e.date >= :start AND e.date <= :end ORDER BY e.date DESC, e.id DESC")
+    List<Expense> findByUserAndPeriod(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
+    );
+
+    /**
      * Distinct user ids with at least one expense in {@code [start, end]}, backing
      * {@code WeeklySummaryJob} (Sprint 5, Batch 3). Used together with
      * {@link IncomeRepository#findDistinctUserIdsByDateBetween} to build the set of users with

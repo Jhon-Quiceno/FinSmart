@@ -24,6 +24,8 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<AuthActionResult>
   logout: () => Promise<void>
   isAuthenticated: boolean
+  /** Updates the in-memory user and its localStorage snapshot after a successful profile edit. */
+  updateUser: (nextUser: { name: string; email: string }) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -148,6 +150,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateUser = (nextUser: { name: string; email: string }) => {
+    if (!user) return
+    persistSession({ ...user, name: nextUser.name, email: nextUser.email })
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -157,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         isAuthenticated: !!user,
+        updateUser,
       }}
     >
       {shouldRenderChildren ? children : null}

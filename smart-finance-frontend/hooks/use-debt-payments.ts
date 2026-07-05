@@ -4,6 +4,7 @@ import type { DebtPaymentFilters } from "@/lib/services/debt-payment.service"
 import type { DebtPayment, DebtPaymentRequest } from "@/lib/types/debt-payment"
 import type { PaginatedResponse } from "@/lib/types/pagination"
 import { invalidateDebtsCache } from "./use-debts"
+import { invalidateExpensesCache } from "./use-expenses"
 
 const debtPaymentsCache = new Map<string, PaginatedResponse<DebtPayment>>()
 const debtPaymentListeners = new Set<() => void>()
@@ -93,6 +94,7 @@ export function useCreateDebtPayment() {
       const response = await createDebtPayment(debtId, payload)
       invalidateDebtPaymentsCache()
       invalidateDebtsCache()
+      invalidateExpensesCache()
       return response
     } finally {
       setIsLoading(false)

@@ -8,6 +8,7 @@ import { ExpensesFilters } from "@/components/expenses/expenses-filters"
 import { ExpensesTable } from "@/components/expenses/expenses-table"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
@@ -20,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useCreateExpense, useDeleteExpense, useExpenses, useUpdateExpense } from "@/hooks/use-expenses"
-import { getApiErrorMessage } from "@/lib/api-client"
+import { toastApiError } from "@/lib/api-client"
 import type { ExpenseFormValues } from "@/lib/schemas/expense.schema"
 import type { Expense, ExpenseRequest } from "@/lib/types/expense"
 import { ALL_PERIODS_VALUE, getCurrentPeriodValue, periodToDateRange } from "@/lib/utils/period"
@@ -110,7 +111,7 @@ export default function GastosPage() {
       setModalOpen(false)
       setEditingExpense(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible guardar el gasto"))
+      toastApiError(error, "No fue posible guardar el gasto")
     }
   }
 
@@ -122,7 +123,7 @@ export default function GastosPage() {
       toast.success("Gasto eliminado correctamente")
       setDeletingExpense(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible eliminar el gasto"))
+      toastApiError(error, "No fue posible eliminar el gasto")
     }
   }
 
@@ -204,15 +205,29 @@ export default function GastosPage() {
           </Button>
         </div>
 
-        <ExpensesTable
-          expenses={filteredExpenses}
-          isLoading={isLoading}
-          onEdit={(expense) => {
-            setEditingExpense(expense)
-            setModalOpen(true)
-          }}
-          onDelete={(expense) => setDeletingExpense(expense)}
-        />
+        {!isLoading && filteredExpenses.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <TrendingDown />
+              </EmptyMedia>
+              <EmptyTitle>No hay gastos registrados</EmptyTitle>
+              <EmptyDescription>
+                Ajusta los filtros seleccionados o agrega tu primer gasto para verlo reflejado aqui.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <ExpensesTable
+            expenses={filteredExpenses}
+            isLoading={isLoading}
+            onEdit={(expense) => {
+              setEditingExpense(expense)
+              setModalOpen(true)
+            }}
+            onDelete={(expense) => setDeletingExpense(expense)}
+          />
+        )}
       </div>
 
       <ExpenseModal

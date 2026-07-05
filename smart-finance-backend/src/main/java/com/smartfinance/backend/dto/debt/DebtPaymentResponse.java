@@ -13,6 +13,8 @@ import java.time.LocalDate;
  * @param paymentDate date the payment was made
  * @param note        optional free-text note
  * @param createdAt   creation timestamp
+ * @param expenseId   identifier of the {@link com.smartfinance.backend.model.Expense} created
+ *                    alongside this payment (see {@code DebtPaymentService#createPayment})
  */
 public record DebtPaymentResponse(
         Long id,
@@ -20,6 +22,7 @@ public record DebtPaymentResponse(
         BigDecimal amount,
         LocalDate paymentDate,
         String note,
-        Instant createdAt
+        Instant createdAt,
+        Long expenseId
 ) {
 }

@@ -7,6 +7,7 @@ import { IncomeModal } from "@/components/income/income-modal"
 import { IncomeTable } from "@/components/income/income-table"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -20,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useCreateIncome, useDeleteIncome, useIncomes, useUpdateIncome } from "@/hooks/use-incomes"
-import { getApiErrorMessage } from "@/lib/api-client"
+import { toastApiError } from "@/lib/api-client"
 import type { IncomeFormValues } from "@/lib/schemas/income.schema"
 import type { Income, IncomeRequest } from "@/lib/types/income"
 
@@ -89,7 +90,7 @@ export default function IngresosPage() {
       setModalOpen(false)
       setEditingIncome(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible guardar el ingreso"))
+      toastApiError(error, "No fue posible guardar el ingreso")
     }
   }
 
@@ -101,7 +102,7 @@ export default function IngresosPage() {
       toast.success("Ingreso eliminado correctamente")
       setDeletingIncome(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible eliminar el ingreso"))
+      toastApiError(error, "No fue posible eliminar el ingreso")
     }
   }
 
@@ -218,15 +219,29 @@ export default function IngresosPage() {
           </div>
         </div>
 
-        <IncomeTable
-          incomes={incomes.content}
-          isLoading={isLoading}
-          onEdit={(income) => {
-            setEditingIncome(income)
-            setModalOpen(true)
-          }}
-          onDelete={(income) => setDeletingIncome(income)}
-        />
+        {!isLoading && incomes.content.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <TrendingUp />
+              </EmptyMedia>
+              <EmptyTitle>No hay ingresos registrados en este periodo</EmptyTitle>
+              <EmptyDescription>
+                Ajusta el mes y ano seleccionados o agrega tu primer ingreso para verlo reflejado aqui.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <IncomeTable
+            incomes={incomes.content}
+            isLoading={isLoading}
+            onEdit={(income) => {
+              setEditingIncome(income)
+              setModalOpen(true)
+            }}
+            onDelete={(income) => setDeletingIncome(income)}
+          />
+        )}
       </div>
 
       <IncomeModal

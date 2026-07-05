@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DebtCard } from "@/components/debts/debt-card"
 import { DebtModal } from "@/components/debts/debt-modal"
@@ -22,7 +23,7 @@ import { DebtPaymentModal } from "@/components/debts/debt-payment-modal"
 import { DebtPaymentHistoryDialog } from "@/components/debts/debt-payment-history-dialog"
 import { useCreateDebt, useDebts, useDeleteDebt, useUpdateDebt } from "@/hooks/use-debts"
 import { useCreateDebtPayment } from "@/hooks/use-debt-payments"
-import { getApiErrorMessage } from "@/lib/api-client"
+import { toastApiError } from "@/lib/api-client"
 import type { DebtFormValues } from "@/lib/schemas/debt.schema"
 import type { DebtPaymentFormValues } from "@/lib/schemas/debt-payment.schema"
 import type { Debt, DebtCreateRequest, DebtUpdateRequest } from "@/lib/types/debt"
@@ -84,7 +85,7 @@ export default function DeudasPage() {
       setEditingDebt(null)
       return true
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible guardar la deuda"))
+      toastApiError(error, "No fue posible guardar la deuda")
       return false
     }
   }
@@ -97,7 +98,7 @@ export default function DeudasPage() {
       toast.success("Deuda eliminada correctamente")
       setDeletingDebt(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible eliminar la deuda"))
+      toastApiError(error, "No fue posible eliminar la deuda")
     }
   }
 
@@ -116,7 +117,7 @@ export default function DeudasPage() {
       setPayingDebt(null)
       return true
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible registrar el pago"))
+      toastApiError(error, "No fue posible registrar el pago")
       return false
     }
   }
@@ -230,9 +231,17 @@ export default function DeudasPage() {
             ))}
           </div>
         ) : debts.content.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-            Todavia no tienes deudas registradas.
-          </div>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <CreditCard />
+              </EmptyMedia>
+              <EmptyTitle>No tenes deudas registradas</EmptyTitle>
+              <EmptyDescription>
+                Agrega tu primera deuda para comenzar a monitorear pagos y progreso.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {debts.content.map((debt) => (
