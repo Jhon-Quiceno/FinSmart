@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RecurringPaymentCard } from "@/components/recurring/recurring-payment-card"
 import { RecurringPaymentModal } from "@/components/recurring/recurring-payment-modal"
@@ -26,7 +27,7 @@ import {
   useToggleRecurringPayment,
   useUpdateRecurringPayment,
 } from "@/hooks/use-recurring-payments"
-import { getApiErrorMessage } from "@/lib/api-client"
+import { toastApiError } from "@/lib/api-client"
 import type { RecurringPaymentFormValues } from "@/lib/schemas/recurring-payment.schema"
 import type {
   RecurringPayment,
@@ -102,7 +103,7 @@ export default function ServiciosPage() {
       setEditingItem(null)
       return true
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible guardar el servicio"))
+      toastApiError(error, "No fue posible guardar el servicio")
       return false
     }
   }
@@ -115,7 +116,7 @@ export default function ServiciosPage() {
       toast.success("Servicio eliminado correctamente")
       setDeletingItem(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible eliminar el servicio"))
+      toastApiError(error, "No fue posible eliminar el servicio")
     }
   }
 
@@ -124,7 +125,7 @@ export default function ServiciosPage() {
       await toggleRecurringPayment(item.id)
       toast.success(item.isActive ? "Servicio desactivado" : "Servicio activado")
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible cambiar el estado del servicio"))
+      toastApiError(error, "No fue posible cambiar el estado del servicio")
     }
   }
 
@@ -133,7 +134,7 @@ export default function ServiciosPage() {
       await payRecurringPayment(item.id)
       toast.success(`Pago de "${item.name}" registrado correctamente`)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible registrar el pago"))
+      toastApiError(error, "No fue posible registrar el pago")
     }
   }
 
@@ -216,9 +217,17 @@ export default function ServiciosPage() {
             ))}
           </div>
         ) : recurringPayments.content.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-            Todavia no tienes servicios recurrentes registrados.
-          </div>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Repeat />
+              </EmptyMedia>
+              <EmptyTitle>No tenes servicios recurrentes registrados</EmptyTitle>
+              <EmptyDescription>
+                Agrega un servicio o suscripcion para llevar el control de tus pagos recurrentes.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recurringPayments.content.map((item) => (

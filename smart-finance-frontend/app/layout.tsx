@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/contexts/auth-context"
 import "./globals.css"
@@ -46,10 +47,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es" suppressHydrationWarning>
       <body className={`${inter.variable} bg-background font-sans antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
-        <Toaster richColors position="top-right" />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          <AuthProvider>{children}</AuthProvider>
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

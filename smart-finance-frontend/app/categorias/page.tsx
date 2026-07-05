@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
+import { Plus, Tags } from "lucide-react"
 import { toast } from "sonner"
 import { CategoryModal } from "@/components/categories/category-modal"
 import { CategoriesTable } from "@/components/categories/categories-table"
@@ -17,9 +17,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from "@/hooks/use-categories"
-import { getApiErrorMessage } from "@/lib/api-client"
+import { toastApiError } from "@/lib/api-client"
 import type { CategoryFormValues } from "@/lib/schemas/category.schema"
 import type { Category, CategoryRequest, CategoryType } from "@/lib/types/category"
 
@@ -52,7 +53,7 @@ export default function CategoriasPage() {
       setModalOpen(false)
       setEditingCategory(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible guardar la categoria"))
+      toastApiError(error, "No fue posible guardar la categoria")
     }
   }
 
@@ -64,7 +65,7 @@ export default function CategoriasPage() {
       toast.success("Categoria eliminada correctamente")
       setDeletingCategory(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "No fue posible eliminar la categoria"))
+      toastApiError(error, "No fue posible eliminar la categoria")
     }
   }
 
@@ -96,27 +97,55 @@ export default function CategoriasPage() {
           </TabsList>
 
           <TabsContent value="INCOME">
-            <CategoriesTable
-              categories={activeType === "INCOME" ? categories : []}
-              isLoading={activeType === "INCOME" && isLoading}
-              onEdit={(category) => {
-                setEditingCategory(category)
-                setModalOpen(true)
-              }}
-              onDelete={(category) => setDeletingCategory(category)}
-            />
+            {activeType === "INCOME" && !isLoading && categories.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Tags />
+                  </EmptyMedia>
+                  <EmptyTitle>No hay categorias de ingresos registradas</EmptyTitle>
+                  <EmptyDescription>
+                    Agrega una categoria para organizar tus ingresos.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <CategoriesTable
+                categories={activeType === "INCOME" ? categories : []}
+                isLoading={activeType === "INCOME" && isLoading}
+                onEdit={(category) => {
+                  setEditingCategory(category)
+                  setModalOpen(true)
+                }}
+                onDelete={(category) => setDeletingCategory(category)}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="EXPENSE">
-            <CategoriesTable
-              categories={activeType === "EXPENSE" ? categories : []}
-              isLoading={activeType === "EXPENSE" && isLoading}
-              onEdit={(category) => {
-                setEditingCategory(category)
-                setModalOpen(true)
-              }}
-              onDelete={(category) => setDeletingCategory(category)}
-            />
+            {activeType === "EXPENSE" && !isLoading && categories.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Tags />
+                  </EmptyMedia>
+                  <EmptyTitle>No hay categorias de gastos registradas</EmptyTitle>
+                  <EmptyDescription>
+                    Agrega una categoria para organizar tus gastos.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <CategoriesTable
+                categories={activeType === "EXPENSE" ? categories : []}
+                isLoading={activeType === "EXPENSE" && isLoading}
+                onEdit={(category) => {
+                  setEditingCategory(category)
+                  setModalOpen(true)
+                }}
+                onDelete={(category) => setDeletingCategory(category)}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>

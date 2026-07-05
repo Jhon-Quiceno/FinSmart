@@ -77,6 +77,16 @@ async function setAuthorizationAndCsrfHeaders(config: InternalAxiosRequestConfig
   return config
 }
 
+/**
+ * Clears the client-side session snapshot on a hard auth failure (refresh failed, or a 403 that
+ * really means "not authenticated"). This intentionally does NOT call `AuthContext.clearSession()`
+ * — an axios interceptor runs outside React's render tree, so there is no `AuthProvider` instance
+ * to call into here. Instead it reproduces the same two effects `clearSession()` has (drop the
+ * `financeai_user` localStorage key, clear the in-memory access token) directly, and the caller
+ * always follows up with `redirectToLogin()`, which does a full `window.location.href` navigation
+ * — that reload remounts `AuthProvider` from scratch, so React state staying stale in the old page
+ * is a non-issue.
+ */
 function clearClientSession() {
   if (typeof window === "undefined") return
   window.localStorage.removeItem("financeai_user")
@@ -103,6 +113,24 @@ function showForbiddenToast() {
   })
 }
 
+/**
+ * The AI endpoints (chat, insights, categorize) intentionally surface their own specific error
+ * messages at the call site (e.g. `ai-insights-card.tsx` distinguishes a 422 "no provider
+ * configured" from a generic failure, and both `chat`/`generateInsight` propagate a 503 "assistant
+ * unavailable" for the caller to render). Showing the generic server-error toast for those
+ * requests too would double up on toasts, so 5xx responses from `/api/ai/*` are excluded here.
+ */
+function isAiEndpoint(url: string): boolean {
+  return url.includes("/api/ai/")
+}
+
+function showServerErrorToast() {
+  if (typeof window === "undefined") return
+  void import("sonner").then(({ toast }) => {
+    toast.error("Ocurrió un error en el servidor. Intentá de nuevo en unos minutos.")
+  })
+}
+
 apiClient.interceptors.request.use(async (config) => setAuthorizationAndCsrfHeaders(config))
 
 apiClient.interceptors.response.use(
@@ -118,7 +146,8 @@ apiClient.interceptors.response.use(
       requestUrl.includes("/api/users/login") ||
       requestUrl.includes("/api/users/register") ||
       requestUrl.includes("/api/users/refresh") ||
-      requestUrl.includes("/api/users/logout")
+      requestUrl.includes("/api/users/logout") ||
+      requestUrl.includes("/api/users/password")
     const status = error.response?.status
 
     if (isCsrfError(error) && !originalRequest._csrfRetry && isMutatingMethod(originalRequest.method)) {
@@ -163,6 +192,10 @@ apiClient.interceptors.response.use(
       showForbiddenToast()
     }
 
+    if (status !== undefined && status >= 500 && !isAiEndpoint(requestUrl)) {
+      showServerErrorToast()
+    }
+
     return Promise.reject(error)
   },
 )
@@ -186,6 +219,22 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string): str
   }
 
   return fallbackMessage
+}
+
+/**
+ * Toasts `error` with `fallbackMessage`, except for 5xx responses: those already get the generic
+ * server-error toast from the response interceptor above, so toasting here too would stack two
+ * toasts for the same failure.
+ */
+export function toastApiError(error: unknown, fallbackMessage: string): void {
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined
+  if (status !== undefined && status >= 500) {
+    return
+  }
+
+  void import("sonner").then(({ toast }) => {
+    toast.error(getApiErrorMessage(error, fallbackMessage))
+  })
 }
 
 async function refreshAccessToken(): Promise<string> {
