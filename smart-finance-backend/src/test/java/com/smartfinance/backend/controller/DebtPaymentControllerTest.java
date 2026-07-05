@@ -60,7 +60,7 @@ class DebtPaymentControllerTest {
     private static final String AUTH_HEADER = "Bearer test-token";
 
     private final DebtPaymentResponse payment = new DebtPaymentResponse(
-            1L, 10L, BigDecimal.valueOf(200), LocalDate.of(2026, 6, 1), "Abono mensual", null
+            1L, 10L, BigDecimal.valueOf(200), LocalDate.of(2026, 6, 1), "Abono mensual", null, 77L
     );
 
     @BeforeEach
@@ -94,7 +94,8 @@ class DebtPaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1L));
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.expenseId").value(77L));
     }
 
     @Test

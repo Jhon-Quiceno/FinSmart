@@ -6,8 +6,12 @@ import com.smartfinance.backend.exception.ResourceNotFoundException;
 import com.smartfinance.backend.mapper.DebtPaymentMapper;
 import com.smartfinance.backend.model.Debt;
 import com.smartfinance.backend.model.DebtPayment;
+import com.smartfinance.backend.model.Expense;
+import com.smartfinance.backend.model.PaymentMethodType;
 import com.smartfinance.backend.repository.DebtPaymentRepository;
 import com.smartfinance.backend.repository.DebtRepository;
+import com.smartfinance.backend.repository.ExpenseRepository;
+import com.smartfinance.backend.repository.UserRepository;
 import com.smartfinance.backend.security.SecurityUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,21 +30,32 @@ import java.time.LocalDate;
  * not a read-then-write) before persisting the {@link DebtPayment}, so two concurrent payments
  * against the same debt cannot both pass validation against the same stale balance and cause a
  * lost update.
+ *
+ * <p>{@link #createPayment} also creates an {@link Expense} linked back to the debt payment
+ * (see {@link Expense#getDebtPayment()}), mirroring how
+ * {@code RecurringPaymentService#payRecurringPayment} generates an {@link Expense} for each
+ * recurring payment execution.
  */
 @Service
 public class DebtPaymentService {
 
     private final DebtPaymentRepository debtPaymentRepository;
     private final DebtRepository debtRepository;
+    private final ExpenseRepository expenseRepository;
+    private final UserRepository userRepository;
     private final DebtPaymentMapper debtPaymentMapper;
 
     public DebtPaymentService(
             DebtPaymentRepository debtPaymentRepository,
             DebtRepository debtRepository,
+            ExpenseRepository expenseRepository,
+            UserRepository userRepository,
             DebtPaymentMapper debtPaymentMapper
     ) {
         this.debtPaymentRepository = debtPaymentRepository;
         this.debtRepository = debtRepository;
+        this.expenseRepository = expenseRepository;
+        this.userRepository = userRepository;
         this.debtPaymentMapper = debtPaymentMapper;
     }
 
@@ -74,10 +89,31 @@ public class DebtPaymentService {
 
         DebtPayment payment = debtPaymentMapper.toEntity(request);
         payment.setDebt(debt);
-        payment.setPaymentDate(request.paymentDate() != null ? request.paymentDate() : LocalDate.now());
+        LocalDate paymentDate = request.paymentDate() != null ? request.paymentDate() : LocalDate.now();
+        payment.setPaymentDate(paymentDate);
 
         DebtPayment savedPayment = debtPaymentRepository.save(payment);
-        return debtPaymentMapper.toResponse(savedPayment);
+
+        Expense expense = new Expense();
+        expense.setUser(userRepository.getReferenceById(userId));
+        expense.setDescription("Abono a deuda: " + debt.getName());
+        expense.setAmount(request.amount());
+        expense.setDate(paymentDate);
+        expense.setPaymentMethod(PaymentMethodType.OTHER);
+        expense.setCategory(null);
+        expense.setDebtPayment(savedPayment);
+        Expense savedExpense = expenseRepository.save(expense);
+
+        DebtPaymentResponse mappedResponse = debtPaymentMapper.toResponse(savedPayment);
+        return new DebtPaymentResponse(
+                mappedResponse.id(),
+                mappedResponse.debtId(),
+                mappedResponse.amount(),
+                mappedResponse.paymentDate(),
+                mappedResponse.note(),
+                mappedResponse.createdAt(),
+                savedExpense.getId()
+        );
     }
 
     private Debt findOwnedDebt(Long debtId, Long userId) {
