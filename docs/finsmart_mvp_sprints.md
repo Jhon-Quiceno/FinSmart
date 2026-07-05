@@ -194,27 +194,31 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 ---
 
 ## 🟪 Sprint 6 — Reportes, Pulido y Launch
-> Reportes, UX final, índices de rendimiento, Docker y deploy del MVP · **14 tareas**
+> Reportes, UX final, índices de rendimiento, Docker y deploy del MVP · **12/14 tareas completas, 2 parciales** (ver detalle)
 
 ### Backend
-- [ ] `[BE]` Endpoints de reportes por período — `GET /api/reports/monthly?month=X&year=Y` con breakdown completo
-- [ ] `[BE]` Endpoint de exportación — `GET /api/reports/export` → CSV o JSON con todos los movimientos del período
-- [ ] `[BE]` Dockerizar Spring Boot — `Dockerfile` + `docker-compose` con PostgreSQL
-- [ ] `[BE]` Variables de entorno para producción — `application.properties` separado para `prod`/`dev`
-- [ ] `[BE]` Validaciones exhaustivas en todos los endpoints — `@Valid`, mensajes de error claros en español
-- [ ] `[BE]` Smoke testing de todos los endpoints con colección de Postman documentada
+- [x] `[BE]` Endpoints de reportes por período — `GET /api/reports/monthly?month=X&year=Y` con breakdown completo
+- [x] `[BE]` Endpoint de exportación — `GET /api/reports/export` → CSV o JSON con todos los movimientos del período
+- [x] `[BE]` Dockerizar Spring Boot — `Dockerfile` + `docker-compose` con PostgreSQL
+- [x] `[BE]` Variables de entorno para producción — `application.properties` separado para `prod`/`dev`
+- [x] `[BE]` Validaciones exhaustivas en todos los endpoints — `@Valid`, mensajes de error claros en español
+- [~] `[BE]` Smoke testing de todos los endpoints con colección de Postman documentada — smoke testing cubierto por la suite automatizada (MockMvc); la colección de Postman exportable queda pendiente, ver `docs/auditoria/pendientes-fuera-de-sprint6.md`
 
 ### Base de datos
-- [ ] `[DB]` **Migración `V11`** — índices de cierre restantes: `debt_id + payment_date` en `debt_payments` (los de `expenses`/`incomes`/`recurring_payments`/`ai_messages` ya quedaron cubiertos por `V8` y `V10` en Sprint 5)
+- [x] `[DB]` **Migración `V11`** — índices de cierre restantes: `debt_id + payment_date` en `debt_payments` (los de `expenses`/`incomes`/`recurring_payments`/`ai_messages` ya quedaron cubiertos por `V8` y `V10` en Sprint 5)
 
 ### Frontend
-- [ ] `[FE]` Página `/reportes` conectada al backend — selector de período + gráficos mensuales/anuales
-- [ ] `[FE]` Funcionalidad de exportación desde `/reportes` — botón descargar CSV
-- [ ] `[FE]` Manejo global de errores `401`/`403`/`500` — redirigir a login si token expirado
-- [ ] `[FE]` Empty states para todas las páginas cuando no hay datos registrados
-- [ ] `[FE]` Página `/configuracion` — cambio de contraseña, preferencias de notificación, datos de perfil
-- [ ] `[FE]` Revisión de responsividad mobile en todas las páginas con datos reales
-- [ ] `[FE]` Build de producción Next.js — variable `NEXT_PUBLIC_API_URL` configurada para prod
+- [x] `[FE]` Página `/reportes` conectada al backend — selector de período + gráficos mensuales/anuales
+- [x] `[FE]` Funcionalidad de exportación desde `/reportes` — botón descargar CSV
+- [x] `[FE]` Manejo global de errores `401`/`403`/`500` — redirigir a login si token expirado
+- [x] `[FE]` Empty states para todas las páginas cuando no hay datos registrados
+- [x] `[FE]` Página `/configuracion` — cambio de contraseña, preferencias de notificación, datos de perfil
+- [~] `[FE]` Revisión de responsividad mobile en todas las páginas con datos reales — pendiente de verificación manual en navegador por el usuario, no automatizable
+- [x] `[FE]` Build de producción Next.js — variable `NEXT_PUBLIC_API_URL` configurada para prod
+
+**Sprint 6 — decisiones no explícitas en el alcance original:** el sprint pedía `/configuracion` con cambio de contraseña y datos de perfil, pero el alcance de backend original no listaba los endpoints correspondientes — se agregaron `PUT /api/users/profile` (nombre/email, rechaza con `409` si el email ya está en uso por otro usuario) y `PUT /api/users/password` (verifica la contraseña actual antes de aplicar la nueva). El reporte mensual (`GET /api/reports/monthly`) no persiste un snapshot nuevo: reutiliza `FinancialAnalysisService.getSummary()` (Sprint 4) para el breakdown y agrega el desglose de movimientos crudos vía `ReportService`, siguiendo la decisión de arquitectura ya documentada en `docs/sprints/sprint6.md`. Se agregaron 3 agentes revisores en contexto limpio (backend, frontend, tests+arquitectura) que auditaron el diff completo del sprint y encontraron, entre otros: inyección de fórmulas en el CSV exportado (corregido escapando `=`/`+`/`-`/`@` al inicio de un campo), que cambiar la contraseña no invalidaba sesiones existentes (se agregó revocación de todos los refresh tokens del usuario), una condición de carrera en la validación de email único que podía degradar a un `500` en vez de un `409` (corregida con `try/catch` sobre `DataIntegrityViolationException`), que el `401` de "contraseña actual incorrecta" era tratado por el interceptor global como sesión expirada (se excluyó `/api/users/password` de la recuperación automática de sesión), y que el nuevo manejo global de `500` duplicaba el toast de error en páginas que ya mostraban su propio mensaje (se introdujo `toastApiError`, que omite el toast local en 5xx). Se encontró y eliminó código muerto real (los primitivos de toast de shadcn/ui — `toast.tsx`/`toaster.tsx`/`use-toast.ts` — completamente reemplazados por `sonner` y sin ninguna referencia en el proyecto), sin podar el resto de la librería shadcn/ui por decisión explícita del usuario. El detalle completo de estas revisiones y lo que queda pendiente fuera de este sprint está en `docs/auditoria/` (`arquitectura.md`, `base-de-datos.md`, `codigo-muerto.md`, `pendientes-fuera-de-sprint6.md`). Verificado con la suite completa: 281 tests backend y 88 tests frontend en verde, lint y build de producción limpios.
+
+**Sprint 6 — seguimiento posterior (post-cierre, fuera del alcance original):** tras cerrar el sprint, se detectaron y corrigieron 3 items adicionales de pulido. (1) **Bug real de datos**: registrar un abono a una deuda (`POST /api/debts/{id}/payments`) no generaba un gasto, a diferencia de marcar un servicio recurrente como pagado (`PATCH /api/recurring/{id}/pay`), que sí lo hace desde el Sprint 3 — un abono a deuda es plata que sale de tu bolsillo igual que cualquier gasto, y no aparecía en `/gastos` ni en el dashboard del mes. Se corrigió replicando exactamente el patrón ya existente: **migración `V12`** agrega `debt_payment_id` (FK nullable, `ON DELETE SET NULL`) a `expenses`; `DebtPaymentService.createPayment` ahora crea un `Expense` vinculado (`"Abono a deuda: {nombre}"`, método de pago `OTHER` por no capturarse uno específico en el abono, sin categoría) en la misma transacción que descuenta el saldo restante; `DebtPaymentResponse` expone el nuevo `expenseId`; el frontend invalida la caché de gastos (`invalidateExpensesCache()`) tras registrar un abono, igual que ya hacía al pagar un servicio. (2) **Diferenciación `/reportes` vs. dashboard**: el dashboard es un resumen ejecutivo del mes en curso; `/reportes` ahora agrega una tabla de movimientos detallados del período seleccionado (fecha, tipo, categoría, descripción, monto, método de pago — la misma data que ya se exportaba a CSV, pero visible en pantalla), vía un nuevo endpoint de solo lectura `GET /api/reports/movements` (misma forma que `/export?format=json` pero sin semántica de descarga de archivo, para no forzar un `Content-Disposition` en un fetch que solo alimenta una tabla). (3) **CSV más legible**: el archivo exportado ahora traduce tipo (`Ingreso`/`Gasto`) y método de pago a español (mismas etiquetas que ya usa el frontend en `/gastos`) y formatea el monto con 2 decimales fijos — el contrato JSON (`/export?format=json` y el nuevo `/movements`) se mantiene sin traducir, ya que el frontend ya tiene su propia capa de etiquetas en pantalla. Verificado: 286 tests backend y 92 tests frontend en verde, lint y build limpios.
 
 ---
 
@@ -227,8 +231,8 @@ Respecto al tablero original, se hicieron 4 cambios estructurales tras revisar l
 | 3 | Deudas y Servicios | 18/18 | 8 | 8 | 2 | `V4`, `V5` |
 | 4 | Motor Financiero + Dashboard | 15/15 | 8 | 6 | 1 | `V6` |
 | 5 | IA Multi-Proveedor + Notificaciones | 26/26 | 15 | 8 | 3 | `V7`, `V8`, `V10` |
-| 6 | Reportes y Launch | 14 | 6 | 7 | 1 | `V11` |
-| **Total** | | **105** | **53** | **41** | **11** | **10 migraciones** |
+| 6 | Reportes y Launch | 12/14 (2 parciales) | 6 | 7 | 1 (+`V12` post-cierre) | `V11`, `V12` |
+| **Total** | | **103/105** | **53** | **41** | **11** | **11 migraciones** |
 
 ---
 
@@ -240,6 +244,8 @@ POST   /api/users/register
 POST   /api/users/login
 POST   /api/users/refresh
 POST   /api/users/logout
+PUT    /api/users/profile
+PUT    /api/users/password
 
 # Categorías
 GET    /api/categories
@@ -298,6 +304,7 @@ PUT    /api/notifications/preferences
 
 # Reportes
 GET    /api/reports/monthly?month=X&year=Y
+GET    /api/reports/movements?month=X&year=Y
 GET    /api/reports/export
 ```
 
