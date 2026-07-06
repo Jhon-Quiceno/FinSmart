@@ -1,0 +1,68 @@
+@startuml
+!theme plain
+
+title Flujo de Autenticación JWT
+
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+
+actor "Usuario" as user
+participant "Frontend\n(Next.js)" as frontend
+participant "Axios\nInterceptor" as axios
+participant "Backend\n(Spring Boot)" as backend
+database "PostgreSQL\n(Refresh Tokens)" as db
+
+== Registro ==
+
+user -> frontend: POST /register { email, password, name }
+frontend -> backend: POST /api/users/register
+backend -> db: INSERT INTO users
+backend --> frontend: 201 { user }
+frontend --> user: Redirige a /login
+
+== Login ==
+
+user -> frontend: POST /login { email, password }
+frontend -> backend: POST /api/users/login
+backend -> db: Verifica credenciales
+backend -> db: INSERT INTO refresh_tokens (hash)
+backend --> frontend: 200 { accessToken, user }\n+ Set-Cookie: refreshToken (HttpOnly)
+frontend -> frontend: Guarda accessToken en memoria
+frontend --> user: Redirige a /dashboard
+
+== Request Autenticado ==
+
+user -> frontend: Navega a /gastos
+frontend -> axios: GET /api/expenses
+axios -> axios: Adjunta header:\nAuthorization: Bearer {accessToken}
+axios -> backend: GET /api/expenses
+backend -> backend: Valida JWT (firma + exp)
+backend --> frontend: 200 { data }
+frontend --> user: Renderiza página
+
+== Refresh Automático ==
+
+user -> frontend: Sigue navegando (accessToken expiró)
+frontend -> axios: GET /api/debts
+axios -> axios: Adjunta accessToken (expirado)
+axios -> backend: GET /api/debts
+backend --> axios: 401 Unauthorized
+axios -> backend: POST /api/users/refresh\n(Cookie: refreshToken)
+backend -> db: Verifica hash + no revocado
+backend -> db: Revoca refresh token anterior
+backend -> db: INSERT nuevo refresh token (rotación)
+backend --> axios: 200 { accessToken, expiresIn }
+axios -> axios: Actualiza accessToken en memoria
+axios -> backend: GET /api/debts (REINTENTA)
+backend --> frontend: 200 { data }
+
+== Logout ==
+
+user -> frontend: Cerrar sesión
+frontend -> backend: POST /api/users/logout
+backend -> db: Revoca refresh token
+backend --> frontend: 200 OK
+frontend -> frontend: Limpia accessToken de memoria
+frontend --> user: Redirige a /login
+
+@enduml
