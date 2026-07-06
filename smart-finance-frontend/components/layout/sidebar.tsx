@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -15,7 +16,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Bot,
 } from "lucide-react"
 
@@ -47,8 +47,15 @@ export function Sidebar() {
         <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
           {!collapsed && (
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center shrink-0">
+                <Image
+                  src="/logo_finsmart.svg"
+                  alt="FinSmart"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8"
+                  priority
+                />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
                 FinSmart
@@ -56,8 +63,15 @@ export function Sidebar() {
             </Link>
           )}
           {collapsed && (
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary mx-auto">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
+            <div className="flex items-center justify-center mx-auto">
+              <Image
+                src="/logo_finsmart.svg"
+                alt="FinSmart"
+                width={32}
+                height={32}
+                className="h-8 w-8"
+                priority
+              />
             </div>
           )}
         </div>

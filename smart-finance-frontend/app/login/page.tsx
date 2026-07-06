@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { 
-  Sparkles, 
   Mail, 
   Lock, 
   Eye, 
@@ -99,8 +99,14 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 border border-primary/30">
-              <Sparkles className="w-6 h-6 text-primary" />
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 p-1.5">
+              <Image
+                src="/logo_finsmart.svg"
+                alt="FinSmart"
+                width={48}
+                height={48}
+                className="h-full w-full object-contain"
+              />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">FinSmart</h1>
@@ -140,8 +146,14 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex items-center justify-center gap-3 mb-8 lg:hidden">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 border border-primary/30">
-              <Sparkles className="w-5 h-5 text-primary" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 p-1.5">
+              <Image
+                src="/logo_finsmart.svg"
+                alt="FinSmart"
+                width={40}
+                height={40}
+                className="h-full w-full object-contain"
+              />
             </div>
             <h1 className="text-xl font-bold text-foreground">FinSmart</h1>
           </div>

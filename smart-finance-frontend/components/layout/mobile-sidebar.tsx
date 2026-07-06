@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -12,7 +13,6 @@ import {
   Repeat,
   BarChart3,
   Settings,
-  Sparkles,
   X,
   Bot,
 } from "lucide-react"
@@ -58,8 +58,15 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           {/* Logo */}
           <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
             <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center shrink-0">
+                <Image
+                  src="/logo_finsmart.svg"
+                  alt="FinSmart"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8"
+                  priority
+                />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
                 FinSmart
