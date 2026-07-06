@@ -103,7 +103,7 @@ export default function LoginPage() {
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">FinanceAI</h1>
+              <h1 className="text-2xl font-bold text-foreground">FinSmart</h1>
               <p className="text-sm text-muted-foreground">Gestion Financiera Inteligente</p>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 border border-primary/30">
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">FinanceAI</h1>
+            <h1 className="text-xl font-bold text-foreground">FinSmart</h1>
           </div>
 
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
