@@ -1,0 +1,103 @@
+@startuml
+!theme plain
+
+title Arquitectura General - FinSmart
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+
+package "Cliente Web (Navegador)" {
+  [Next.js 16 App]
+  [Tailwind CSS v4 / shadcn]
+  [Recharts (Gráficos)]
+  [Context API (Auth + Notificaciones)]
+}
+
+package "Frontend (Next.js)" {
+  [Páginas (App Router)]
+  [Componentes React]
+  [Axios API Client]
+  [JWT Interceptor]
+}
+
+package "Backend (Spring Boot 4)" {
+  package "Controllers" {
+    [UserController]
+    [CategoryController]
+    [IncomeController]
+    [ExpenseController]
+    [DebtController]
+    [RecurringController]
+    [AnalysisController]
+    [AIChatController]
+    [NotificationController]
+    [ReportController]
+  }
+
+  package "Services" {
+    [UserService]
+    [CategoryService]
+    [IncomeService]
+    [ExpenseService]
+    [DebtService]
+    [RecurringService]
+    [FinancialAnalysisService]
+    [AiChatOrchestrator]
+    [NotificationService]
+    [ReportService]
+  }
+
+  package "Jobs (@Scheduled)" {
+    [PaymentReminderJob]
+    [WeeklySummaryJob]
+    [InactivityReminderJob]
+    [MonthEndPredictionJob]
+  }
+
+  package "Events" {
+    [ExpenseCreatedEvent]
+    [NotificationListener]
+  }
+
+  package "Security" {
+    [JwtAuthenticationFilter]
+    [SecurityConfig]
+  }
+
+  package "Data Access" {
+    [Repositories (JPA)]
+    [Specifications]
+    [Entities]
+  }
+
+  package "IA Multi-Proveedor" {
+    [AiChatOrchestrator]
+    [AiProviderRegistry]
+    [FinancialContextBuilder]
+    [AiChatClient]
+  }
+}
+
+database "PostgreSQL 16" {
+  [Tablas: users, categories, incomes, expenses]
+  [Tablas: debts, debt_payments, recurring_payments]
+  [Tablas: notifications, ai_messages]
+  [Tablas: financial_analysis]
+  [Migraciones Flyway V1-V12]
+}
+
+package "Externo" {
+  [NVIDIA NIM API]
+  [OpenCode Zen API]
+  [OpenRouter API]
+  [Brevo SMTP (Email)]
+}
+
+Cliente Web -> Frontend: HTTPS
+Frontend -> Backend: REST API (JSON)
+Backend -> PostgreSQL: JDBC / JPA
+Backend -> "IA APIs": HTTP / OpenAI-compatible
+Backend -> "Brevo SMTP": Email (async, degradable)
+
+@enduml
