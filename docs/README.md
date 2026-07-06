@@ -22,10 +22,13 @@ docs/
 │   └── diagramas/
 │       ├── puml/                      ← Diagramas fuente en PlantUML
 │       └── renders/                   ← Diagramas renderizados (generados)
-├── assets/                            ← Imágenes, diagramas y recursos estáticos
+├── assets/                            ← Recursos estáticos compartidos (íconos, imágenes generales)
 ├── auditoria/                         ← Auditorías de arquitectura, BD y código
 ├── evidencias/                        ← Evidencias técnicas por sprint
-│   └── README.md                      ← Índice y guía de evidencias
+│   ├── README.md                      ← Índice y guía de evidencias
+│   └── capturas/                      ← Capturas de pantalla reales, por fecha y feature
+├── video-evidencias/                  ← Video demo de la app (HyperFrames)
+│   └── finsmart-demo/                 ← Composición + capturas reales + finsmart-demo.mp4
 ├── sprints/                           ← Planificación detallada por sprint
 ├── finsmart_mvp_sprints.md            ← Tablero maestro del MVP (105 tareas)
 ├── FRONTEND_DOC.md                    ← Documentación del frontend
@@ -65,6 +68,14 @@ docs/
 
 ---
 
+## Documentación Visual
+
+- 🎬 **Video demo:** [`video-evidencias/finsmart-demo/finsmart-demo.mp4`](video-evidencias/finsmart-demo/finsmart-demo.mp4) — recorrido de ~30s por login, registro, dashboard y los 8 módulos, con capturas reales de la aplicación.
+- 🖼️ **Capturas reales:** [`evidencias/capturas/`](evidencias/capturas/) — screenshots por fecha y feature, referenciados desde las evidencias de sprint.
+- 📐 **Diagramas de arquitectura:** [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) — fuente PlantUML + renders SVG.
+
+---
+
 ## Guía Rápida
 
 | Si querés... | Andá a... |
@@ -75,6 +86,7 @@ docs/
 | Entender la seguridad | [`analisis-diseno/documentacion/05-seguridad.md`](analisis-diseno/documentacion/05-seguridad.md) |
 | Ver el diseño del asistente IA | [`analisis-diseno/documentacion/06-ia-asistente.md`](analisis-diseno/documentacion/06-ia-asistente.md) |
 | Ver diagramas de arquitectura | [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) |
+| Ver un recorrido en video de la app | [`video-evidencias/finsmart-demo/`](video-evidencias/finsmart-demo/) |
 | Consultar el plan de sprints | [`finsmart_mvp_sprints.md`](finsmart_mvp_sprints.md) |
 | Ver evidencia de un sprint | [`evidencias/`](evidencias/) |
 | Revisar las auditorías | [`auditoria/`](auditoria/) |
@@ -85,7 +97,8 @@ docs/
 
 - Los documentos de análisis y diseño priorizan **conceptos sobre implementación**.
 - Los diagramas PlantUML son la fuente de verdad visual; los renders en `renders/` se generan a partir de ellos.
-- Las evidencias siguen el formato `YYYY-MM-DD_nombre-descritptivo.md` y cubren qué se hizo, por qué, y cómo se verificó.
+- Las evidencias siguen el formato `YYYY-MM-DD_nombre-descriptivo.md` y cubren qué se hizo, por qué, y cómo se verificó.
+- Las capturas de pantalla reales van en `evidencias/capturas/YYYY-MM-DD_nombre-feature/`, nombradas `pagina-anchoxalto.png`.
 - Los documentos técnicos (código, configuraciones, endpoints) están en español neutro.
 
 ---

@@ -14,7 +14,9 @@ evidencias/
 ├── 2026-07-05_sprint-3-deudas-servicios.md            ← Sprint 3: Deudas, abonos, servicios recurrentes
 ├── 2026-07-05_sprint-4-motor-financiero-dashboard.md  ← Sprint 4: Dashboard, análisis, recomendaciones
 ├── 2026-07-05_sprint-5-ia-notificaciones.md           ← Sprint 5: IA multi-proveedor, notificaciones
-└── 2026-07-05_sprint-6-reportes-launch.md             ← Sprint 6: Reportes, exportación, configuración
+├── 2026-07-05_sprint-6-reportes-launch.md             ← Sprint 6: Reportes, exportación, configuración
+└── capturas/                                          ← Capturas de pantalla reales, por fecha y feature
+    └── 2026-07-06_pantallas-app/                      ← Login, registro, dashboard y los 8 módulos
 ```
 
 ---
@@ -64,7 +66,7 @@ Cada documento incluye las siguientes secciones:
 ## Convenciones
 
 - Formato de archivo: `YYYY-MM-DD_sprint-N-nombre-descriptivo.md`
-- Las capturas de pantalla y recursos visuales van en `docs/assets/`
+- Las capturas de pantalla reales van en `capturas/YYYY-MM-DD_nombre-feature/`, nombradas `pagina-anchoxalto.png`
 - Las evidencias se actualizan si cambian decisiones de diseño o implementación
 - Los diagramas referenciados están en `docs/analisis-diseno/diagramas/`
 
