@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "FinanceAI - Plataforma Inteligente de Gestion Financiera",
+  title: "FinSmart - Plataforma Inteligente de Gestion Financiera",
   description:
     "Gestiona tus finanzas personales con inteligencia artificial. Registra ingresos, gastos, deudas y recibe recomendaciones personalizadas.",
   generator: "v0.app",
