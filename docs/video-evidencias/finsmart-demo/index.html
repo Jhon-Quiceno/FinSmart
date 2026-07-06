@@ -9,117 +9,59 @@
       html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0a0a1a; }
       body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
-      /* === SCENE 1: TITLE === */
+      /* === SCENE: TITLE === */
       #s1-title {
         background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
         display: flex; flex-direction: column; align-items: center; justify-content: center;
       }
       #s1-title .accent-line {
-        width: 80px; height: 4px; background: linear-gradient(90deg, #6366f1, #06b6d4);
+        width: 80px; height: 4px; background: linear-gradient(90deg, #22c55e, #06b6d4);
         border-radius: 2px; margin-bottom: 32px;
       }
       #s1-title h1 {
         font-size: 80px; font-weight: 700; color: #fff; letter-spacing: -2px;
-        text-shadow: 0 0 40px rgba(99,102,241,0.3);
+        text-shadow: 0 0 40px rgba(34,197,94,0.3);
       }
-      #s1-title h1 span { background: linear-gradient(135deg, #6366f1, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      #s1-title h1 span { background: linear-gradient(135deg, #22c55e, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
       #s1-title .subtitle { font-size: 28px; color: #94a3b8; margin-top: 16px; font-weight: 300; letter-spacing: 4px; }
-      #s1-title .tagline { font-size: 18px; color: #64748b; margin-top: 40px; border: 1px solid #1e293b; padding: 12px 32px; border-radius: 100px; }
 
-      /* === SCENE 2: WHAT === */
-      #s2-what {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        display: flex; flex-direction: column; padding: 80px 120px;
+      /* === SCREEN TOUR SCENES === */
+      .screen-scene {
+        background: linear-gradient(135deg, #0a0a1a 0%, #12122a 100%);
+        display: flex; flex-direction: column; align-items: center;
       }
-      #s2-what h2 {
-        font-size: 48px; font-weight: 600; color: #fff; margin-bottom: 16px;
+      .screen-scene .caption {
+        margin-top: 40px; height: 50px; display: flex; align-items: center; justify-content: center;
+        font-size: 32px; font-weight: 600; color: #e2e8f0; letter-spacing: -0.5px;
       }
-      #s2-what h2 span { color: #6366f1; }
-      #s2-what .divider { width: 60px; height: 3px; background: #6366f1; border-radius: 2px; margin-bottom: 40px; }
-      #s2-what .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-      #s2-what .card {
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 16px; padding: 28px;
+      .screen-scene .caption span { color: #22c55e; }
+      .browser-frame {
+        margin-top: 20px; width: 1440px; height: 940px; border-radius: 14px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 30px 80px rgba(0,0,0,0.55);
       }
-      #s2-what .card .icon { font-size: 32px; margin-bottom: 12px; }
-      #s2-what .card h3 { font-size: 22px; color: #e2e8f0; margin-bottom: 8px; font-weight: 600; }
-      #s2-what .card p { font-size: 16px; color: #94a3b8; line-height: 1.6; }
+      .browser-bar {
+        height: 40px; background: #14161c; display: flex; align-items: center; padding: 0 16px; gap: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .browser-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+      .browser-bar .dot.red { background: #ff5f57; }
+      .browser-bar .dot.yellow { background: #febc2e; }
+      .browser-bar .dot.green { background: #28c840; }
+      .browser-bar .url {
+        margin-left: 16px; background: #22242c; color: #94a3b8; font-size: 13px;
+        padding: 5px 16px; border-radius: 6px; font-family: monospace;
+      }
+      .browser-frame img { display: block; width: 1440px; height: 900px; }
 
-      /* === SCENE 3: ARCHITECTURE === */
-      #s3-arch {
-        background: #0f172a; display: flex; flex-direction: column; padding: 60px 80px;
-      }
-      #s3-arch h2 {
-        font-size: 42px; font-weight: 600; color: #fff; text-align: center; margin-bottom: 8px;
-      }
-      #s3-arch h2 span { color: #06b6d4; }
-      #s3-arch .divider { width: 60px; height: 3px; background: #06b6d4; margin: 0 auto 32px; border-radius: 2px; }
-      #s3-arch .layers { display: flex; flex-direction: column; gap: 12px; flex: 1; justify-content: center; }
-      #s3-arch .layer {
-        display: flex; align-items: center; border-radius: 12px; padding: 16px 24px; border: 1px solid rgba(255,255,255,0.08);
-      }
-      #s3-arch .layer.client { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.2); }
-      #s3-arch .layer.frontend { background: rgba(6,182,212,0.1); border-color: rgba(6,182,212,0.2); }
-      #s3-arch .layer.backend { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.15); }
-      #s3-arch .layer.database { background: rgba(250,204,21,0.08); border-color: rgba(250,204,21,0.15); }
-      #s3-arch .layer.external { background: rgba(168,85,247,0.08); border-color: rgba(168,85,247,0.15); }
-      #s3-arch .layer .label { width: 100px; font-size: 14px; font-weight: 600; color: #cbd5e1; letter-spacing: 1px; }
-      #s3-arch .layer .components { font-size: 14px; color: #94a3b8; }
-
-      /* === SCENE 4: FEATURES === */
-      #s4-features {
-        background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 100%);
-        display: flex; flex-direction: column; padding: 80px 100px;
-      }
-      #s4-features h2 {
-        font-size: 48px; font-weight: 600; color: #fff; text-align: center; margin-bottom: 8px;
-      }
-      #s4-features h2 span { color: #a78bfa; }
-      #s4-features .divider { width: 60px; height: 3px; background: #a78bfa; margin: 0 auto 40px; border-radius: 2px; }
-      #s4-features .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-      #s4-features .f-card {
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 16px; padding: 24px; text-align: center;
-      }
-      #s4-features .f-card .emoji { font-size: 40px; margin-bottom: 12px; }
-      #s4-features .f-card h3 { font-size: 20px; color: #e2e8f0; margin-bottom: 6px; font-weight: 600; }
-      #s4-features .f-card p { font-size: 14px; color: #94a3b8; line-height: 1.5; }
-
-      /* === SCENE 5: TECH STACK === */
-      #s5-tech {
-        background: #0f172a; display: flex; flex-direction: column; padding: 80px 120px;
-      }
-      #s5-tech h2 {
-        font-size: 42px; font-weight: 600; color: #fff; text-align: center; margin-bottom: 40px;
-      }
-      #s5-tech h2 span { color: #10b981; }
-      #s5-tech .stack-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-      #s5-tech .tech-item {
-        display: flex; align-items: center; gap: 16px; background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 24px;
-      }
-      #s5-tech .tech-item .badge {
-        width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-        font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
-      }
-      #s5-tech .tech-item .badge.spring { background: #6db33f; }
-      #s5-tech .tech-item .badge.next { background: #000; border: 1px solid #333; }
-      #s5-tech .tech-item .badge.postgres { background: #336791; }
-      #s5-tech .tech-item .badge.nvidia { background: #76b900; }
-      #s5-tech .tech-item .badge.ts { background: #3178c6; }
-      #s5-tech .tech-item .badge.tailwind { background: #06b6d4; }
-      #s5-tech .tech-item .info h4 { font-size: 18px; color: #e2e8f0; font-weight: 600; }
-      #s5-tech .tech-item .info p { font-size: 14px; color: #64748b; }
-
-      /* === SCENE 6: CLOSING === */
-      #s6-close {
+      /* === SCENE: CLOSING === */
+      #s-close {
         background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
         display: flex; flex-direction: column; align-items: center; justify-content: center;
       }
-      #s6-close h2 { font-size: 56px; font-weight: 700; color: #fff; letter-spacing: -1px; }
-      #s6-close h2 span { background: linear-gradient(135deg, #6366f1, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-      #s6-close p { font-size: 24px; color: #64748b; margin-top: 16px; }
-      #s6-close .badge { margin-top: 48px; padding: 16px 40px; border: 1px solid #1e293b; border-radius: 100px; font-size: 16px; color: #475569; }
+      #s-close h2 { font-size: 56px; font-weight: 700; color: #fff; letter-spacing: -1px; }
+      #s-close h2 span { background: linear-gradient(135deg, #22c55e, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      #s-close p { font-size: 24px; color: #64748b; margin-top: 16px; }
+      #s-close .badge { margin-top: 48px; padding: 16px 40px; border: 1px solid #1e293b; border-radius: 100px; font-size: 16px; color: #475569; }
 
       .clip { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
     </style>
@@ -129,149 +71,122 @@
       id="root"
       data-composition-id="main"
       data-start="0"
-      data-duration="24"
+      data-duration="29.8"
       data-width="1920"
       data-height="1080"
     >
 
-      <!-- SCENE 1: TITLE (0s - 4s) -->
-      <div id="s1-title" class="clip" data-start="0" data-duration="4" data-track-index="0">
+      <!-- SCENE: TITLE (0s - 2s) -->
+      <div id="s1-title" class="clip" data-start="0" data-duration="2" data-track-index="0">
         <div class="accent-line" id="t1-line"></div>
         <h1 id="t1-h1"><span>FinSmart</span></h1>
-        <div class="subtitle" id="t1-sub">SMART FINANCE MANAGEMENT</div>
-        <div class="tagline" id="t1-tag">Spring Boot 4 · Next.js 16 · PostgreSQL 16 · AI Multi-Provider</div>
+        <div class="subtitle" id="t1-sub">RECORRIDO POR LA APLICACION</div>
       </div>
 
-      <!-- SCENE 2: WHAT IS FINSMART (4s - 8s) -->
-      <div id="s2-what" class="clip" data-start="4" data-duration="4" data-track-index="0">
-        <h2 id="t2-h"><span>FinSmart</span> es tu copiloto financiero</h2>
-        <div class="divider" id="t2-div"></div>
-        <div class="grid" id="t2-grid">
-          <div class="card" id="t2-c1">
-            <div class="icon">📊</div>
-            <h3>Control Total</h3>
-            <p>Gestioná ingresos, gastos, deudas y servicios recurrentes desde un solo panel. Visualizá reportes con Recharts.</p>
-          </div>
-          <div class="card" id="t2-c2">
-            <div class="icon">🤖</div>
-            <h3>IA Multi-Proveedor</h3>
-            <p>Asistente inteligente con failover automático: NVIDIA NIM → OpenCode Zen → OpenRouter. Sin punto único de falla.</p>
-          </div>
-          <div class="card" id="t2-c3">
-            <div class="icon">🔔</div>
-            <h3>Notificaciones Proactivas</h3>
-            <p>Recordatorios de pagos, alertas de sobrecarga, resúmenes semanales y predicciones vía @Scheduled + Brevo SMTP.</p>
-          </div>
-          <div class="card" id="t2-c4">
-            <div class="icon">🛡️</div>
-            <h3>Seguridad Enterprise</h3>
-            <p>JWT con refresh token rotation, CORS granular, validación Zod en frontend y Spring Security en backend.</p>
-          </div>
+      <!-- SCREEN 1: Login (2.0s - 4.3s) -->
+      <div class="clip screen-scene" data-start="2.0" data-duration="2.3" data-track-index="0">
+        <div class="caption">Iniciar <span>sesion</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/login</div></div>
+          <img src="assets/screens/login-1440x900.png" alt="Login" />
         </div>
       </div>
 
-      <!-- SCENE 3: ARCHITECTURE (8s - 13s) -->
-      <div id="s3-arch" class="clip" data-start="8" data-duration="5" data-track-index="0">
-        <h2 id="t3-h">Arquitectura <span>general</span></h2>
-        <div class="divider" id="t3-div"></div>
-        <div class="layers" id="t3-layers">
-          <div class="layer client" id="t3-l1">
-            <div class="label">CLIENTE WEB</div>
-            <div class="components">Next.js 16 App · Tailwind CSS v4 · shadcn/ui · Recharts · Context API</div>
-          </div>
-          <div class="layer frontend" id="t3-l2">
-            <div class="label">FRONTEND</div>
-            <div class="components">App Router · React 19 · Axios · JWT Interceptor · Zod validación</div>
-          </div>
-          <div class="layer backend" id="t3-l3">
-            <div class="label">BACKEND</div>
-            <div class="components">Spring Boot 4 · Controllers · Services · JPA Repositories · Scheduled Jobs · AI Orchestrator</div>
-          </div>
-          <div class="layer database" id="t3-l4">
-            <div class="label">DATABASE</div>
-            <div class="components">PostgreSQL 16 · Flyway V1-V12 · Índices · Tablas: users, incomes, expenses, debts, notifications</div>
-          </div>
-          <div class="layer external" id="t3-l5">
-            <div class="label">EXTERNO</div>
-            <div class="components">NVIDIA NIM API · OpenCode Zen · OpenRouter · Brevo SMTP (Email)</div>
-          </div>
+      <!-- SCREEN 2: Registro (4.3s - 6.6s) -->
+      <div class="clip screen-scene" data-start="4.3" data-duration="2.3" data-track-index="0">
+        <div class="caption">Crear <span>cuenta</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/registro</div></div>
+          <img src="assets/screens/registro-1440x900.png" alt="Registro" />
         </div>
       </div>
 
-      <!-- SCENE 4: KEY FEATURES (13s - 18s) -->
-      <div id="s4-features" class="clip" data-start="13" data-duration="5" data-track-index="0">
-        <h2 id="t4-h">Funcionalidades <span>clave</span></h2>
-        <div class="divider" id="t4-div"></div>
-        <div class="feature-grid" id="t4-grid">
-          <div class="f-card" id="t4-f1">
-            <div class="emoji">💰</div>
-            <h3>Ingresos & Gastos</h3>
-            <p>CRUD completo por categoría con filtros, paginación y validación. Historial transaccional completo.</p>
-          </div>
-          <div class="f-card" id="t4-f2">
-            <div class="emoji">📉</div>
-            <h3>Deudas & Servicios</h3>
-            <p>Seguimiento de deudas con intereses y pagos parciales. Servicios recurrentes automatizados.</p>
-          </div>
-          <div class="f-card" id="t4-f3">
-            <div class="emoji">📈</div>
-            <h3>Dashboard & Reportes</h3>
-            <p>Métricas financieras, ratios, gráficos interactivos y exportación de reportes.</p>
-          </div>
-          <div class="f-card" id="t4-f4">
-            <div class="emoji">🧠</div>
-            <h3>Asistente IA</h3>
-            <p>Chat contextual con datos reales. Preguntá: "¿En qué gasté más este mes?" y recibí respuestas al instante.</p>
-          </div>
-          <div class="f-card" id="t4-f5">
-            <div class="emoji">🔐</div>
-            <h3>Auth Segura</h3>
-            <p>JWT + Refresh Token rotation. Sesión con cookie httpOnly. Bloqueo anti-fuerza bruta.</p>
-          </div>
-          <div class="f-card" id="t4-f6">
-            <div class="emoji">📬</div>
-            <h3>Notificaciones</h3>
-            <p>Recordatorios de pago, alertas de sobrecarga y resúmenes semanales vía email con Brevo.</p>
-          </div>
+      <!-- SCREEN 3: Dashboard (6.6s - 8.9s) -->
+      <div class="clip screen-scene" data-start="6.6" data-duration="2.3" data-track-index="0">
+        <div class="caption"><span>Dashboard</span> financiero</div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/</div></div>
+          <img src="assets/screens/dashboard-1440x900.png" alt="Dashboard" />
         </div>
       </div>
 
-      <!-- SCENE 5: TECH STACK (18s - 22s) -->
-      <div id="s5-tech" class="clip" data-start="18" data-duration="4" data-track-index="0">
-        <h2 id="t5-h">Tech <span>Stack</span></h2>
-        <div class="stack-grid" id="t5-grid">
-          <div class="tech-item" id="t5-t1">
-            <div class="badge spring">SB</div>
-            <div class="info"><h4>Spring Boot 4</h4><p>Java 21 · REST API · JPA · Security · @Scheduled · Events</p></div>
-          </div>
-          <div class="tech-item" id="t5-t2">
-            <div class="badge next">N</div>
-            <div class="info"><h4>Next.js 16</h4><p>React 19 · App Router · Server Components · Tailwind v4 · shadcn/ui</p></div>
-          </div>
-          <div class="tech-item" id="t5-t3">
-            <div class="badge postgres">PG</div>
-            <div class="info"><h4>PostgreSQL 16</h4><p>Flyway migrations · JPA Specifications · Índices funcionales</p></div>
-          </div>
-          <div class="tech-item" id="t5-t4">
-            <div class="badge nvidia">NV</div>
-            <div class="info"><h4>NVIDIA NIM / OpenRouter</h4><p>IA multi-proveedor con failover automático y contexto financiero</p></div>
-          </div>
-          <div class="tech-item" id="t5-t5">
-            <div class="badge ts">TS</div>
-            <div class="info"><h4>TypeScript</h4><p>Tipado estricto · Zod schemas compartidos · Interfaces REST</p></div>
-          </div>
-          <div class="tech-item" id="t5-t6">
-            <div class="badge tailwind">TW</div>
-            <div class="info"><h4>Tailwind CSS v4</h4><p>CSS variables · @theme inline · Dark mode · shadcn/ui components</p></div>
-          </div>
+      <!-- SCREEN 4: Ingresos (8.9s - 11.2s) -->
+      <div class="clip screen-scene" data-start="8.9" data-duration="2.3" data-track-index="0">
+        <div class="caption">Gestion de <span>ingresos</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/ingresos</div></div>
+          <img src="assets/screens/ingresos-1440x900.png" alt="Ingresos" />
         </div>
       </div>
 
-      <!-- SCENE 6: CLOSING (22s - 24s) -->
-      <div id="s6-close" class="clip" data-start="22" data-duration="3" data-track-index="0">
-        <h2 id="t6-h"><span>FinSmart</span></h2>
-        <p id="t6-p">Tu copiloto financiero inteligente</p>
-        <div class="badge" id="t6-badge">Universidad de Córdoba · Pasantía Profesional</div>
+      <!-- SCREEN 5: Gastos (11.2s - 13.5s) -->
+      <div class="clip screen-scene" data-start="11.2" data-duration="2.3" data-track-index="0">
+        <div class="caption">Control de <span>gastos</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/gastos</div></div>
+          <img src="assets/screens/gastos-1440x900.png" alt="Gastos" />
+        </div>
+      </div>
+
+      <!-- SCREEN 6: Deudas (13.5s - 15.8s) -->
+      <div class="clip screen-scene" data-start="13.5" data-duration="2.3" data-track-index="0">
+        <div class="caption">Seguimiento de <span>deudas</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/deudas</div></div>
+          <img src="assets/screens/deudas-1440x900.png" alt="Deudas" />
+        </div>
+      </div>
+
+      <!-- SCREEN 7: Servicios (15.8s - 18.1s) -->
+      <div class="clip screen-scene" data-start="15.8" data-duration="2.3" data-track-index="0">
+        <div class="caption">Servicios y <span>suscripciones</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/servicios</div></div>
+          <img src="assets/screens/servicios-1440x900.png" alt="Servicios" />
+        </div>
+      </div>
+
+      <!-- SCREEN 8: Categorias (18.1s - 20.4s) -->
+      <div class="clip screen-scene" data-start="18.1" data-duration="2.3" data-track-index="0">
+        <div class="caption">Tus <span>categorias</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/categorias</div></div>
+          <img src="assets/screens/categorias-1440x900.png" alt="Categorias" />
+        </div>
+      </div>
+
+      <!-- SCREEN 9: Reportes (20.4s - 22.7s) -->
+      <div class="clip screen-scene" data-start="20.4" data-duration="2.3" data-track-index="0">
+        <div class="caption"><span>Reportes</span> y analisis</div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/reportes</div></div>
+          <img src="assets/screens/reportes-1440x900.png" alt="Reportes" />
+        </div>
+      </div>
+
+      <!-- SCREEN 10: Asistente IA (22.7s - 25.0s) -->
+      <div class="clip screen-scene" data-start="22.7" data-duration="2.3" data-track-index="0">
+        <div class="caption">Asistente <span>IA</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/asistente-ia</div></div>
+          <img src="assets/screens/asistente-ia-1440x900.png" alt="Asistente IA" />
+        </div>
+      </div>
+
+      <!-- SCREEN 11: Configuracion (25.0s - 27.3s) -->
+      <div class="clip screen-scene" data-start="25.0" data-duration="2.3" data-track-index="0">
+        <div class="caption"><span>Configuracion</span> de la cuenta</div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/configuracion</div></div>
+          <img src="assets/screens/configuracion-1440x900.png" alt="Configuracion" />
+        </div>
+      </div>
+
+      <!-- SCENE: CLOSING (27.3s - 29.8s) -->
+      <div id="s-close" class="clip" data-start="27.3" data-duration="2.5" data-track-index="0">
+        <h2 id="tc-h"><span>FinSmart</span></h2>
+        <p id="tc-p">Tu copiloto financiero inteligente</p>
+        <div class="badge" id="tc-badge">Universidad de Cordoba · Pasantia Profesional</div>
       </div>
 
     </div>
@@ -280,38 +195,25 @@
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
 
-      // SCENE 1: Title (0s)
-      tl.from("#t1-line", { scaleX: 0, duration: 0.6, ease: "power3.out" }, 0.3);
-      tl.from("#t1-h1", { opacity: 0, y: 30, duration: 0.8, ease: "power3.out" }, 0.6);
-      tl.from("#t1-sub", { opacity: 0, y: 20, duration: 0.6, ease: "power3.out" }, 1.2);
-      tl.from("#t1-tag", { opacity: 0, y: 20, duration: 0.5, ease: "power3.out" }, 1.6);
+      // Title
+      tl.from("#t1-line", { scaleX: 0, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.from("#t1-h1", { opacity: 0, y: 30, duration: 0.6, ease: "power3.out" }, 0.4);
+      tl.from("#t1-sub", { opacity: 0, y: 20, duration: 0.5, ease: "power3.out" }, 0.8);
 
-      // SCENE 2: What (4s)
-      tl.from("#t2-h", { opacity: 0, x: -40, duration: 0.6, ease: "power3.out" }, 4.2);
-      tl.from("#t2-div", { scaleX: 0, duration: 0.4, ease: "power3.out" }, 4.3);
-      tl.from("#t2-c1, #t2-c2", { opacity: 0, y: 30, duration: 0.5, ease: "power3.out" }, 4.6);
-      tl.from("#t2-c3, #t2-c4", { opacity: 0, y: 30, duration: 0.5, ease: "power3.out" }, 5.0);
+      // Screen tour scenes: fade + rise for caption, fade + scale for the browser frame
+      const screenStarts = [2.0, 4.3, 6.6, 8.9, 11.2, 13.5, 15.8, 18.1, 20.4, 22.7, 25.0];
+      document.querySelectorAll(".screen-scene").forEach((scene, i) => {
+        const start = screenStarts[i];
+        const caption = scene.querySelector(".caption");
+        const frame = scene.querySelector(".browser-frame");
+        tl.from(caption, { opacity: 0, y: -16, duration: 0.35, ease: "power3.out" }, start + 0.15);
+        tl.from(frame, { opacity: 0, y: 20, scale: 0.98, duration: 0.4, ease: "power3.out" }, start + 0.25);
+      });
 
-      // SCENE 3: Architecture (8s)
-      tl.from("#t3-h", { opacity: 0, y: -20, duration: 0.5, ease: "power3.out" }, 8.2);
-      tl.from("#t3-div", { scaleX: 0, duration: 0.4, ease: "power3.out" }, 8.3);
-      tl.from([ "#t3-l1", "#t3-l2", "#t3-l3", "#t3-l4", "#t3-l5" ], { opacity: 0, x: -30, duration: 0.4, stagger: 0.15, ease: "power3.out" }, 8.6);
-
-      // SCENE 4: Features (13s)
-      tl.from("#t4-h", { opacity: 0, y: -20, duration: 0.5, ease: "power3.out" }, 13.2);
-      tl.from("#t4-div", { scaleX: 0, duration: 0.4, ease: "power3.out" }, 13.3);
-      tl.from("#t4-f1, #t4-f2, #t4-f3", { opacity: 0, y: 25, duration: 0.4, ease: "power3.out" }, 13.6);
-      tl.from("#t4-f4, #t4-f5, #t4-f6", { opacity: 0, y: 25, duration: 0.4, ease: "power3.out" }, 14.0);
-
-      // SCENE 5: Tech Stack (18s)
-      tl.from("#t5-h", { opacity: 0, y: -20, duration: 0.5, ease: "power3.out" }, 18.2);
-      tl.from("#t5-t1, #t5-t2, #t5-t3", { opacity: 0, x: -20, duration: 0.4, ease: "power3.out" }, 18.5);
-      tl.from("#t5-t4, #t5-t5, #t5-t6", { opacity: 0, x: 20, duration: 0.4, ease: "power3.out" }, 18.9);
-
-      // SCENE 6: Closing (22s)
-      tl.from("#t6-h", { opacity: 0, scale: 0.8, duration: 0.7, ease: "power3.out" }, 22.3);
-      tl.from("#t6-p", { opacity: 0, y: 20, duration: 0.5, ease: "power3.out" }, 22.8);
-      tl.from("#t6-badge", { opacity: 0, y: 15, duration: 0.5, ease: "power3.out" }, 23.2);
+      // Closing
+      tl.from("#tc-h", { opacity: 0, scale: 0.8, duration: 0.6, ease: "power3.out" }, 27.5);
+      tl.from("#tc-p", { opacity: 0, y: 20, duration: 0.45, ease: "power3.out" }, 27.9);
+      tl.from("#tc-badge", { opacity: 0, y: 15, duration: 0.45, ease: "power3.out" }, 28.3);
 
       window.__timelines["main"] = tl;
     </script>
