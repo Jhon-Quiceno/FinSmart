@@ -10,24 +10,35 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
+import type { MonthlySeriesPoint } from "@/lib/types/analysis"
 
-const data = [
-  { month: "Ene", ingresos: 25000, gastos: 18000 },
-  { month: "Feb", ingresos: 27000, gastos: 19500 },
-  { month: "Mar", ingresos: 26500, gastos: 21000 },
-  { month: "Abr", ingresos: 28000, gastos: 17800 },
-  { month: "May", ingresos: 30000, gastos: 22500 },
-  { month: "Jun", ingresos: 32000, gastos: 20000 },
+const MONTH_LABELS = [
+  "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ]
 
-export function IncomeExpensesChart() {
+interface IncomeExpensesChartProps {
+  series: MonthlySeriesPoint[]
+}
+
+export function IncomeExpensesChart({ series }: IncomeExpensesChartProps) {
+  const data = series.map((point) => ({
+    month: MONTH_LABELS[point.month - 1] ?? String(point.month),
+    ingresos: point.totalIncome,
+    gastos: point.totalExpense,
+  }))
+
   return (
     <div className="rounded-xl bg-card border border-border p-5">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-foreground">Ingresos vs Gastos</h3>
         <p className="text-sm text-muted-foreground">Comparativa de los ultimos 6 meses</p>
       </div>
-      
+
+      {data.length === 0 ? (
+        <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+          Todavia no hay suficientes movimientos para mostrar esta comparativa.
+        </div>
+      ) : (
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -89,6 +100,7 @@ export function IncomeExpensesChart() {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      )}
     </div>
   )
 }

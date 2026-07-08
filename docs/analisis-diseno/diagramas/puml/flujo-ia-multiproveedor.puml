@@ -1,0 +1,64 @@
+@startuml
+!theme plain
+
+title Flujo de IA Multi-Proveedor con Failover
+
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+
+actor "Usuario" as user
+participant "Frontend" as frontend
+participant "AIChatController" as controller
+participant "AiChatOrchestrator" as orchestrator
+participant "AiProviderRegistry" as registry
+participant "FinancialContextBuilder" as context
+collections "Proveedores IA" as providers
+database "PostgreSQL\n(ai_messages)" as db
+
+== Chat con el Asistente IA ==
+
+user -> frontend: "¿En qué gasté más este mes?"
+frontend -> controller: POST /api/ai/chat { message }
+controller -> orchestrator: chat(userId, message)
+
+orchestrator -> registry: getEnabledProviders()
+registry --> orchestrator: [NVIDIA, OpenCode, OpenRouter]
+
+orchestrator -> context: buildContext(userId)
+context -> db: SELECT financial_analysis
+context -> db: SELECT recent transactions
+context --> orchestrator: SystemPrompt con datos reales
+
+== Intento #1: NVIDIA NIM ==
+
+orchestrator -> providers: POST /chat/completions (NVIDIA)
+providers --> orchestrator: 200 { response }
+orchestrator -> db: INSERT ai_messages (user msg + assistant reply)
+orchestrator --> controller: { reply, provider: "nvidia-nim" }
+controller --> frontend: 200 { reply }
+frontend --> user: Muestra respuesta
+
+== Failover: NVIDIA cae, OpenCode responde ==
+
+orchestrator -> providers: POST /chat/completions (NVIDIA)
+providers --> orchestrator: 503 Service Unavailable
+orchestrator -> providers: POST /chat/completions (OpenCode)
+providers --> orchestrator: 200 { response }
+orchestrator -> db: INSERT ai_messages
+orchestrator --> controller: { reply, provider: "opencode-zen" }
+controller --> frontend: 200 { reply }
+frontend --> user: Muestra respuesta (failover transparente)
+
+== Todos los proveedores fallan ==
+
+orchestrator -> providers: POST /chat/completions (NVIDIA)
+providers --> orchestrator: ERROR
+orchestrator -> providers: POST /chat/completions (OpenCode)
+providers --> orchestrator: ERROR
+orchestrator -> providers: POST /chat/completions (OpenRouter)
+providers --> orchestrator: ERROR
+orchestrator --> controller: Error: IA no disponible
+controller --> frontend: 503 { message: "El asistente no está disponible en este momento" }
+frontend --> user: Muestra error amigable
+
+@enduml

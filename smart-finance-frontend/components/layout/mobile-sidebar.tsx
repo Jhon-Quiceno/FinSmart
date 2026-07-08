@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -7,11 +8,11 @@ import {
   LayoutDashboard,
   TrendingUp,
   TrendingDown,
+  Tags,
   CreditCard,
   Repeat,
   BarChart3,
   Settings,
-  Sparkles,
   X,
   Bot,
 } from "lucide-react"
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Ingresos", href: "/ingresos", icon: TrendingUp },
   { name: "Gastos", href: "/gastos", icon: TrendingDown },
+  { name: "Categorias", href: "/categorias", icon: Tags },
   { name: "Deudas", href: "/deudas", icon: CreditCard },
   { name: "Servicios", href: "/servicios", icon: Repeat },
   { name: "Asistente IA", href: "/asistente-ia", icon: Bot },
@@ -56,11 +58,18 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           {/* Logo */}
           <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
             <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center shrink-0">
+                <Image
+                  src="/logo_finsmart.svg"
+                  alt="FinSmart"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8"
+                  priority
+                />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
-                FinanceAI
+                FinSmart
               </span>
             </Link>
             <button

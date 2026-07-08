@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown, CreditCard, PiggyBank } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { TapScale } from "@/components/motion/tap-scale"
 
 interface StatCardProps {
   title: string
@@ -13,7 +14,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, change, icon, trend }: StatCardProps) {
   return (
-    <div className="rounded-xl bg-card border border-border p-5 transition-smooth hover:border-primary/30">
+    <TapScale className="rounded-xl bg-card border border-border p-5 transition-smooth hover:border-primary/30">
       <div className="flex items-center justify-between mb-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
           {icon}
@@ -31,7 +32,7 @@ function StatCard({ title, value, change, icon, trend }: StatCardProps) {
       </div>
       <p className="text-sm text-muted-foreground mb-1">{title}</p>
       <p className="text-xl font-semibold text-foreground">{value}</p>
-    </div>
+    </TapScale>
   )
 }
 
@@ -63,7 +64,7 @@ export function StatsCards({
         value={`$${monthlyIncome.toLocaleString('es-MX')}`}
         change={incomeChange}
         icon={<TrendingUp className="h-5 w-5 text-success" />}
-        trend="up"
+        trend={incomeChange >= 0 ? "up" : "down"}
       />
       <StatCard
         title="Gastos del Mes"
@@ -77,7 +78,7 @@ export function StatsCards({
         value={`$${totalDebts.toLocaleString('es-MX')}`}
         change={debtsChange}
         icon={<CreditCard className="h-5 w-5 text-warning" />}
-        trend={debtsChange < 0 ? "up" : "down"}
+        trend={debtsChange === 0 ? "neutral" : debtsChange < 0 ? "up" : "down"}
       />
       <StatCard
         title="Ahorros"

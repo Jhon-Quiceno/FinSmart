@@ -1,0 +1,177 @@
+@startuml
+!theme plain
+
+title Modelo de Datos - FinSmart
+
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+
+entity "users" as users {
+  + id: BIGSERIAL [PK]
+  --
+  email: VARCHAR(255) [UNIQUE, NOT NULL]
+  password_hash: VARCHAR(255) [NOT NULL]
+  name: VARCHAR(255) [NOT NULL]
+  created_at: TIMESTAMP [NOT NULL]
+  updated_at: TIMESTAMP [NOT NULL]
+}
+
+entity "refresh_tokens" as refresh_tokens {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  token_hash: VARCHAR(255) [UNIQUE, NOT NULL]
+  expires_at: TIMESTAMP [NOT NULL]
+  revoked: BOOLEAN [DEFAULT false]
+  created_at: TIMESTAMP [NOT NULL]
+}
+
+entity "categories" as categories {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  name: VARCHAR(100) [NOT NULL]
+  type: VARCHAR(10) [CHECK INCOME/EXPENSE]
+  color: VARCHAR(7)
+  icon: VARCHAR(50)
+  created_at: TIMESTAMP [NOT NULL]
+}
+
+entity "incomes" as incomes {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  # category_id: BIGINT [FK]
+  amount: DECIMAL(12,2) [NOT NULL]
+  source: VARCHAR(100)
+  date: DATE [NOT NULL]
+  description: TEXT
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity "expenses" as expenses {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  # category_id: BIGINT [FK]
+  amount: DECIMAL(12,2) [NOT NULL]
+  payment_method: VARCHAR(20) [CHECK]
+  date: DATE [NOT NULL]
+  description: TEXT
+  recurring_payment_id: BIGINT [FK, NULLABLE]
+  debt_payment_id: BIGINT [FK, NULLABLE]
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity "debts" as debts {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  name: VARCHAR(255) [NOT NULL]
+  total_amount: DECIMAL(12,2) [NOT NULL]
+  remaining_amount: DECIMAL(12,2) [NOT NULL]
+  interest_rate: DECIMAL(5,2)
+  due_date: DATE [NOT NULL]
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity "debt_payments" as debt_payments {
+  + id: BIGSERIAL [PK]
+  --
+  # debt_id: BIGINT [FK, NOT NULL]
+  amount: DECIMAL(12,2) [NOT NULL]
+  payment_date: DATE [NOT NULL]
+  notes: TEXT
+  created_at: TIMESTAMP
+}
+
+entity "recurring_payments" as recurring_payments {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  name: VARCHAR(255) [NOT NULL]
+  amount: DECIMAL(12,2) [NOT NULL]
+  frequency: VARCHAR(10) [CHECK MONTHLY/WEEKLY]
+  next_payment_date: DATE [NOT NULL]
+  is_active: BOOLEAN [DEFAULT true]
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity "financial_analysis" as financial_analysis {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  period_year: INT [NOT NULL]
+  period_month: INT [NOT NULL]
+  total_income: DECIMAL(12,2)
+  total_expense: DECIMAL(12,2)
+  savings: DECIMAL(12,2)
+  expense_ratio: DECIMAL(5,2)
+  debt_ratio: DECIMAL(5,2)
+  # top_category_id: BIGINT [FK]
+  created_at: TIMESTAMP
+  --
+  UNIQUE(user_id, period_year, period_month)
+}
+
+entity "notifications" as notifications {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  type: VARCHAR(50) [NOT NULL]
+  title: VARCHAR(255) [NOT NULL]
+  message: TEXT [NOT NULL]
+  is_read: BOOLEAN [DEFAULT false]
+  read_at: TIMESTAMP
+  created_at: TIMESTAMP
+}
+
+entity "notification_preferences" as notification_preferences {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, UNIQUE, NOT NULL]
+  payment_reminder: BOOLEAN [DEFAULT true]
+  overspend_alert: BOOLEAN [DEFAULT true]
+  weekly_summary: BOOLEAN [DEFAULT true]
+  email_enabled: BOOLEAN [DEFAULT false]
+}
+
+entity "ai_messages" as ai_messages {
+  + id: BIGSERIAL [PK]
+  --
+  # user_id: BIGINT [FK, NOT NULL]
+  role: VARCHAR(10) [CHECK user/assistant]
+  kind: VARCHAR(10) [CHECK CHAT/INSIGHT]
+  content: TEXT [NOT NULL]
+  provider: VARCHAR(50)
+  model: VARCHAR(100)
+  created_at: TIMESTAMP
+}
+
+' ---- RELACIONES ----
+
+users ||--o{ refresh_tokens : ""
+users ||--o{ categories : ""
+users ||--o{ incomes : ""
+users ||--o{ expenses : ""
+users ||--o{ debts : ""
+users ||--o{ recurring_payments : ""
+users ||--o{ notifications : ""
+users ||--o{ notification_preferences : "1 a 1"
+users ||--o{ ai_messages : ""
+users ||--o{ financial_analysis : ""
+
+categories ||--o{ incomes : ""
+categories ||--o{ expenses : ""
+categories ||--o{ financial_analysis : "top_category"
+
+debts ||--o{ debt_payments : ""
+
+recurring_payments ||--o{ expenses : "recurring_payment_id"
+debt_payments ||--o{ expenses : "debt_payment_id"
+
+@enduml

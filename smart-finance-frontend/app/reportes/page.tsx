@@ -1,40 +1,91 @@
 "use client"
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts"
+import { useEffect, useMemo, useState } from "react"
+import { Download, FileBarChart, PiggyBank, TrendingDown, TrendingUp } from "lucide-react"
+import { toast } from "sonner"
 import { AppLayout } from "@/components/layout/app-layout"
-import { Download, Calendar, TrendingUp, TrendingDown, PiggyBank } from "lucide-react"
+import { ExpensesByCategoryChart } from "@/components/dashboard/expenses-by-category-chart"
+import { IncomeExpensesChart } from "@/components/dashboard/income-expenses-chart"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useMonthlyReport, useReportMovements } from "@/hooks/use-report"
+import { toastApiError } from "@/lib/api-client"
+import { exportReport } from "@/lib/services/report.service"
+import type { PaymentMethodType } from "@/lib/types/expense"
+import type { ReportMovementRow } from "@/lib/types/report"
+import { ALL_PERIODS_VALUE, getCurrentPeriodValue, getRecentPeriodOptions } from "@/lib/utils/period"
 
-const monthlyData = [
-  { month: "Ene", ingresos: 25000, gastos: 18000, ahorro: 7000 },
-  { month: "Feb", ingresos: 27000, gastos: 19500, ahorro: 7500 },
-  { month: "Mar", ingresos: 26500, gastos: 21000, ahorro: 5500 },
-  { month: "Abr", ingresos: 28000, gastos: 17800, ahorro: 10200 },
-  { month: "May", ingresos: 30000, gastos: 22500, ahorro: 7500 },
-  { month: "Jun", ingresos: 32000, gastos: 20000, ahorro: 12000 },
-]
+const periodOptions = getRecentPeriodOptions().filter((option) => option.value !== ALL_PERIODS_VALUE)
 
-const categoryData = [
-  { name: "Alimentacion", value: 4500, color: "oklch(0.72 0.19 145)" },
-  { name: "Transporte", value: 2800, color: "oklch(0.65 0.22 25)" },
-  { name: "Entretenimiento", value: 2200, color: "oklch(0.78 0.16 75)" },
-  { name: "Servicios", value: 3500, color: "oklch(0.65 0.18 260)" },
-  { name: "Otros", value: 1500, color: "oklch(0.70 0.15 200)" },
-]
+const movementTypeLabels: Record<ReportMovementRow["type"], string> = {
+  INCOME: "Ingreso",
+  EXPENSE: "Gasto",
+}
 
-const savingsData = [
-  { month: "Ene", meta: 8000, real: 7000 },
-  { month: "Feb", meta: 8000, real: 7500 },
-  { month: "Mar", meta: 8000, real: 5500 },
-  { month: "Abr", meta: 8000, real: 10200 },
-  { month: "May", meta: 8000, real: 7500 },
-  { month: "Jun", meta: 8000, real: 12000 },
-]
+const paymentMethodLabels: Record<PaymentMethodType, string> = {
+  CASH: "Efectivo",
+  DEBIT_CARD: "Tarjeta de Debito",
+  CREDIT_CARD: "Tarjeta de Credito",
+  TRANSFER: "Transferencia",
+  OTHER: "Otro",
+}
+
+function parsePeriod(period: string): { year: number; month: number } {
+  const [year, month] = period.split("-").map(Number)
+  return { year, month }
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.URL.revokeObjectURL(url)
+}
 
 export default function ReportesPage() {
-  const totalIncome = monthlyData.reduce((sum, m) => sum + m.ingresos, 0)
-  const totalExpenses = monthlyData.reduce((sum, m) => sum + m.gastos, 0)
-  const totalSavings = monthlyData.reduce((sum, m) => sum + m.ahorro, 0)
+  const [period, setPeriod] = useState(getCurrentPeriodValue())
+  const [isExporting, setIsExporting] = useState(false)
+  const { year, month } = useMemo(() => parsePeriod(period), [period])
+
+  const { report, isLoading, error } = useMonthlyReport({ year, month })
+  const { movements, isLoading: isLoadingMovements, error: movementsError } = useReportMovements({
+    year,
+    month,
+  })
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
+
+  useEffect(() => {
+    if (movementsError) {
+      toast.error(movementsError)
+    }
+  }, [movementsError])
+
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      const { blob, filename } = await exportReport(year, month, "csv")
+      triggerBlobDownload(blob, filename)
+      toast.success("Reporte exportado correctamente")
+    } catch (error) {
+      toastApiError(error, "No fue posible exportar el reporte")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const hasData = !!report && (report.totalIncome > 0 || report.totalExpense > 0)
 
   return (
     <AppLayout>
@@ -48,182 +99,170 @@ export default function ReportesPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              Ultimos 6 meses
-            </Button>
-            <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Selecciona un periodo" />
+              </SelectTrigger>
+              <SelectContent>
+                {periodOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => void handleExport()}
+              disabled={isExporting || isLoading}
+            >
               <Download className="h-4 w-4" />
-              Exportar
+              {isExporting ? "Exportando..." : "Exportar CSV"}
             </Button>
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="rounded-xl bg-card border border-border p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-                <TrendingUp className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Ingresos</p>
-                <p className="text-xl font-bold text-success">
-                  ${totalIncome.toLocaleString("es-MX")}
-                </p>
-              </div>
+        {isLoading ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Skeleton className="h-[340px] w-full" />
+              <Skeleton className="h-[340px] w-full" />
             </div>
           </div>
-
-          <div className="rounded-xl bg-card border border-border p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-                <TrendingDown className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Gastos</p>
-                <p className="text-xl font-bold text-destructive">
-                  ${totalExpenses.toLocaleString("es-MX")}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-card border border-border p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <PiggyBank className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Ahorro</p>
-                <p className="text-xl font-bold text-primary">
-                  ${totalSavings.toLocaleString("es-MX")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Monthly Income vs Expenses */}
-          <div className="rounded-xl bg-card border border-border p-5">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Ingresos vs Gastos Mensuales</h3>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.28 0.01 260)" />
-                  <XAxis dataKey="month" stroke="oklch(0.65 0.01 260)" fontSize={12} />
-                  <YAxis stroke="oklch(0.65 0.01 260)" fontSize={12} tickFormatter={(v) => `$${v/1000}k`} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "oklch(0.16 0.008 260)",
-                      border: "1px solid oklch(0.28 0.01 260)",
-                      borderRadius: "8px",
-                      color: "oklch(0.95 0.01 260)",
-                    }}
-                    formatter={(value: number) => [`$${value.toLocaleString("es-MX")}`, ""]}
-                  />
-                  <Bar dataKey="ingresos" fill="oklch(0.72 0.19 145)" radius={[4, 4, 0, 0]} name="Ingresos" />
-                  <Bar dataKey="gastos" fill="oklch(0.65 0.22 25)" radius={[4, 4, 0, 0]} name="Gastos" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Savings Progress */}
-          <div className="rounded-xl bg-card border border-border p-5">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Progreso de Ahorro</h3>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={savingsData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.28 0.01 260)" />
-                  <XAxis dataKey="month" stroke="oklch(0.65 0.01 260)" fontSize={12} />
-                  <YAxis stroke="oklch(0.65 0.01 260)" fontSize={12} tickFormatter={(v) => `$${v/1000}k`} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "oklch(0.16 0.008 260)",
-                      border: "1px solid oklch(0.28 0.01 260)",
-                      borderRadius: "8px",
-                      color: "oklch(0.95 0.01 260)",
-                    }}
-                    formatter={(value: number) => [`$${value.toLocaleString("es-MX")}`, ""]}
-                  />
-                  <Line type="monotone" dataKey="meta" stroke="oklch(0.65 0.01 260)" strokeDasharray="5 5" strokeWidth={2} name="Meta" dot={false} />
-                  <Line type="monotone" dataKey="real" stroke="oklch(0.75 0.18 145)" strokeWidth={2} name="Real" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Expenses by Category */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-xl bg-card border border-border p-5">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Gastos por Categoria</h3>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "oklch(0.16 0.008 260)",
-                      border: "1px solid oklch(0.28 0.01 260)",
-                      borderRadius: "8px",
-                      color: "oklch(0.95 0.01 260)",
-                    }}
-                    formatter={(value: number) => [`$${value.toLocaleString("es-MX")}`, ""]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {categoryData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-xs text-muted-foreground">{item.name}</span>
-                  <span className="text-xs font-medium text-foreground ml-auto">${item.value.toLocaleString("es-MX")}</span>
+        ) : !report || !hasData ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <FileBarChart />
+              </EmptyMedia>
+              <EmptyTitle>No hay movimientos en este periodo</EmptyTitle>
+              <EmptyDescription>
+                Registra ingresos o gastos en el periodo seleccionado para ver aqui tu reporte financiero.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-xl bg-card border border-border p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                    <TrendingUp className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Ingresos</p>
+                    <p className="text-xl font-bold text-success">
+                      ${report.totalIncome.toLocaleString("es-MX")}
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          {/* Monthly Savings Breakdown */}
-          <div className="rounded-xl bg-card border border-border p-5">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Ahorro Mensual</h3>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.28 0.01 260)" />
-                  <XAxis type="number" stroke="oklch(0.65 0.01 260)" fontSize={12} tickFormatter={(v) => `$${v/1000}k`} />
-                  <YAxis type="category" dataKey="month" stroke="oklch(0.65 0.01 260)" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "oklch(0.16 0.008 260)",
-                      border: "1px solid oklch(0.28 0.01 260)",
-                      borderRadius: "8px",
-                      color: "oklch(0.95 0.01 260)",
-                    }}
-                    formatter={(value: number) => [`$${value.toLocaleString("es-MX")}`, ""]}
-                  />
-                  <Bar dataKey="ahorro" fill="oklch(0.75 0.18 145)" radius={[0, 4, 4, 0]} name="Ahorro" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="rounded-xl bg-card border border-border p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+                    <TrendingDown className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Gastos</p>
+                    <p className="text-xl font-bold text-destructive">
+                      ${report.totalExpense.toLocaleString("es-MX")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {Math.round(report.expenseRatio * 100)}% de tus ingresos
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-card border border-border p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <PiggyBank className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ahorro</p>
+                    <p className="text-xl font-bold text-primary">
+                      ${report.savings.toLocaleString("es-MX")}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <IncomeExpensesChart series={report.monthlySeries} />
+              <ExpensesByCategoryChart topCategories={report.topCategories} />
+            </div>
+
+            {/* Movements Table */}
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-foreground">Movimientos del periodo</h2>
+              <div className="rounded-xl border border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Descripcion</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Metodo de pago</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoadingMovements &&
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <TableRow key={`movement-skeleton-${index}`}>
+                          <TableCell colSpan={6}>
+                            <Skeleton className="h-8 w-full" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+
+                    {!isLoadingMovements && movements.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                          No hay movimientos para los filtros seleccionados.
+                        </TableCell>
+                      </TableRow>
+                    )}
+
+                    {!isLoadingMovements &&
+                      movements.map((movement, index) => (
+                        <TableRow key={`${movement.date}-${index}`}>
+                          <TableCell>{movement.date}</TableCell>
+                          <TableCell>{movementTypeLabels[movement.type]}</TableCell>
+                          <TableCell>{movement.categoryName || "Sin categoria"}</TableCell>
+                          <TableCell>{movement.description || "Sin descripcion"}</TableCell>
+                          <TableCell
+                            className={
+                              movement.type === "INCOME"
+                                ? "font-semibold text-success"
+                                : "font-semibold text-destructive"
+                            }
+                          >
+                            {movement.type === "INCOME" ? "+" : "-"}$
+                            {movement.amount.toLocaleString("es-MX")}
+                          </TableCell>
+                          <TableCell>
+                            {movement.paymentMethod ? paymentMethodLabels[movement.paymentMethod] : "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   )

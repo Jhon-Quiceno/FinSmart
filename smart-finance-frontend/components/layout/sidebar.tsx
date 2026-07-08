@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -8,20 +8,22 @@ import {
   LayoutDashboard,
   TrendingUp,
   TrendingDown,
+  Tags,
   CreditCard,
   Repeat,
   BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Bot,
 } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Ingresos", href: "/ingresos", icon: TrendingUp },
   { name: "Gastos", href: "/gastos", icon: TrendingDown },
+  { name: "Categorias", href: "/categorias", icon: Tags },
   { name: "Deudas", href: "/deudas", icon: CreditCard },
   { name: "Servicios", href: "/servicios", icon: Repeat },
   { name: "Asistente IA", href: "/asistente-ia", icon: Bot },
@@ -29,8 +31,12 @@ const navigation = [
   { name: "Configuracion", href: "/configuracion", icon: Settings },
 ]
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+interface SidebarProps {
+  collapsed: boolean
+  onCollapsedChange: (collapsed: boolean) => void
+}
+
+export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -45,17 +51,31 @@ export function Sidebar() {
         <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
           {!collapsed && (
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center shrink-0">
+                <Image
+                  src="/logo_finsmart.svg"
+                  alt="FinSmart"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8"
+                  priority
+                />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
-                FinanceAI
+                FinSmart
               </span>
             </Link>
           )}
           {collapsed && (
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary mx-auto">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
+            <div className="flex items-center justify-center mx-auto">
+              <Image
+                src="/logo_finsmart.svg"
+                alt="FinSmart"
+                width={32}
+                height={32}
+                className="h-8 w-8"
+                priority
+              />
             </div>
           )}
         </div>
@@ -64,7 +84,7 @@ export function Sidebar() {
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href
-            return (
+            const link = (
               <Link
                 key={item.name}
                 href={item.href}
@@ -79,21 +99,37 @@ export function Sidebar() {
                 {!collapsed && <span>{item.name}</span>}
               </Link>
             )
+
+            if (!collapsed) return link
+
+            return (
+              <Tooltip key={item.name}>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right">{item.name}</TooltipContent>
+              </Tooltip>
+            )
           })}
         </nav>
 
         {/* Collapse Toggle */}
         <div className="p-3 border-t border-sidebar-border">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="flex w-full items-center justify-center rounded-lg p-2 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-smooth"
-          >
-            {collapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => onCollapsedChange(!collapsed)}
+                className="flex w-full items-center justify-center rounded-lg p-2 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-smooth"
+              >
+                {collapsed ? (
+                  <ChevronRight className="h-5 w-5" />
+                ) : (
+                  <ChevronLeft className="h-5 w-5" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {collapsed ? "Expandir" : "Colapsar"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </aside>

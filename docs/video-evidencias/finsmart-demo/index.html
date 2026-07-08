@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0a0a1a; }
+      body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+      /* === SCENE: TITLE === */
+      #s1-title {
+        background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+      }
+      #s1-title .accent-line {
+        width: 80px; height: 4px; background: linear-gradient(90deg, #22c55e, #06b6d4);
+        border-radius: 2px; margin-bottom: 32px;
+      }
+      #s1-title h1 {
+        font-size: 80px; font-weight: 700; color: #fff; letter-spacing: -2px;
+        text-shadow: 0 0 40px rgba(34,197,94,0.3);
+      }
+      #s1-title h1 span { background: linear-gradient(135deg, #22c55e, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      #s1-title .subtitle { font-size: 28px; color: #94a3b8; margin-top: 16px; font-weight: 300; letter-spacing: 4px; }
+
+      /* === SCREEN TOUR SCENES === */
+      .screen-scene {
+        background: linear-gradient(135deg, #0a0a1a 0%, #12122a 100%);
+        display: flex; flex-direction: column; align-items: center;
+      }
+      .screen-scene .caption {
+        margin-top: 40px; height: 50px; display: flex; align-items: center; justify-content: center;
+        font-size: 32px; font-weight: 600; color: #e2e8f0; letter-spacing: -0.5px;
+      }
+      .screen-scene .caption span { color: #22c55e; }
+      .browser-frame {
+        margin-top: 20px; width: 1440px; height: 940px; border-radius: 14px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+      }
+      .browser-bar {
+        height: 40px; background: #14161c; display: flex; align-items: center; padding: 0 16px; gap: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .browser-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+      .browser-bar .dot.red { background: #ff5f57; }
+      .browser-bar .dot.yellow { background: #febc2e; }
+      .browser-bar .dot.green { background: #28c840; }
+      .browser-bar .url {
+        margin-left: 16px; background: #22242c; color: #94a3b8; font-size: 13px;
+        padding: 5px 16px; border-radius: 6px; font-family: monospace;
+      }
+      .browser-frame img { display: block; width: 1440px; height: 900px; }
+
+      /* === SCENE: CLOSING === */
+      #s-close {
+        background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+      }
+      #s-close h2 { font-size: 56px; font-weight: 700; color: #fff; letter-spacing: -1px; }
+      #s-close h2 span { background: linear-gradient(135deg, #22c55e, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      #s-close p { font-size: 24px; color: #64748b; margin-top: 16px; }
+      #s-close .badge { margin-top: 48px; padding: 16px 40px; border: 1px solid #1e293b; border-radius: 100px; font-size: 16px; color: #475569; }
+
+      .clip { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="29.8"
+      data-width="1920"
+      data-height="1080"
+    >
+
+      <!-- SCENE: TITLE (0s - 2s) -->
+      <div id="s1-title" class="clip" data-start="0" data-duration="2" data-track-index="0">
+        <div class="accent-line" id="t1-line"></div>
+        <h1 id="t1-h1"><span>FinSmart</span></h1>
+        <div class="subtitle" id="t1-sub">RECORRIDO POR LA APLICACION</div>
+      </div>
+
+      <!-- SCREEN 1: Login (2.0s - 4.3s) -->
+      <div class="clip screen-scene" data-start="2.0" data-duration="2.3" data-track-index="0">
+        <div class="caption">Iniciar <span>sesion</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/login</div></div>
+          <img src="assets/screens/login-1440x900.png" alt="Login" />
+        </div>
+      </div>
+
+      <!-- SCREEN 2: Registro (4.3s - 6.6s) -->
+      <div class="clip screen-scene" data-start="4.3" data-duration="2.3" data-track-index="0">
+        <div class="caption">Crear <span>cuenta</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/registro</div></div>
+          <img src="assets/screens/registro-1440x900.png" alt="Registro" />
+        </div>
+      </div>
+
+      <!-- SCREEN 3: Dashboard (6.6s - 8.9s) -->
+      <div class="clip screen-scene" data-start="6.6" data-duration="2.3" data-track-index="0">
+        <div class="caption"><span>Dashboard</span> financiero</div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/</div></div>
+          <img src="assets/screens/dashboard-1440x900.png" alt="Dashboard" />
+        </div>
+      </div>
+
+      <!-- SCREEN 4: Ingresos (8.9s - 11.2s) -->
+      <div class="clip screen-scene" data-start="8.9" data-duration="2.3" data-track-index="0">
+        <div class="caption">Gestion de <span>ingresos</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/ingresos</div></div>
+          <img src="assets/screens/ingresos-1440x900.png" alt="Ingresos" />
+        </div>
+      </div>
+
+      <!-- SCREEN 5: Gastos (11.2s - 13.5s) -->
+      <div class="clip screen-scene" data-start="11.2" data-duration="2.3" data-track-index="0">
+        <div class="caption">Control de <span>gastos</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/gastos</div></div>
+          <img src="assets/screens/gastos-1440x900.png" alt="Gastos" />
+        </div>
+      </div>
+
+      <!-- SCREEN 6: Deudas (13.5s - 15.8s) -->
+      <div class="clip screen-scene" data-start="13.5" data-duration="2.3" data-track-index="0">
+        <div class="caption">Seguimiento de <span>deudas</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/deudas</div></div>
+          <img src="assets/screens/deudas-1440x900.png" alt="Deudas" />
+        </div>
+      </div>
+
+      <!-- SCREEN 7: Servicios (15.8s - 18.1s) -->
+      <div class="clip screen-scene" data-start="15.8" data-duration="2.3" data-track-index="0">
+        <div class="caption">Servicios y <span>suscripciones</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/servicios</div></div>
+          <img src="assets/screens/servicios-1440x900.png" alt="Servicios" />
+        </div>
+      </div>
+
+      <!-- SCREEN 8: Categorias (18.1s - 20.4s) -->
+      <div class="clip screen-scene" data-start="18.1" data-duration="2.3" data-track-index="0">
+        <div class="caption">Tus <span>categorias</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/categorias</div></div>
+          <img src="assets/screens/categorias-1440x900.png" alt="Categorias" />
+        </div>
+      </div>
+
+      <!-- SCREEN 9: Reportes (20.4s - 22.7s) -->
+      <div class="clip screen-scene" data-start="20.4" data-duration="2.3" data-track-index="0">
+        <div class="caption"><span>Reportes</span> y analisis</div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/reportes</div></div>
+          <img src="assets/screens/reportes-1440x900.png" alt="Reportes" />
+        </div>
+      </div>
+
+      <!-- SCREEN 10: Asistente IA (22.7s - 25.0s) -->
+      <div class="clip screen-scene" data-start="22.7" data-duration="2.3" data-track-index="0">
+        <div class="caption">Asistente <span>IA</span></div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/asistente-ia</div></div>
+          <img src="assets/screens/asistente-ia-1440x900.png" alt="Asistente IA" />
+        </div>
+      </div>
+
+      <!-- SCREEN 11: Configuracion (25.0s - 27.3s) -->
+      <div class="clip screen-scene" data-start="25.0" data-duration="2.3" data-track-index="0">
+        <div class="caption"><span>Configuracion</span> de la cuenta</div>
+        <div class="browser-frame">
+          <div class="browser-bar"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div><div class="url">finsmart.app/configuracion</div></div>
+          <img src="assets/screens/configuracion-1440x900.png" alt="Configuracion" />
+        </div>
+      </div>
+
+      <!-- SCENE: CLOSING (27.3s - 29.8s) -->
+      <div id="s-close" class="clip" data-start="27.3" data-duration="2.5" data-track-index="0">
+        <h2 id="tc-h"><span>FinSmart</span></h2>
+        <p id="tc-p">Tu copiloto financiero inteligente</p>
+        <div class="badge" id="tc-badge">Universidad de Cordoba · Pasantia Profesional</div>
+      </div>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Title
+      tl.from("#t1-line", { scaleX: 0, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.from("#t1-h1", { opacity: 0, y: 30, duration: 0.6, ease: "power3.out" }, 0.4);
+      tl.from("#t1-sub", { opacity: 0, y: 20, duration: 0.5, ease: "power3.out" }, 0.8);
+
+      // Screen tour scenes: fade + rise for caption, fade + scale for the browser frame
+      const screenStarts = [2.0, 4.3, 6.6, 8.9, 11.2, 13.5, 15.8, 18.1, 20.4, 22.7, 25.0];
+      document.querySelectorAll(".screen-scene").forEach((scene, i) => {
+        const start = screenStarts[i];
+        const caption = scene.querySelector(".caption");
+        const frame = scene.querySelector(".browser-frame");
+        tl.from(caption, { opacity: 0, y: -16, duration: 0.35, ease: "power3.out" }, start + 0.15);
+        tl.from(frame, { opacity: 0, y: 20, scale: 0.98, duration: 0.4, ease: "power3.out" }, start + 0.25);
+      });
+
+      // Closing
+      tl.from("#tc-h", { opacity: 0, scale: 0.8, duration: 0.6, ease: "power3.out" }, 27.5);
+      tl.from("#tc-p", { opacity: 0, y: 20, duration: 0.45, ease: "power3.out" }, 27.9);
+      tl.from("#tc-badge", { opacity: 0, y: 15, duration: 0.45, ease: "power3.out" }, 28.3);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

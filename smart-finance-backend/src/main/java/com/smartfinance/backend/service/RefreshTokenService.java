@@ -69,6 +69,15 @@ public class RefreshTokenService {
         }
     }
 
+    /**
+     * Revokes every active refresh token belonging to {@code userId}, so a password change
+     * invalidates other sessions instead of leaving stolen/lingering refresh tokens usable.
+     */
+    @Transactional
+    public void revokeAllForUser(Long userId) {
+        refreshTokenRepository.revokeAllActiveForUser(userId, Instant.now());
+    }
+
     private RefreshToken resolveActiveToken(String rawToken) {
         Claims claims = jwtService.parseRefreshToken(rawToken);
         String tokenIdRaw = claims.getId();

@@ -1,94 +1,76 @@
 "use client"
 
-import { Search, Filter, Calendar } from "lucide-react"
+import { FilterX, Search } from "lucide-react"
+import { CategorySelect } from "@/components/shared/category-select"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getRecentPeriodOptions } from "@/lib/utils/period"
+
+const periodOptions = getRecentPeriodOptions()
 
 interface ExpensesFiltersProps {
   searchQuery: string
   onSearchChange: (value: string) => void
   selectedCategory: string
   onCategoryChange: (value: string) => void
-  dateRange: string
-  onDateRangeChange: (value: string) => void
+  period: string
+  onPeriodChange: (value: string) => void
+  onClearFilters: () => void
+  hasActiveFilters: boolean
 }
-
-const categories = [
-  "Todas",
-  "Alimentacion",
-  "Transporte",
-  "Entretenimiento",
-  "Servicios",
-  "Salud",
-  "Educacion",
-  "Ropa",
-  "Otros",
-]
-
-const dateRanges = [
-  { value: "all", label: "Todo el tiempo" },
-  { value: "today", label: "Hoy" },
-  { value: "week", label: "Esta semana" },
-  { value: "month", label: "Este mes" },
-  { value: "year", label: "Este ano" },
-]
 
 export function ExpensesFilters({
   searchQuery,
   onSearchChange,
   selectedCategory,
   onCategoryChange,
-  dateRange,
-  onDateRangeChange,
+  period,
+  onPeriodChange,
+  onClearFilters,
+  hasActiveFilters,
 }: ExpensesFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
-      {/* Search */}
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar gastos..."
           value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10 bg-secondary border-border"
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Buscar por descripcion o metodo"
+          className="pl-10"
         />
       </div>
 
-      {/* Category Filter */}
-      <Select value={selectedCategory} onValueChange={onCategoryChange}>
-        <SelectTrigger className="w-full sm:w-[180px] bg-secondary border-border">
-          <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-          <SelectValue placeholder="Categoria" />
+      <CategorySelect
+        type="EXPENSE"
+        value={selectedCategory}
+        onValueChange={onCategoryChange}
+        placeholder="Todas las categorias"
+      />
+
+      <Select value={period} onValueChange={onPeriodChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecciona un periodo" />
         </SelectTrigger>
         <SelectContent>
-          {categories.map((cat) => (
-            <SelectItem key={cat} value={cat}>
-              {cat}
+          {periodOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {/* Date Range Filter */}
-      <Select value={dateRange} onValueChange={onDateRangeChange}>
-        <SelectTrigger className="w-full sm:w-[180px] bg-secondary border-border">
-          <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-          <SelectValue placeholder="Periodo" />
-        </SelectTrigger>
-        <SelectContent>
-          {dateRanges.map((range) => (
-            <SelectItem key={range.value} value={range.value}>
-              {range.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Button
+        variant="outline"
+        onClick={onClearFilters}
+        disabled={!hasActiveFilters}
+        className="gap-2"
+      >
+        <FilterX data-icon="inline-start" />
+        Limpiar filtros
+      </Button>
     </div>
   )
 }

@@ -1,38 +1,39 @@
 "use client"
 
-import { CreditCard, Calendar, Percent, AlertTriangle } from "lucide-react"
+import { AlertTriangle, Calendar, CreditCard, History, MoreVertical, Pencil, Percent, Trash2, Wallet } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-
-export interface Debt {
-  id: number
-  name: string
-  totalAmount: number
-  paidAmount: number
-  interestRate: number
-  dueDate: string
-  minimumPayment: number
-  priority: "high" | "medium" | "low"
-}
+import type { Debt } from "@/lib/types/debt"
 
 interface DebtCardProps {
   debt: Debt
+  onEdit: (debt: Debt) => void
+  onDelete: (debt: Debt) => void
+  onRegisterPayment: (debt: Debt) => void
+  onViewHistory: (debt: Debt) => void
 }
 
-export function DebtCard({ debt }: DebtCardProps) {
-  const progress = (debt.paidAmount / debt.totalAmount) * 100
-  const remaining = debt.totalAmount - debt.paidAmount
+function formatCurrency(value: number): string {
+  return `$${value.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
-  const priorityStyles = {
-    high: "bg-destructive/10 text-destructive border-destructive/30",
-    medium: "bg-warning/10 text-warning border-warning/30",
-    low: "bg-success/10 text-success border-success/30",
-  }
+function formatDate(value: string | null): string {
+  if (!value) return "Sin fecha"
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+}
 
-  const priorityLabels = {
-    high: "Alta",
-    medium: "Media",
-    low: "Baja",
-  }
+export function DebtCard({ debt, onEdit, onDelete, onRegisterPayment, onViewHistory }: DebtCardProps) {
+  const paidAmount = debt.totalAmount - debt.remainingAmount
+  const progress = debt.totalAmount > 0 ? Math.min(Math.max((paidAmount / debt.totalAmount) * 100, 0), 100) : 0
+  const isPaidOff = debt.remainingAmount <= 0
 
   return (
     <div className="rounded-xl bg-card border border-border p-5 hover:border-primary/30 transition-smooth">
@@ -44,19 +45,33 @@ export function DebtCard({ debt }: DebtCardProps) {
           <div>
             <h3 className="text-sm font-semibold text-foreground">{debt.name}</h3>
             <p className="text-xs text-muted-foreground">
-              Pago minimo: ${debt.minimumPayment.toLocaleString("es-MX")}
+              {isPaidOff ? "Deuda saldada" : `Restante: ${formatCurrency(debt.remainingAmount)}`}
             </p>
           </div>
         </div>
-        <span className={cn(
-          "text-xs font-medium px-2 py-1 rounded-md border",
-          priorityStyles[debt.priority]
-        )}>
-          {priorityLabels[debt.priority]}
-        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label="Mas opciones">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(debt)}>
+              <Pencil className="h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onViewHistory(debt)}>
+              <History className="h-4 w-4" />
+              Ver historial
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => onDelete(debt)}>
+              <Trash2 className="h-4 w-4" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Progress bar */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted-foreground">Progreso de pago</span>
@@ -66,14 +81,13 @@ export function DebtCard({ debt }: DebtCardProps) {
           <div
             className={cn(
               "h-full rounded-full transition-all duration-500",
-              progress >= 75 ? "bg-success" : progress >= 50 ? "bg-warning" : "bg-primary"
+              progress >= 75 ? "bg-success" : progress >= 50 ? "bg-warning" : "bg-primary",
             )}
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
-      {/* Details */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
@@ -81,9 +95,7 @@ export function DebtCard({ debt }: DebtCardProps) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-sm font-semibold text-foreground">
-              ${debt.totalAmount.toLocaleString("es-MX")}
-            </p>
+            <p className="text-sm font-semibold text-foreground">{formatCurrency(debt.totalAmount)}</p>
           </div>
         </div>
 
@@ -93,9 +105,7 @@ export function DebtCard({ debt }: DebtCardProps) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Restante</p>
-            <p className="text-sm font-semibold text-destructive">
-              ${remaining.toLocaleString("es-MX")}
-            </p>
+            <p className="text-sm font-semibold text-destructive">{formatCurrency(debt.remainingAmount)}</p>
           </div>
         </div>
 
@@ -105,7 +115,9 @@ export function DebtCard({ debt }: DebtCardProps) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Interes</p>
-            <p className="text-sm font-semibold text-foreground">{debt.interestRate}%</p>
+            <p className="text-sm font-semibold text-foreground">
+              {debt.interestRate !== null ? `${debt.interestRate}%` : "N/A"}
+            </p>
           </div>
         </div>
 
@@ -115,15 +127,20 @@ export function DebtCard({ debt }: DebtCardProps) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Vencimiento</p>
-            <p className="text-sm font-semibold text-foreground">{debt.dueDate}</p>
+            <p className="text-sm font-semibold text-foreground">{formatDate(debt.dueDate)}</p>
           </div>
         </div>
       </div>
 
-      {/* Action button */}
-      <button className="mt-4 w-full rounded-lg border border-primary/30 bg-primary/5 py-2 text-sm font-medium text-primary hover:bg-primary/10 transition-smooth">
-        Realizar Pago
-      </button>
+      <Button
+        variant="outline"
+        className="mt-4 w-full border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
+        onClick={() => onRegisterPayment(debt)}
+        disabled={isPaidOff}
+      >
+        <Wallet className="h-4 w-4" />
+        {isPaidOff ? "Deuda saldada" : "Registrar pago"}
+      </Button>
     </div>
   )
 }

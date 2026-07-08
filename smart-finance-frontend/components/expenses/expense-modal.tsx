@@ -1,182 +1,227 @@
 "use client"
 
-import { useState } from "react"
-import { X } from "lucide-react"
+import { useEffect } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Sparkles } from "lucide-react"
+import { useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
+import { z } from "zod"
+import { CategorySelect } from "@/components/shared/category-select"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useCategorize } from "@/hooks/use-ai"
+import { getApiErrorMessage } from "@/lib/api-client"
+import { getTodayDateInput } from "@/lib/date"
+import { expenseSchema } from "@/lib/schemas/expense.schema"
+import type { Expense, PaymentMethodType } from "@/lib/types/expense"
+
+const MIN_DESCRIPTION_LENGTH_FOR_SUGGESTION = 3
+
+const paymentMethods: { value: PaymentMethodType; label: string }[] = [
+  { value: "CASH", label: "Efectivo" },
+  { value: "DEBIT_CARD", label: "Tarjeta de Debito" },
+  { value: "CREDIT_CARD", label: "Tarjeta de Credito" },
+  { value: "TRANSFER", label: "Transferencia" },
+  { value: "OTHER", label: "Otro" },
+]
+
+type ExpenseFormValues = z.infer<typeof expenseSchema>
 
 interface ExpenseModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (expense: {
-    description: string
-    amount: number
-    category: string
-    paymentMethod: string
-    date: string
-  }) => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  initialValue?: Expense | null
+  isSubmitting: boolean
+  onSubmit: (values: ExpenseFormValues) => Promise<void>
 }
 
-const categories = [
-  "Alimentacion",
-  "Transporte",
-  "Entretenimiento",
-  "Servicios",
-  "Salud",
-  "Educacion",
-  "Ropa",
-  "Otros",
-]
+const getDefaultValues = (expense?: Expense | null): ExpenseFormValues => ({
+  amount: expense?.amount ?? 0,
+  description: expense?.description ?? "",
+  date: expense?.date ?? getTodayDateInput(),
+  paymentMethod: expense?.paymentMethod ?? "CASH",
+  categoryId: expense?.categoryId ?? null,
+})
 
-const paymentMethods = [
-  "Efectivo",
-  "Tarjeta de Debito",
-  "Tarjeta de Credito",
-  "Transferencia",
-]
+export function ExpenseModal({ open, onOpenChange, initialValue, isSubmitting, onSubmit }: ExpenseModalProps) {
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
+    mode: "onSubmit",
+    reValidateMode: "onBlur",
+    defaultValues: getDefaultValues(initialValue),
+  })
 
-export function ExpenseModal({ isOpen, onClose, onSubmit }: ExpenseModalProps) {
-  const [description, setDescription] = useState("")
-  const [amount, setAmount] = useState("")
-  const [category, setCategory] = useState("")
-  const [paymentMethod, setPaymentMethod] = useState("")
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
+  useEffect(() => {
+    if (open) {
+      form.reset(getDefaultValues(initialValue))
+    }
+  }, [form, initialValue, open])
 
-  if (!isOpen) return null
+  const handleSubmit = form.handleSubmit(async (values) => {
+    await onSubmit(values)
+    form.reset(getDefaultValues(null))
+  })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit({
-      description,
-      amount: parseFloat(amount),
-      category,
-      paymentMethod,
-      date,
-    })
-    // Reset form
-    setDescription("")
-    setAmount("")
-    setCategory("")
-    setPaymentMethod("")
-    setDate(new Date().toISOString().split("T")[0])
-    onClose()
+  const { categorize, isLoading: isCategorizing } = useCategorize()
+  const watchedDescription = useWatch({ control: form.control, name: "description" })
+  const watchedAmount = useWatch({ control: form.control, name: "amount" })
+
+  const trimmedDescription = typeof watchedDescription === "string" ? watchedDescription.trim() : ""
+  const canSuggestCategory = trimmedDescription.length >= MIN_DESCRIPTION_LENGTH_FOR_SUGGESTION
+
+  const handleSuggestCategory = async () => {
+    if (!canSuggestCategory || isCategorizing) return
+
+    const parsedAmount = typeof watchedAmount === "number" ? watchedAmount : Number(watchedAmount)
+
+    try {
+      const result = await categorize({
+        description: trimmedDescription,
+        amount: Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : undefined,
+      })
+
+      if (result.categoryId !== null) {
+        form.setValue("categoryId", result.categoryId, { shouldValidate: true })
+        toast.success(`Categoria sugerida: ${result.categoryName}`)
+      } else {
+        toast.info("No encontramos una categoria clara para esa descripcion")
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "No fue posible sugerir una categoria"))
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{initialValue ? "Editar gasto" : "Crear gasto"}</DialogTitle>
+          <DialogDescription>
+            Completa la informacion para registrar el gasto en tu historial.
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Modal */}
-      <div className="relative w-full max-w-md rounded-xl bg-card border border-border p-6 shadow-xl mx-4">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-foreground">Agregar Gasto</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-smooth"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="description">Descripcion</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ej: Compra en supermercado"
-              required
-              className="bg-secondary border-border"
+        <Form {...form}>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripcion</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ej: Mercado semanal" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Monto</Label>
-            <Input
-              id="amount"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              required
-              min="0"
-              step="0.01"
-              className="bg-secondary border-border"
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Monto</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      {...field}
+                      onChange={(event) => field.onChange(event.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label>Categoria</Label>
-            <Select value={category} onValueChange={setCategory} required>
-              <SelectTrigger className="bg-secondary border-border">
-                <SelectValue placeholder="Selecciona una categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Metodo de Pago</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
-              <SelectTrigger className="bg-secondary border-border">
-                <SelectValue placeholder="Selecciona metodo de pago" />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentMethods.map((method) => (
-                  <SelectItem key={method} value={method}>
-                    {method}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="date">Fecha</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              className="bg-secondary border-border"
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between gap-2">
+                    <FormLabel>Categoria</FormLabel>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={!canSuggestCategory || isCategorizing}
+                      onClick={() => void handleSuggestCategory()}
+                    >
+                      <Sparkles data-icon="inline-start" />
+                      {isCategorizing ? "Sugiriendo..." : "Sugerir categoria"}
+                    </Button>
+                  </div>
+                  <FormControl>
+                    <CategorySelect
+                      type="EXPENSE"
+                      value={field.value === null ? "none" : String(field.value)}
+                      onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
-              Agregar Gasto
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <FormField
+              control={form.control}
+              name="paymentMethod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Metodo de pago</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un metodo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        {paymentMethods.map((method) => (
+                          <SelectItem key={method.value} value={method.value}>
+                            {method.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : initialValue ? "Guardar cambios" : "Crear gasto"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   )
 }

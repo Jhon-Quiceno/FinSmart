@@ -1,0 +1,106 @@
+@startuml
+!theme plain
+
+title Arquitectura General - FinSmart
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+
+package "Cliente Web (Navegador)" as ClienteWeb {
+  [Next.js 16 App] as NextApp
+  [Tailwind CSS v4 / shadcn]
+  [Recharts (Gráficos)]
+  [Context API (Auth + Notificaciones)]
+}
+
+package "Frontend (Next.js)" as FrontendServer {
+  [Páginas (App Router)]
+  [Componentes React]
+  [Axios API Client] as Axios
+  [JWT Interceptor]
+}
+
+package "Backend (Spring Boot 4)" as Backend {
+  package "Controllers" {
+    [UserController]
+    [CategoryController]
+    [IncomeController]
+    [ExpenseController]
+    [DebtController]
+    [RecurringController]
+    [AnalysisController]
+    [AIChatController]
+    [NotificationController]
+    [ReportController]
+  }
+
+  package "Services" {
+    [UserService]
+    [CategoryService]
+    [IncomeService]
+    [ExpenseService]
+    [DebtService]
+    [RecurringService]
+    [FinancialAnalysisService]
+    [AiChatOrchestratorService]
+    [NotificationService]
+    [ReportService]
+  }
+
+  package "Jobs (@Scheduled)" {
+    [PaymentReminderJob]
+    [WeeklySummaryJob]
+    [InactivityReminderJob]
+    [MonthEndPredictionJob]
+  }
+
+  package "Events" {
+    [ExpenseCreatedEvent]
+    [NotificationListener]
+  }
+
+  package "Security" {
+    [JwtAuthenticationFilter]
+    [SecurityConfig]
+  }
+
+  package "Data Access" {
+    [Repositories (JPA)] as Repositories
+    [Specifications]
+    [Entities]
+  }
+
+  package "IA Multi-Proveedor" as IAMulti {
+    [AiChatOrchestrator]
+    [AiProviderRegistry]
+    [FinancialContextBuilder]
+    [AiChatClient] as AIClient
+  }
+}
+
+database "PostgreSQL 16" as DB {
+  [Tablas: users, categories, incomes, expenses]
+  [Tablas: debts, debt_payments, recurring_payments]
+  [Tablas: notifications, ai_messages]
+  [Tablas: financial_analysis]
+  [Migraciones Flyway V1-V12]
+}
+
+package "Externo" as Ext {
+  [NVIDIA NIM API] as Nvidia
+  [OpenCode Zen API] as OpenCode
+  [OpenRouter API] as OpenRouter
+  [Brevo SMTP (Email)] as Brevo
+}
+
+' Relaciones corregidas usando los alias declarados
+NextApp --> FrontendServer : "Renderiza / Carga"
+Axios --> Controllers : "HTTPS / REST API (JSON)"
+Repositories --> DB : "JDBC / JPA"
+AIClient --> Nvidia : "HTTP / OpenAI-compatible"
+AIClient --> OpenCode : "HTTP"
+AIClient --> OpenRouter : "HTTP"
+NotificationService --> Brevo : "Email (async, degradable)"
+
+@enduml

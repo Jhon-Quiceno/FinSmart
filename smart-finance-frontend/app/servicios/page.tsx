@@ -1,135 +1,282 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, Repeat, AlertTriangle, CheckCircle, Clock } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Plus, Repeat, Wallet } from "lucide-react"
+import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
-import { ServiceCard, type Service } from "@/components/services/service-card"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
+import { RecurringPaymentCard } from "@/components/recurring/recurring-payment-card"
+import { RecurringPaymentModal } from "@/components/recurring/recurring-payment-modal"
+import {
+  useCreateRecurringPayment,
+  useDeleteRecurringPayment,
+  usePayRecurringPayment,
+  useRecurringPayments,
+  useToggleRecurringPayment,
+  useUpdateRecurringPayment,
+} from "@/hooks/use-recurring-payments"
+import { toastApiError } from "@/lib/api-client"
+import type { RecurringPaymentFormValues } from "@/lib/schemas/recurring-payment.schema"
+import type {
+  RecurringPayment,
+  RecurringPaymentCreateRequest,
+  RecurringPaymentUpdateRequest,
+} from "@/lib/types/recurring-payment"
 
-const initialServices: Service[] = [
-  { id: 1, name: "Netflix", amount: 299, paymentDate: "25 Mar", daysUntilDue: 5, category: "Streaming", status: "upcoming" },
-  { id: 2, name: "CFE (Luz)", amount: 520, paymentDate: "20 Mar", daysUntilDue: 0, category: "Luz", status: "pending" },
-  { id: 3, name: "Agua SAPAL", amount: 180, paymentDate: "28 Mar", daysUntilDue: 8, category: "Agua", status: "upcoming" },
-  { id: 4, name: "Telmex Internet", amount: 599, paymentDate: "15 Mar", daysUntilDue: -5, category: "Internet", status: "paid" },
-  { id: 5, name: "Spotify Premium", amount: 129, paymentDate: "22 Mar", daysUntilDue: 2, category: "Musica", status: "pending" },
-  { id: 6, name: "Disney+", amount: 179, paymentDate: "01 Abr", daysUntilDue: 12, category: "Streaming", status: "upcoming" },
-  { id: 7, name: "Telcel", amount: 399, paymentDate: "10 Mar", daysUntilDue: -10, category: "Telefono", status: "paid" },
-  { id: 8, name: "iCloud", amount: 49, paymentDate: "05 Abr", daysUntilDue: 16, category: "Cloud", status: "upcoming" },
-  { id: 9, name: "Amazon Prime", amount: 99, paymentDate: "18 Mar", daysUntilDue: -2, category: "Streaming", status: "paid" },
-  { id: 10, name: "Gas Natural", amount: 350, paymentDate: "23 Mar", daysUntilDue: 3, category: "Otros", status: "pending" },
-]
+const pageSize = 9
+
+// A month averages 52/12 ≈ 4.33 weeks. Used only to estimate the display total
+// for weekly recurring payments; the backend's actual nextPaymentDate recalculation
+// uses an exact plusWeeks(1), this constant is UI-only.
+const WEEKS_PER_MONTH_ESTIMATE = 52 / 12
 
 export default function ServiciosPage() {
-  const [services] = useState<Service[]>(initialServices)
+  const [page, setPage] = useState(1)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<RecurringPayment | null>(null)
+  const [deletingItem, setDeletingItem] = useState<RecurringPayment | null>(null)
 
-  const totalMonthly = services.reduce((sum, s) => sum + s.amount, 0)
-  const pendingServices = services.filter(s => s.status === "pending" || s.status === "upcoming")
-  const paidServices = services.filter(s => s.status === "paid")
-  const urgentServices = services.filter(s => s.status !== "paid" && s.daysUntilDue <= 3)
+  const { recurringPayments, isLoading, error } = useRecurringPayments({ page: page - 1, size: pageSize })
+
+  const { createRecurringPayment, isLoading: isCreating } = useCreateRecurringPayment()
+  const { updateRecurringPayment, isLoading: isUpdating } = useUpdateRecurringPayment()
+  const { deleteRecurringPayment, isLoading: isDeleting } = useDeleteRecurringPayment()
+  const { toggleRecurringPayment, isLoading: isToggling } = useToggleRecurringPayment()
+  const { payRecurringPayment, isLoading: isMarkingAsPaid } = usePayRecurringPayment()
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
+
+  const activeCount = useMemo(
+    () => recurringPayments.content.filter((item) => item.isActive).length,
+    [recurringPayments.content],
+  )
+  const monthlyTotal = useMemo(
+    () =>
+      recurringPayments.content
+        .filter((item) => item.isActive)
+        .reduce(
+          (sum, item) =>
+            sum + (item.frequency === "MONTHLY" ? item.amount : item.amount * WEEKS_PER_MONTH_ESTIMATE),
+          0,
+        ),
+    [recurringPayments.content],
+  )
+
+  const handleSubmit = async (values: RecurringPaymentFormValues): Promise<boolean> => {
+    try {
+      if (editingItem) {
+        const payload: RecurringPaymentUpdateRequest = {
+          name: values.name,
+          amount: values.amount,
+          frequency: values.frequency,
+        }
+        await updateRecurringPayment(editingItem.id, payload)
+        toast.success("Servicio actualizado correctamente")
+      } else {
+        const payload: RecurringPaymentCreateRequest = {
+          name: values.name,
+          amount: values.amount,
+          frequency: values.frequency,
+          firstPaymentDate: values.firstPaymentDate,
+        }
+        await createRecurringPayment(payload)
+        toast.success("Servicio creado correctamente")
+      }
+
+      setModalOpen(false)
+      setEditingItem(null)
+      return true
+    } catch (error) {
+      toastApiError(error, "No fue posible guardar el servicio")
+      return false
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingItem) return
+
+    try {
+      await deleteRecurringPayment(deletingItem.id)
+      toast.success("Servicio eliminado correctamente")
+      setDeletingItem(null)
+    } catch (error) {
+      toastApiError(error, "No fue posible eliminar el servicio")
+    }
+  }
+
+  const handleToggle = async (item: RecurringPayment) => {
+    try {
+      await toggleRecurringPayment(item.id)
+      toast.success(item.isActive ? "Servicio desactivado" : "Servicio activado")
+    } catch (error) {
+      toastApiError(error, "No fue posible cambiar el estado del servicio")
+    }
+  }
+
+  const handleMarkAsPaid = async (item: RecurringPayment) => {
+    try {
+      await payRecurringPayment(item.id)
+      toast.success(`Pago de "${item.name}" registrado correctamente`)
+    } catch (error) {
+      toastApiError(error, "No fue posible registrar el pago")
+    }
+  }
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Servicios y Suscripciones</h1>
-            <p className="text-sm text-muted-foreground">
-              Administra tus pagos recurrentes
-            </p>
+            <p className="text-sm text-muted-foreground">Administra tus pagos recurrentes</p>
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Servicio
+          <Button
+            onClick={() => {
+              setEditingItem(null)
+              setModalOpen(true)
+            }}
+          >
+            <Plus data-icon="inline-start" />
+            Agregar servicio
           </Button>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl bg-card border border-border p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Repeat className="h-5 w-5 text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </>
+          ) : (
+            <>
+              <div className="rounded-xl bg-card border border-border p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Repeat className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Servicios activos</p>
+                    <p className="text-xl font-bold text-foreground">{activeCount}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Mensual</p>
-                <p className="text-xl font-bold text-foreground">
-                  ${totalMonthly.toLocaleString("es-MX")}
-                </p>
-              </div>
-            </div>
-          </div>
 
-          <div className="rounded-xl bg-card border border-border p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                <Clock className="h-5 w-5 text-warning" />
+              <div className="rounded-xl bg-card border border-border p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+                    <Wallet className="h-5 w-5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estimado mensual</p>
+                    <p className="text-xl font-bold text-foreground">
+                      ${monthlyTotal.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pendientes</p>
-                <p className="text-xl font-bold text-warning">{pendingServices.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-card border border-border p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Urgentes</p>
-                <p className="text-xl font-bold text-destructive">{urgentServices.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-card border border-border p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-                <CheckCircle className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pagados</p>
-                <p className="text-xl font-bold text-success">{paidServices.length}</p>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
-        {/* Urgent Services Alert */}
-        {urgentServices.length > 0 && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-destructive">
-                  Tienes {urgentServices.length} servicio{urgentServices.length > 1 ? "s" : ""} por vencer en los proximos 3 dias
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {urgentServices.map(s => s.name).join(", ")}
-                </p>
-              </div>
-            </div>
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>
+            Anterior
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Pagina {Math.max(recurringPayments.number + 1, page)} de {Math.max(recurringPayments.totalPages, 1)}
+          </span>
+          <Button
+            variant="outline"
+            disabled={page >= Math.max(recurringPayments.totalPages, 1)}
+            onClick={() => setPage((value) => value + 1)}
+          >
+            Siguiente
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-64 w-full" />
+            ))}
+          </div>
+        ) : recurringPayments.content.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Repeat />
+              </EmptyMedia>
+              <EmptyTitle>No tenes servicios recurrentes registrados</EmptyTitle>
+              <EmptyDescription>
+                Agrega un servicio o suscripcion para llevar el control de tus pagos recurrentes.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recurringPayments.content.map((item) => (
+              <RecurringPaymentCard
+                key={item.id}
+                recurringPayment={item}
+                onEdit={(value) => {
+                  setEditingItem(value)
+                  setModalOpen(true)
+                }}
+                onDelete={(value) => setDeletingItem(value)}
+                onToggle={handleToggle}
+                onMarkAsPaid={handleMarkAsPaid}
+                isToggling={isToggling}
+                isMarkingAsPaid={isMarkingAsPaid}
+              />
+            ))}
           </div>
         )}
-
-        {/* Services Grid */}
-        <div>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Todos los Servicios</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {services
-              .sort((a, b) => {
-                if (a.status === "paid" && b.status !== "paid") return 1
-                if (a.status !== "paid" && b.status === "paid") return -1
-                return a.daysUntilDue - b.daysUntilDue
-              })
-              .map((service) => (
-                <ServiceCard key={service.id} service={service} />
-              ))}
-          </div>
-        </div>
       </div>
+
+      <RecurringPaymentModal
+        open={modalOpen}
+        onOpenChange={(nextOpen) => {
+          setModalOpen(nextOpen)
+          if (!nextOpen) setEditingItem(null)
+        }}
+        initialValue={editingItem}
+        onSubmit={handleSubmit}
+        isSubmitting={isCreating || isUpdating}
+      />
+
+      <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar servicio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion no se puede deshacer. El servicio recurrente seleccionado se eliminara de forma
+              permanente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   )
 }
