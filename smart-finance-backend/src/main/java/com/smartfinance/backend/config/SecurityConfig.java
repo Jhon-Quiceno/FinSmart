@@ -23,9 +23,11 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtProperties jwtProperties;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtProperties jwtProperties) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.jwtProperties = jwtProperties;
     }
 
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
@@ -74,11 +76,19 @@ public class SecurityConfig {
      * CSRF token stored in a cookie readable by the frontend (JavaScript).
      * The frontend must read XSRF-TOKEN cookie and send it as X-XSRF-TOKEN header
      * on requests that use cookie-based auth (e.g., POST /api/users/refresh).
+     *
+     * Same-site/secure policy mirrors the refresh cookie's: when the frontend and
+     * backend are on different origins (e.g. Vercel + Cloud Run), SameSite=Lax would
+     * make the browser silently drop this cookie on cross-site requests, causing a
+     * 403 on every CSRF-protected endpoint even with a valid session.
      */
     @Bean
     public CookieCsrfTokenRepository csrfTokenRepository() {
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookiePath("/");
+        repository.setCookieCustomizer(customizer -> customizer
+            .sameSite(jwtProperties.refreshCookieSameSite())
+            .secure(jwtProperties.refreshCookieSecure()));
         return repository;
     }
 
