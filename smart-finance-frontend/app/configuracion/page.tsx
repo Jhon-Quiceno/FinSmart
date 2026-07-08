@@ -24,7 +24,7 @@ export default function ConfiguracionPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6 w-full max-w-4xl mx-auto">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Configuracion</h1>
