@@ -3,6 +3,8 @@
 import { ShoppingBag, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { RecentTransaction } from "@/lib/types/analysis"
+import { StaggerContainer, StaggerItem } from "@/components/motion/stagger"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 
 interface RecentTransactionsProps {
   transactions: RecentTransaction[]
@@ -27,9 +29,9 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
           Todavia no tienes movimientos registrados en este periodo.
         </div>
       ) : (
-        <div className="space-y-3">
+        <StaggerContainer className="space-y-3">
           {transactions.map((transaction) => (
-            <div
+            <StaggerItem
               key={`${transaction.type}-${transaction.id}`}
               className="flex items-center gap-3 rounded-lg p-3 hover:bg-secondary/50 transition-smooth"
             >
@@ -46,9 +48,19 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {transaction.description}
-                </p>
+                <HoverCard>
+                  <HoverCardTrigger asChild>
+                    <p className="text-sm font-medium text-foreground truncate cursor-default">
+                      {transaction.description}
+                    </p>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-auto max-w-xs">
+                    <p className="text-sm text-foreground">{transaction.description}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {transaction.categoryName ?? "Sin categoria"} · {formatTransactionDate(transaction.date)}
+                    </p>
+                  </HoverCardContent>
+                </HoverCard>
                 <p className="text-xs text-muted-foreground">
                   {transaction.categoryName ?? "Sin categoria"} · {formatTransactionDate(transaction.date)}
                 </p>
@@ -64,9 +76,9 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                   {transaction.amount.toLocaleString("es-MX")}
                 </p>
               </div>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
     </div>
   )
