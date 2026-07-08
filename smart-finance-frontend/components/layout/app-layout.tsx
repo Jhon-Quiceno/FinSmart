@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 import { Sidebar } from "./sidebar"
 import { Navbar } from "./navbar"
 import { MobileSidebar } from "./mobile-sidebar"
@@ -11,23 +12,24 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar collapsed={isSidebarCollapsed} onCollapsedChange={setIsSidebarCollapsed} />
       </div>
 
       {/* Mobile Sidebar */}
-      <MobileSidebar 
-        isOpen={isMobileMenuOpen} 
-        onClose={() => setIsMobileMenuOpen(false)} 
+      <MobileSidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Main Content */}
-      <div className="lg:pl-64 transition-all duration-300">
-        <Navbar 
+      <div className={cn("transition-all duration-300", isSidebarCollapsed ? "lg:pl-16" : "lg:pl-64")}>
+        <Navbar
           onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           isMobileMenuOpen={isMobileMenuOpen}
         />

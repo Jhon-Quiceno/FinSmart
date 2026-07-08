@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -18,6 +17,7 @@ import {
   ChevronRight,
   Bot,
 } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -31,8 +31,12 @@ const navigation = [
   { name: "Configuracion", href: "/configuracion", icon: Settings },
 ]
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+interface SidebarProps {
+  collapsed: boolean
+  onCollapsedChange: (collapsed: boolean) => void
+}
+
+export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -80,7 +84,7 @@ export function Sidebar() {
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href
-            return (
+            const link = (
               <Link
                 key={item.name}
                 href={item.href}
@@ -95,21 +99,37 @@ export function Sidebar() {
                 {!collapsed && <span>{item.name}</span>}
               </Link>
             )
+
+            if (!collapsed) return link
+
+            return (
+              <Tooltip key={item.name}>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right">{item.name}</TooltipContent>
+              </Tooltip>
+            )
           })}
         </nav>
 
         {/* Collapse Toggle */}
         <div className="p-3 border-t border-sidebar-border">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="flex w-full items-center justify-center rounded-lg p-2 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-smooth"
-          >
-            {collapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => onCollapsedChange(!collapsed)}
+                className="flex w-full items-center justify-center rounded-lg p-2 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-smooth"
+              >
+                {collapsed ? (
+                  <ChevronRight className="h-5 w-5" />
+                ) : (
+                  <ChevronLeft className="h-5 w-5" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {collapsed ? "Expandir" : "Colapsar"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </aside>

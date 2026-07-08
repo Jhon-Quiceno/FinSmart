@@ -14,6 +14,7 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions"
 import { MonthEndPredictionCard } from "@/components/dashboard/month-end-prediction-card"
 import { AiInsightsCard } from "@/components/dashboard/ai-insights-card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { StaggerContainer, StaggerItem } from "@/components/motion/stagger"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { useAnalysisRecommendations, useAnalysisSummary } from "@/hooks/use-analysis"
 
@@ -101,8 +102,8 @@ export default function DashboardPage() {
             </EmptyHeader>
           </Empty>
         ) : (
-          <>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <StaggerContainer className="flex flex-col gap-6">
+            <StaggerItem className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div>
                 {isLoading || !summary ? (
                   <div className="rounded-xl border border-border bg-card p-6">
@@ -139,9 +140,9 @@ export default function DashboardPage() {
                   />
                 )}
               </div>
-            </div>
+            </StaggerItem>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <StaggerItem className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 {isLoading || !summary ? (
                   <Skeleton className="h-[360px] w-full" />
@@ -154,14 +155,14 @@ export default function DashboardPage() {
               ) : (
                 <ExpensesByCategoryChart topCategories={summary.topCategories} />
               )}
-            </div>
+            </StaggerItem>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <StaggerItem className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <MonthEndPredictionCard />
               <AiInsightsCard />
-            </div>
+            </StaggerItem>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <StaggerItem className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               {isRecommendationsLoading ? (
                 <Skeleton className="h-64 w-full" />
               ) : (
@@ -177,8 +178,8 @@ export default function DashboardPage() {
               ) : (
                 <RecentTransactions transactions={summary.recentTransactions} />
               )}
-            </div>
-          </>
+            </StaggerItem>
+          </StaggerContainer>
         )}
       </div>
     </AppLayout>
