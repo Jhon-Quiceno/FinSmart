@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useMarkAllAsRead, useMarkAsRead, useNotifications, useUnreadCount } from "@/hooks/use-notifications"
 import type { Notification, NotificationType } from "@/lib/types/notification"
 import Link from "next/link"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 interface NavbarProps {
   onMobileMenuToggle: () => void
@@ -73,6 +74,9 @@ export function Navbar({ onMobileMenuToggle, isMobileMenuOpen }: NavbarProps) {
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
