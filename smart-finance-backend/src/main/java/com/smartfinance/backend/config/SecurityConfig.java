@@ -31,6 +31,19 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
 
+    // Same values as JwtProperties.refreshCookieSameSite/Secure, read directly from the
+    // underlying env vars here (instead of injecting the JwtProperties bean) so @WebMvcTest
+    // slices that @Import this config don't need to provide a JwtProperties bean just to
+    // build the CSRF cookie repo. Reading app.jwt.refresh-cookie-secure itself wouldn't work
+    // as a fallback source: that property is defined as ${JWT_REFRESH_COOKIE_SECURE} with no
+    // default, so Spring resolves it to that literal unresolved placeholder (not "missing"),
+    // and a @Value default only kicks in when the property is truly absent.
+    @Value("${JWT_REFRESH_COOKIE_SAME_SITE:Lax}")
+    private String csrfCookieSameSite;
+
+    @Value("${JWT_REFRESH_COOKIE_SECURE:false}")
+    private boolean csrfCookieSecure;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -74,11 +87,19 @@ public class SecurityConfig {
      * CSRF token stored in a cookie readable by the frontend (JavaScript).
      * The frontend must read XSRF-TOKEN cookie and send it as X-XSRF-TOKEN header
      * on requests that use cookie-based auth (e.g., POST /api/users/refresh).
+     *
+     * Same-site/secure policy mirrors the refresh cookie's: when the frontend and
+     * backend are on different origins (e.g. Vercel + Cloud Run), SameSite=Lax would
+     * make the browser silently drop this cookie on cross-site requests, causing a
+     * 403 on every CSRF-protected endpoint even with a valid session.
      */
     @Bean
     public CookieCsrfTokenRepository csrfTokenRepository() {
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookiePath("/");
+        repository.setCookieCustomizer(customizer -> customizer
+            .sameSite(csrfCookieSameSite)
+            .secure(csrfCookieSecure));
         return repository;
     }
 
