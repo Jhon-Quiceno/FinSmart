@@ -23,15 +23,22 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtProperties jwtProperties;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, JwtProperties jwtProperties) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.jwtProperties = jwtProperties;
     }
 
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
+
+    // Same property keys as JwtProperties.refreshCookieSameSite/Secure, read directly here
+    // (instead of injecting the JwtProperties bean) so @WebMvcTest slices that @Import this
+    // config don't need to provide a JwtProperties bean just to build the CSRF cookie repo.
+    @Value("${app.jwt.refresh-cookie-same-site:Lax}")
+    private String csrfCookieSameSite;
+
+    @Value("${app.jwt.refresh-cookie-secure:false}")
+    private boolean csrfCookieSecure;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -87,8 +94,8 @@ public class SecurityConfig {
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookiePath("/");
         repository.setCookieCustomizer(customizer -> customizer
-            .sameSite(jwtProperties.refreshCookieSameSite())
-            .secure(jwtProperties.refreshCookieSecure()));
+            .sameSite(csrfCookieSameSite)
+            .secure(csrfCookieSecure));
         return repository;
     }
 
