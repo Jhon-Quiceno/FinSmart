@@ -61,7 +61,7 @@ public class UserController {
         AuthSession session = userService.register(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken(), session.rememberMe()).toString())
                 .body(session.response());
     }
 
@@ -78,7 +78,7 @@ public class UserController {
         AuthSession session = userService.login(request);
         return ResponseEntity
                 .ok()
-                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken(), session.rememberMe()).toString())
                 .body(session.response());
     }
 
@@ -94,7 +94,7 @@ public class UserController {
         AuthSession session = userService.refresh(refreshToken);
         return ResponseEntity
                 .ok()
-                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken(), session.rememberMe()).toString())
                 .body(session.response());
     }
 
@@ -166,14 +166,24 @@ public class UserController {
         return null;
     }
 
-    private ResponseCookie buildRefreshCookie(String refreshToken) {
-        return ResponseCookie.from(jwtProperties.refreshCookieName(), refreshToken)
+    /**
+     * When {@code rememberMe} is {@code true}, the cookie carries {@code Max-Age} so it survives
+     * browser restarts; when {@code false}, {@code Max-Age} is omitted entirely so the browser
+     * treats it as a session cookie and drops it when the browser closes. Either way, the JWT
+     * refresh token embedded in the cookie keeps its normal expiration.
+     */
+    private ResponseCookie buildRefreshCookie(String refreshToken, boolean rememberMe) {
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(jwtProperties.refreshCookieName(), refreshToken)
                 .httpOnly(true)
                 .secure(jwtProperties.refreshCookieSecure())
                 .sameSite(jwtProperties.refreshCookieSameSite())
-                .path("/")
-                .maxAge(Duration.ofMillis(jwtProperties.refreshExpirationMs()))
-                .build();
+                .path("/");
+
+        if (rememberMe) {
+            builder.maxAge(Duration.ofMillis(jwtProperties.refreshExpirationMs()));
+        }
+
+        return builder.build();
     }
 
     private ResponseCookie clearRefreshCookie() {
