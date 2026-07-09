@@ -31,13 +31,17 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
 
-    // Same property keys as JwtProperties.refreshCookieSameSite/Secure, read directly here
-    // (instead of injecting the JwtProperties bean) so @WebMvcTest slices that @Import this
-    // config don't need to provide a JwtProperties bean just to build the CSRF cookie repo.
-    @Value("${app.jwt.refresh-cookie-same-site:Lax}")
+    // Same values as JwtProperties.refreshCookieSameSite/Secure, read directly from the
+    // underlying env vars here (instead of injecting the JwtProperties bean) so @WebMvcTest
+    // slices that @Import this config don't need to provide a JwtProperties bean just to
+    // build the CSRF cookie repo. Reading app.jwt.refresh-cookie-secure itself wouldn't work
+    // as a fallback source: that property is defined as ${JWT_REFRESH_COOKIE_SECURE} with no
+    // default, so Spring resolves it to that literal unresolved placeholder (not "missing"),
+    // and a @Value default only kicks in when the property is truly absent.
+    @Value("${JWT_REFRESH_COOKIE_SAME_SITE:Lax}")
     private String csrfCookieSameSite;
 
-    @Value("${app.jwt.refresh-cookie-secure:false}")
+    @Value("${JWT_REFRESH_COOKIE_SECURE:false}")
     private boolean csrfCookieSecure;
 
     @Bean
