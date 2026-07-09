@@ -47,6 +47,23 @@ public class User {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    /**
+     * Number of AI chat messages sent by this user during {@link #aiChatPeriod}. A dedicated
+     * counter (rather than counting {@code ai_messages} rows) so it survives the login-time chat
+     * history purge (see {@code UserService#login}) and can be reserved atomically (see
+     * {@code UserRepository#reserveAiChatQuota}).
+     */
+    @Column(name = "ai_chat_used", nullable = false)
+    private int aiChatUsed = 0;
+
+    /**
+     * UTC calendar month {@link #aiChatUsed} belongs to, formatted {@code "YYYY-MM"}. {@code null}
+     * until the user's first AI chat message. When this no longer matches the current month, the
+     * counter is treated as reset back to zero.
+     */
+    @Column(name = "ai_chat_period", length = 7)
+    private String aiChatPeriod;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

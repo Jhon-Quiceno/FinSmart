@@ -148,6 +148,14 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(AiMessageQuotaExceededException.class)
+    public ResponseEntity<ErrorResponse> handleAiMessageQuotaExceeded(
+            AiMessageQuotaExceededException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler({
             AiProviderTimeoutException.class,
             AiProviderUnavailableException.class
