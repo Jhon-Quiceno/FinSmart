@@ -60,11 +60,11 @@ class IncomeServiceTest {
     @Test
     void createIncomeShouldSaveIncomeForCurrentUserWithoutCategory() {
         setAuthenticatedUser(1L);
-        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(500), "Bono", LocalDate.now(), "Trabajo", null);
+        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(500), "Bono", LocalDate.now(), null);
         Income mappedIncome = new Income();
         Income savedIncome = new Income();
         savedIncome.setId(10L);
-        IncomeResponse response = new IncomeResponse(10L, BigDecimal.valueOf(500), "Bono", LocalDate.now(), "Trabajo", null, null);
+        IncomeResponse response = new IncomeResponse(10L, BigDecimal.valueOf(500), "Bono", LocalDate.now(), null, null);
 
         when(incomeMapper.toEntity(request)).thenReturn(mappedIncome);
         when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
@@ -81,7 +81,7 @@ class IncomeServiceTest {
     @Test
     void createIncomeShouldResolveOwnedCategoryWhenCategoryIdProvided() {
         setAuthenticatedUser(1L);
-        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(500), "Bono", LocalDate.now(), "Trabajo", 4L);
+        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(500), "Bono", LocalDate.now(), 4L);
         Income mappedIncome = new Income();
         Category category = new Category();
         category.setId(4L);
@@ -92,7 +92,7 @@ class IncomeServiceTest {
         when(categoryRepository.findByIdAndUser_Id(4L, 1L)).thenReturn(Optional.of(category));
         when(incomeRepository.save(mappedIncome)).thenReturn(mappedIncome);
         when(incomeMapper.toResponse(mappedIncome)).thenReturn(
-                new IncomeResponse(1L, BigDecimal.valueOf(500), "Bono", LocalDate.now(), "Trabajo", 4L, "Salario")
+                new IncomeResponse(1L, BigDecimal.valueOf(500), "Bono", LocalDate.now(), 4L, "Salario")
         );
 
         IncomeResponse createdIncome = incomeService.createIncome(request);
@@ -104,7 +104,7 @@ class IncomeServiceTest {
     @Test
     void createIncomeShouldThrowNotFoundWhenCategoryBelongsToAnotherUser() {
         setAuthenticatedUser(1L);
-        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(500), "Bono", LocalDate.now(), "Trabajo", 99L);
+        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(500), "Bono", LocalDate.now(), 99L);
         Income mappedIncome = new Income();
 
         when(incomeMapper.toEntity(request)).thenReturn(mappedIncome);
@@ -117,7 +117,7 @@ class IncomeServiceTest {
     @Test
     void updateIncomeShouldThrowNotFoundWhenIncomeBelongsToAnotherUser() {
         setAuthenticatedUser(1L);
-        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(100), null, LocalDate.now(), null, null);
+        IncomeRequest request = new IncomeRequest(BigDecimal.valueOf(100), null, LocalDate.now(), null);
         when(incomeRepository.findByIdAndUser_Id(20L, 1L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(ResourceNotFoundException.class, () -> incomeService.updateIncome(20L, request));
@@ -145,21 +145,20 @@ class IncomeServiceTest {
     }
 
     @Test
-    void getIncomesShouldApplyMonthYearAndSourceFilters() {
+    void getIncomesShouldApplyMonthYearFilters() {
         setAuthenticatedUser(1L);
         Pageable pageable = PageRequest.of(0, 20);
         Income income = new Income();
         Page<Income> page = new PageImpl<>(List.of(income), pageable, 1);
-        IncomeResponse response = new IncomeResponse(1L, BigDecimal.TEN, null, LocalDate.now(), "Trabajo", null, null);
+        IncomeResponse response = new IncomeResponse(1L, BigDecimal.TEN, null, LocalDate.now(), null, null);
 
         when(incomeRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
         when(incomeMapper.toResponse(income)).thenReturn(response);
 
-        Page<IncomeResponse> result = incomeService.getIncomes(6, 2026, "Trabajo", pageable);
+        Page<IncomeResponse> result = incomeService.getIncomes(6, 2026, pageable);
 
         Assertions.assertEquals(1, result.getTotalElements());
-        Assertions.assertEquals("Trabajo", result.getContent().get(0).source());
     }
 
     @Test
@@ -171,7 +170,7 @@ class IncomeServiceTest {
         when(incomeRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<IncomeResponse> result = incomeService.getIncomes(null, null, null, pageable);
+        Page<IncomeResponse> result = incomeService.getIncomes(null, null, pageable);
 
         Assertions.assertTrue(result.isEmpty());
     }

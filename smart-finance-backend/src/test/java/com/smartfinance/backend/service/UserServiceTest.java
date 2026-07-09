@@ -67,7 +67,7 @@ class UserServiceTest {
         });
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
         when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
-        when(refreshTokenService.createForUser(any(User.class))).thenReturn("refresh-token");
+        when(refreshTokenService.createForUser(any(User.class), eq(false))).thenReturn("refresh-token");
         when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(10L, "Ana", "ana@mail.com"));
 
         AuthSession session = userService.register(request);
@@ -77,6 +77,7 @@ class UserServiceTest {
         Assertions.assertEquals(900L, session.response().expiresIn());
         Assertions.assertEquals(10L, session.response().user().id());
         Assertions.assertEquals("refresh-token", session.refreshToken());
+        Assertions.assertFalse(session.rememberMe());
     }
 
     @Test
@@ -99,16 +100,37 @@ class UserServiceTest {
         when(passwordEncoder.matches("secret123", "hashed")).thenReturn(true);
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
         when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
-        when(refreshTokenService.createForUser(any(User.class))).thenReturn("refresh-token");
+        when(refreshTokenService.createForUser(any(User.class), eq(true))).thenReturn("refresh-token");
         when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(7L, "John", "john@mail.com"));
 
-        AuthSession session = userService.login(new LoginRequest("JOHN@mail.com", "secret123"));
+        AuthSession session = userService.login(new LoginRequest("JOHN@mail.com", "secret123", true));
 
         Assertions.assertEquals("access-token", session.response().accessToken());
         Assertions.assertEquals(7L, session.response().user().id());
         Assertions.assertEquals("refresh-token", session.refreshToken());
+        Assertions.assertTrue(session.rememberMe());
         Assertions.assertNotNull(user.getLastLoginAt());
         verify(aiMessageRepository).deleteByUserIdAndKind(7L, AiMessageKind.CHAT);
+    }
+
+    @Test
+    void loginShouldTreatNullRememberMeAsFalse() {
+        User user = new User();
+        user.setId(8L);
+        user.setName("Jane");
+        user.setEmail("jane@mail.com");
+        user.setPasswordHash("hashed");
+        user.setActive(true);
+        when(userRepository.findByEmailIgnoreCase("jane@mail.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("secret123", "hashed")).thenReturn(true);
+        when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
+        when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
+        when(refreshTokenService.createForUser(any(User.class), eq(false))).thenReturn("refresh-token");
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(8L, "Jane", "jane@mail.com"));
+
+        AuthSession session = userService.login(new LoginRequest("jane@mail.com", "secret123", null));
+
+        Assertions.assertFalse(session.rememberMe());
     }
 
     @Test
@@ -123,7 +145,7 @@ class UserServiceTest {
         when(passwordEncoder.matches("bad-pass", "hashed")).thenReturn(false);
 
         Assertions.assertThrows(InvalidCredentialsException.class,
-                () -> userService.login(new LoginRequest("john@mail.com", "bad-pass")));
+                () -> userService.login(new LoginRequest("john@mail.com", "bad-pass", false)));
         verify(aiMessageRepository, never()).deleteByUserIdAndKind(any(), any());
     }
 
@@ -138,12 +160,30 @@ class UserServiceTest {
         when(userRepository.findByEmailIgnoreCase("inactive@mail.com")).thenReturn(Optional.of(user));
 
         Assertions.assertThrows(InvalidCredentialsException.class,
-                () -> userService.login(new LoginRequest("inactive@mail.com", "secret123")));
+                () -> userService.login(new LoginRequest("inactive@mail.com", "secret123", false)));
     }
 
     @Test
     void refreshShouldFailWhenTokenIsMissing() {
         Assertions.assertThrows(InvalidRefreshTokenException.class, () -> userService.refresh(" "));
+    }
+
+    @Test
+    void refreshShouldPropagateRememberMeFromRotationResult() {
+        User user = new User();
+        user.setId(11L);
+        user.setName("Rotated");
+        user.setEmail("rotated@mail.com");
+        when(refreshTokenService.rotate("old-refresh-token"))
+                .thenReturn(new RefreshTokenService.RotationResult(user, "new-refresh-token", true));
+        when(jwtService.generateAccessToken(user)).thenReturn("access-token");
+        when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
+        when(userMapper.toResponse(user)).thenReturn(new UserResponse(11L, "Rotated", "rotated@mail.com"));
+
+        AuthSession session = userService.refresh("old-refresh-token");
+
+        Assertions.assertEquals("new-refresh-token", session.refreshToken());
+        Assertions.assertTrue(session.rememberMe());
     }
 
     @Test

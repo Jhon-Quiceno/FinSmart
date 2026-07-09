@@ -63,7 +63,9 @@ public class UserService {
         user.setActive(true);
 
         User createdUser = userRepository.save(user);
-        return buildAuthSession(createdUser);
+        // A fresh registration always gets a session cookie (rememberMe = false): the safer
+        // default when the user has not explicitly opted into staying signed in.
+        return buildAuthSession(createdUser, false);
     }
 
     /**
@@ -90,7 +92,8 @@ public class UserService {
 
         user.setLastLoginAt(java.time.Instant.now());
         aiMessageRepository.deleteByUserIdAndKind(user.getId(), AiMessageKind.CHAT);
-        return buildAuthSession(user);
+        boolean rememberMe = Boolean.TRUE.equals(request.rememberMe());
+        return buildAuthSession(user, rememberMe);
     }
 
     @Transactional
@@ -100,7 +103,7 @@ public class UserService {
         }
 
         RefreshTokenService.RotationResult result = refreshTokenService.rotate(refreshToken);
-        return buildAuthSession(result.user(), result.refreshToken());
+        return buildAuthSession(result.user(), result.refreshToken(), result.rememberMe());
     }
 
     @Transactional
@@ -168,12 +171,12 @@ public class UserService {
         refreshTokenService.revokeAllForUser(userId);
     }
 
-    private AuthSession buildAuthSession(User user) {
-        String refreshToken = refreshTokenService.createForUser(user);
-        return buildAuthSession(user, refreshToken);
+    private AuthSession buildAuthSession(User user, boolean rememberMe) {
+        String refreshToken = refreshTokenService.createForUser(user, rememberMe);
+        return buildAuthSession(user, refreshToken, rememberMe);
     }
 
-    private AuthSession buildAuthSession(User user, String refreshToken) {
+    private AuthSession buildAuthSession(User user, String refreshToken, boolean rememberMe) {
         String accessToken = jwtService.generateAccessToken(user);
         UserResponse userResponse = userMapper.toResponse(user);
         AuthResponse response = new AuthResponse(
@@ -183,7 +186,7 @@ public class UserService {
                 userResponse
         );
 
-        return new AuthSession(response, refreshToken);
+        return new AuthSession(response, refreshToken, rememberMe);
     }
 
     private String normalizeEmail(String email) {

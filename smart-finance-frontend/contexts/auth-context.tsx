@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, ReactNode, useContext, useEffect, useState } from "react"
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { clearAccessToken, getApiErrorMessage } from "@/lib/api-client"
 import { loginRequest, logoutRequest, refreshRequest, registerRequest } from "@/lib/services/auth.service"
@@ -21,7 +21,7 @@ interface AuthActionResult {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<AuthActionResult>
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthActionResult>
   register: (name: string, email: string, password: string) => Promise<AuthActionResult>
   logout: () => Promise<void>
   isAuthenticated: boolean
@@ -33,6 +33,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const STORAGE_USER_KEY = "financeai_user"
 const PUBLIC_ROUTES = ["/login", "/registro", "/recuperar-password"]
+
+/** Auto-logout an idle authenticated user after this much inactivity. */
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000
+/** Re-arm the inactivity timer at most this often, so rapid activity (e.g. mousemove) doesn't churn it. */
+const ACTIVITY_RESET_THROTTLE_MS = 30 * 1000
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -96,11 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
   const shouldRenderChildren = isPublicRoute ? !user : !isLoading && !!user
 
-  const login = async (email: string, password: string): Promise<AuthActionResult> => {
+  const login = async (email: string, password: string, rememberMe = false): Promise<AuthActionResult> => {
     setIsLoading(true)
 
     try {
-      const response = await loginRequest(email, password)
+      const response = await loginRequest(email, password, rememberMe)
       persistSession({
         id: String(response.user.id),
         name: response.user.name,
@@ -111,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearSession()
       return {
         success: false,
-        error: getApiErrorMessage(error, "No fue posible iniciar sesion"),
+        error: getApiErrorMessage(error, "No fue posible iniciar sesión"),
       }
     } finally {
       setIsLoading(false)
@@ -140,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await logoutRequest()
     } catch {
@@ -149,12 +154,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearSession()
       router.push("/login")
     }
-  }
+  }, [router])
 
   const updateUser = (nextUser: { name: string; email: string }) => {
     if (!user) return
     persistSession({ ...user, name: nextUser.name, email: nextUser.email })
   }
+
+  // Auto-logout an idle session after INACTIVITY_TIMEOUT_MS. Only runs while authenticated and on
+  // a protected route; skipped entirely for public routes / unauthenticated visitors.
+  useEffect(() => {
+    if (!user) return
+    if (PUBLIC_ROUTES.includes(pathname)) return
+    if (typeof window === "undefined") return
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    let lastResetAt = 0
+
+    const armTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        void logout()
+      }, INACTIVITY_TIMEOUT_MS)
+    }
+
+    const resetTimer = () => {
+      const now = Date.now()
+      if (now - lastResetAt < ACTIVITY_RESET_THROTTLE_MS) return
+      lastResetAt = now
+      armTimer()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        resetTimer()
+      }
+    }
+
+    const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart"] as const
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }))
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    armTimer()
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer))
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [user, pathname, logout])
 
   return (
     <AuthContext.Provider

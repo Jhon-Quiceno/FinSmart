@@ -1,5 +1,5 @@
 import { apiClient } from "../api-client"
-import type { CategorizeRequest, CategorizeResponse, ChatMessage, ChatReply } from "../types/ai"
+import type { AiUsage, CategorizeRequest, CategorizeResponse, ChatMessage, ChatReply } from "../types/ai"
 import type { Insight } from "../types/ai"
 import type { PaginatedResponse } from "../types/pagination"
 
@@ -40,5 +40,10 @@ export async function generateInsight(): Promise<Insight> {
 
 export async function categorize(payload: CategorizeRequest): Promise<CategorizeResponse> {
   const response = await apiClient.post<CategorizeResponse>("/api/ai/categorize", payload)
+  return response.data
+}
+
+export async function getUsage(): Promise<AiUsage> {
+  const response = await apiClient.get<AiUsage>("/api/ai/chat/usage")
   return response.data
 }

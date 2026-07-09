@@ -46,17 +46,17 @@ export default function LoginPage() {
     }
 
     if (password.length < 6) {
-      setError("La contrasena debe tener al menos 6 caracteres")
+      setError("La contraseña debe tener al menos 6 caracteres")
       setIsSubmitting(false)
       return
     }
 
-    const result = await login(email, password)
+    const result = await login(email, password, rememberMe)
 
     if (result.success) {
       router.push("/")
     } else {
-      setError(result.error ?? "Credenciales invalidas. Intenta de nuevo.")
+      setError(result.error ?? "Credenciales inválidas. Intenta de nuevo.")
     }
     
     setIsSubmitting(false)
@@ -71,11 +71,11 @@ export default function LoginPage() {
     {
       icon: PieChart,
       title: "Reportes Inteligentes",
-      description: "Graficos y analisis detallados de tus finanzas"
+      description: "Gráficos y análisis detallados de tus finanzas"
     },
     {
       icon: Wallet,
-      title: "Gestion de Deudas",
+      title: "Gestión de Deudas",
       description: "Organiza y prioriza tus pagos pendientes"
     },
     {
@@ -86,19 +86,19 @@ export default function LoginPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-svh bg-background flex">
       {/* Left side - Features */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-background" />
-        
+
         {/* Decorative circles */}
         <div className="absolute top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        
+
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
+          <div className="flex items-center gap-3 mb-8">
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 p-1.5">
               <Image
                 src="/logo_finsmart.svg"
@@ -110,27 +110,27 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">FinSmart</h1>
-              <p className="text-sm text-muted-foreground">Gestion Financiera Inteligente</p>
+              <p className="text-sm text-muted-foreground">Gestión Financiera Inteligente</p>
             </div>
           </div>
 
           {/* Main heading */}
-          <h2 className="text-4xl xl:text-5xl font-bold text-foreground mb-6 leading-tight">
+          <h2 className="text-4xl xl:text-5xl font-bold text-foreground mb-5 leading-tight">
             Toma el control de{" "}
             <span className="text-primary">tus finanzas</span>
           </h2>
-          <p className="text-lg text-muted-foreground mb-12 max-w-md">
+          <p className="text-lg text-muted-foreground mb-8 max-w-md">
             Gestiona tus ingresos, gastos y deudas con la ayuda de inteligencia artificial para alcanzar tus metas financieras.
           </p>
 
           {/* Features grid */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-4">
             {features.map((feature, index) => (
-              <div 
+              <div
                 key={index}
-                className="p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
+                className="p-3 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
               >
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mb-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mb-2">
                   <feature.icon className="w-5 h-5 text-primary" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-1">{feature.title}</h3>
@@ -142,10 +142,10 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - Login form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 pt-10 sm:p-10">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex items-center justify-center gap-3 mb-8 lg:hidden">
+          <div className="flex items-center justify-center gap-3 mt-2 mb-6 lg:hidden">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 p-1.5">
               <Image
                 src="/logo_finsmart.svg"
@@ -165,11 +165,11 @@ export default function LoginPage() {
                 Ingresa tus credenciales para acceder a tu cuenta
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-5">
+            <CardContent className="pt-5">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Email field */}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Correo electronico</Label>
+                  <Label htmlFor="email">Correo electrónico</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -187,12 +187,12 @@ export default function LoginPage() {
                 {/* Password field */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Contrasena</Label>
+                    <Label htmlFor="password">Contraseña</Label>
                     <button
                       type="button"
                       className="text-xs text-primary hover:text-primary/80 transition-colors"
                     >
-                      Olvidaste tu contrasena?
+                      ¿Olvidaste tu contraseña?
                     </button>
                   </div>
                   <div className="relative">
@@ -232,7 +232,7 @@ export default function LoginPage() {
                     htmlFor="remember"
                     className="text-sm text-muted-foreground cursor-pointer"
                   >
-                    Recordar mi sesion
+                    Recordar mi sesión
                   </label>
                 </div>
 
@@ -252,24 +252,24 @@ export default function LoginPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Iniciando sesion...
+                      Iniciando sesión...
                     </>
                   ) : (
                     <>
-                      Iniciar Sesion
+                      Iniciar sesión
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </>
                   )}
                 </Button>
 
                 {/* Divider */}
-                <div className="relative my-6">
+                <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs">
                     <span className="px-2 bg-card text-muted-foreground">
-                      o continua con
+                      o continúa con
                     </span>
                   </div>
                 </div>
@@ -317,13 +317,13 @@ export default function LoginPage() {
               </form>
 
               {/* Sign up link */}
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                No tienes una cuenta?{" "}
-                <Link 
-                  href="/registro" 
+              <p className="text-center text-sm text-muted-foreground mt-5">
+                ¿No tienes una cuenta?{" "}
+                <Link
+                  href="/registro"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  Registrate gratis
+                  Regístrate gratis
                 </Link>
               </p>
             </CardContent>

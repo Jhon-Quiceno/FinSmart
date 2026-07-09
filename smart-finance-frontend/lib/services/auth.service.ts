@@ -12,10 +12,15 @@ export async function registerRequest(name: string, email: string, password: str
   return response.data
 }
 
-export async function loginRequest(email: string, password: string): Promise<ApiAuthResponse> {
+export async function loginRequest(
+  email: string,
+  password: string,
+  rememberMe: boolean = false,
+): Promise<ApiAuthResponse> {
   const response = await apiClient.post<ApiAuthResponse>("/api/users/login", {
     email,
     password,
+    rememberMe,
   })
 
   setAccessToken(response.data.accessToken)

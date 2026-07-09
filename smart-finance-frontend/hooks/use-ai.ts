@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { categorize, chat, generateInsight, getChatHistory, getLatestInsight } from "@/lib/services/ai.service"
+import { categorize, chat, generateInsight, getChatHistory, getLatestInsight, getUsage } from "@/lib/services/ai.service"
 import type { ChatHistoryFilters } from "@/lib/services/ai.service"
-import type { CategorizeRequest, CategorizeResponse, ChatMessage, ChatReply, Insight } from "@/lib/types/ai"
+import type { AiUsage, CategorizeRequest, CategorizeResponse, ChatMessage, ChatReply, Insight } from "@/lib/types/ai"
 import type { PaginatedResponse } from "@/lib/types/pagination"
 
 const chatHistoryCache = new Map<string, PaginatedResponse<ChatMessage>>()
@@ -82,6 +82,7 @@ export function useSendMessage() {
     try {
       const response = await chat(message)
       invalidateChatHistoryCache()
+      invalidateUsageCache()
       return response
     } finally {
       setIsLoading(false)
@@ -89,6 +90,66 @@ export function useSendMessage() {
   }, [])
 
   return { sendMessage: mutate, isLoading }
+}
+
+let usageCache: AiUsage | null | undefined
+const usageListeners = new Set<() => void>()
+
+function notifyUsageListeners() {
+  usageListeners.forEach((listener) => listener())
+}
+
+export function invalidateUsageCache() {
+  usageCache = undefined
+  notifyUsageListeners()
+}
+
+export function useAiUsage() {
+  const [usage, setUsage] = useState<AiUsage | null>(usageCache ?? null)
+  const [isLoading, setIsLoading] = useState(usageCache === undefined)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshIndex, setRefreshIndex] = useState(0)
+
+  useEffect(() => {
+    const listener = () => setRefreshIndex((value) => value + 1)
+    usageListeners.add(listener)
+    return () => {
+      usageListeners.delete(listener)
+    }
+  }, [])
+
+  const refetch = useCallback(async () => {
+    if (usageCache !== undefined) {
+      setUsage(usageCache)
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await getUsage()
+      usageCache = response
+      setUsage(response)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No fue posible cargar el uso del asistente IA")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void refetch()
+    }, 0)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [refetch, refreshIndex])
+
+  return { usage, isLoading, error, refetch }
 }
 
 let insightCache: Insight | null | undefined

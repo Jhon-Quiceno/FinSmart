@@ -3,9 +3,11 @@ package com.smartfinance.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.smartfinance.backend.config.SecurityConfig;
+import com.smartfinance.backend.dto.ai.AiUsageResponse;
 import com.smartfinance.backend.dto.ai.ChatMessageResponse;
 import com.smartfinance.backend.dto.ai.ChatReplyResponse;
 import com.smartfinance.backend.dto.ai.ChatRequest;
+import com.smartfinance.backend.exception.AiMessageQuotaExceededException;
 import com.smartfinance.backend.exception.AiProviderNotConfiguredException;
 import com.smartfinance.backend.exception.AiProviderRateLimitException;
 import com.smartfinance.backend.model.AiMessageRole;
@@ -129,6 +131,37 @@ class AiChatControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.message").value("El proveedor de IA alcanzó su límite de uso. Intenta de nuevo en unos minutos."));
+    }
+
+    @Test
+    void chatReturns429WhenMonthlyQuotaExceeded() throws Exception {
+        ChatRequest request = new ChatRequest("hola");
+        when(aiChatService.chat(eq(request))).thenThrow(new AiMessageQuotaExceededException(
+                "Alcanzaste el límite de 5 mensajes de IA este mes. Tu límite se reinicia el 1 de agosto de 2026."
+        ));
+
+        mockMvc.perform(post("/api/ai/chat")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value(
+                        "Alcanzaste el límite de 5 mensajes de IA este mes. Tu límite se reinicia el 1 de agosto de 2026."
+                ));
+    }
+
+    @Test
+    void getUsageReturns200WithUsageShape() throws Exception {
+        AiUsageResponse usage = new AiUsageResponse(3, 5, 2, Instant.parse("2026-08-01T00:00:00Z"));
+        when(aiChatService.getUsage()).thenReturn(usage);
+
+        mockMvc.perform(get("/api/ai/chat/usage").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.used").value(3))
+                .andExpect(jsonPath("$.limit").value(5))
+                .andExpect(jsonPath("$.remaining").value(2))
+                .andExpect(jsonPath("$.resetsAt").value("2026-08-01T00:00:00Z"));
     }
 
     @Test

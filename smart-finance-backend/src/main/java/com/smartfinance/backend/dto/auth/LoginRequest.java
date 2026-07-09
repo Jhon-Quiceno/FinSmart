@@ -11,6 +11,13 @@ public record LoginRequest(
         String email,
         @NotBlank(message = "La contraseña es obligatoria")
         @Size(min = 6, max = 100, message = "La contraseña debe tener entre 6 y 100 caracteres")
-        String password
+        String password,
+        /**
+         * When {@code true}, the refresh token cookie is issued as a persistent cookie
+         * (see {@code UserController#buildRefreshCookie}); when {@code false} or {@code null}
+         * (nullable so older clients that omit the field keep the safer default), it is issued
+         * as a browser session cookie that disappears once the browser closes.
+         */
+        Boolean rememberMe
 ) {
 }

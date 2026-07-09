@@ -47,4 +47,12 @@ public class RefreshToken {
 
     @Column(name = "revoked_at")
     private Instant revokedAt;
+
+    /**
+     * Whether this token should keep the refresh cookie alive as a persistent cookie across
+     * browser restarts ({@code true}) or only for the current browser session ({@code false}).
+     * Propagated to the rotated token on every refresh so the choice survives rotation.
+     */
+    @Column(name = "remember_me", nullable = false)
+    private boolean rememberMe;
 }

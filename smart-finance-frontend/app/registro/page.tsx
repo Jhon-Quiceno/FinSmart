@@ -39,9 +39,9 @@ export default function RegisterPage() {
   const router = useRouter()
 
   const passwordRequirements = [
-    { label: "Minimo 6 caracteres", met: password.length >= 6 },
-    { label: "Al menos una mayuscula", met: /[A-Z]/.test(password) },
-    { label: "Al menos un numero", met: /[0-9]/.test(password) },
+    { label: "6+ caracteres", met: password.length >= 6 },
+    { label: "1 mayúscula", met: /[A-Z]/.test(password) },
+    { label: "1 número", met: /[0-9]/.test(password) },
   ]
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,19 +56,19 @@ export default function RegisterPage() {
     }
 
     if (password.length < 6) {
-      setError("La contrasena debe tener al menos 6 caracteres")
+      setError("La contraseña debe tener al menos 6 caracteres")
       setIsSubmitting(false)
       return
     }
 
     if (password !== confirmPassword) {
-      setError("Las contrasenas no coinciden")
+      setError("Las contraseñas no coinciden")
       setIsSubmitting(false)
       return
     }
 
     if (!acceptTerms) {
-      setError("Debes aceptar los terminos y condiciones")
+      setError("Debes aceptar los términos y condiciones")
       setIsSubmitting(false)
       return
     }
@@ -88,34 +88,34 @@ export default function RegisterPage() {
     {
       icon: Shield,
       title: "Seguro y Privado",
-      description: "Tus datos financieros estan encriptados y protegidos"
+      description: "Tus datos financieros están encriptados y protegidos"
     },
     {
       icon: Zap,
-      title: "Configuracion Rapida",
+      title: "Configuración Rápida",
       description: "Comienza a gestionar tus finanzas en menos de 2 minutos"
     },
     {
       icon: BarChart3,
-      title: "Analisis Gratuito",
-      description: "Accede a reportes y graficos sin costo adicional"
+      title: "Análisis Gratuito",
+      description: "Accede a reportes y gráficos sin costo adicional"
     }
   ]
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-svh bg-background flex">
       {/* Left side - Benefits */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-background to-background" />
-        
+
         {/* Decorative circles */}
         <div className="absolute top-32 left-16 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-32 right-16 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        
+
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
+          <div className="flex items-center gap-3 mb-6">
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 p-1.5">
               <Image
                 src="/logo_finsmart.svg"
@@ -127,28 +127,28 @@ export default function RegisterPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">FinSmart</h1>
-              <p className="text-sm text-muted-foreground">Gestion Financiera Inteligente</p>
+              <p className="text-sm text-muted-foreground">Gestión Financiera Inteligente</p>
             </div>
           </div>
 
           {/* Main heading */}
-          <h2 className="text-4xl xl:text-5xl font-bold text-foreground mb-6 leading-tight">
+          <h2 className="text-4xl xl:text-5xl font-bold text-foreground mb-4 leading-tight">
             Comienza tu viaje hacia la{" "}
             <span className="text-emerald-400">libertad financiera</span>
           </h2>
-          <p className="text-lg text-muted-foreground mb-12 max-w-md">
-            Unete a miles de personas que ya estan tomando el control de sus finanzas con la ayuda de inteligencia artificial.
+          <p className="text-lg text-muted-foreground mb-6 max-w-md">
+            Únete a miles de personas que ya están tomando el control de sus finanzas con la ayuda de inteligencia artificial.
           </p>
 
           {/* Benefits list */}
-          <div className="space-y-6">
+          <div className="space-y-3">
             {benefits.map((benefit, index) => (
-              <div 
+              <div
                 key={index}
-                className="flex items-start gap-4 p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
+                className="flex items-start gap-4 p-3 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
               >
-                <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-emerald-500/10 shrink-0">
-                  <benefit.icon className="w-6 h-6 text-emerald-400" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-500/10 shrink-0">
+                  <benefit.icon className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">{benefit.title}</h3>
@@ -159,7 +159,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Stats */}
-          <div className="flex gap-8 mt-12 pt-8 border-t border-border/50">
+          <div className="flex gap-8 mt-6 pt-4 border-t border-border/50">
             <div>
               <p className="text-3xl font-bold text-foreground">10K+</p>
               <p className="text-sm text-muted-foreground">Usuarios activos</p>
@@ -170,17 +170,17 @@ export default function RegisterPage() {
             </div>
             <div>
               <p className="text-3xl font-bold text-foreground">4.9</p>
-              <p className="text-sm text-muted-foreground">Calificacion promedio</p>
+              <p className="text-sm text-muted-foreground">Calificación promedio</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Right side - Register form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 pt-10 sm:p-10">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex items-center justify-center gap-3 mb-8 lg:hidden">
+          <div className="flex items-center justify-center gap-3 mt-2 mb-6 lg:hidden">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 p-1.5">
               <Image
                 src="/logo_finsmart.svg"
@@ -193,17 +193,17 @@ export default function RegisterPage() {
             <h1 className="text-xl font-bold text-foreground">FinSmart</h1>
           </div>
 
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardHeader className="text-center pb-2">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm py-4 gap-4">
+            <CardHeader className="text-center pb-1">
               <CardTitle className="text-2xl">Crear cuenta</CardTitle>
               <CardDescription>
                 Completa tus datos para comenzar a gestionar tus finanzas
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <CardContent className="pt-3">
+              <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Name field */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="name">Nombre completo</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -220,8 +220,8 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Email field */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo electronico</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="email">Correo electrónico</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -236,9 +236,10 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {/* Password field */}
-                <div className="space-y-2">
-                  <Label htmlFor="password">Contrasena</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="password">Contraseña</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -265,13 +266,13 @@ export default function RegisterPage() {
                   
                   {/* Password requirements */}
                   {password.length > 0 && (
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
                       {passwordRequirements.map((req, index) => (
-                        <div key={index} className="flex items-center gap-2 text-xs">
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                        <div key={index} className="flex items-center gap-1.5 text-xs">
+                          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${
                             req.met ? 'bg-emerald-500/20' : 'bg-muted'
                           }`}>
-                            {req.met && <Check className="w-3 h-3 text-emerald-500" />}
+                            {req.met && <Check className="w-2.5 h-2.5 text-emerald-500" />}
                           </div>
                           <span className={req.met ? 'text-emerald-500' : 'text-muted-foreground'}>
                             {req.label}
@@ -283,8 +284,8 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Confirm Password field */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar contrasena</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -309,17 +310,18 @@ export default function RegisterPage() {
                     </button>
                   </div>
                   {confirmPassword.length > 0 && password !== confirmPassword && (
-                    <p className="text-xs text-destructive mt-1">Las contrasenas no coinciden</p>
+                    <p className="text-xs text-destructive mt-1">Las contraseñas no coinciden</p>
                   )}
                   {confirmPassword.length > 0 && password === confirmPassword && (
                     <p className="text-xs text-emerald-500 mt-1 flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Las contrasenas coinciden
+                      <Check className="w-3 h-3" /> Las contraseñas coinciden
                     </p>
                   )}
                 </div>
+                </div>
 
                 {/* Terms checkbox */}
-                <div className="flex items-start space-x-2 pt-2">
+                <div className="flex items-start space-x-2 pt-1">
                   <Checkbox
                     id="terms"
                     checked={acceptTerms}
@@ -333,11 +335,11 @@ export default function RegisterPage() {
                   >
                     Acepto los{" "}
                     <button type="button" className="text-primary hover:text-primary/80 transition-colors">
-                      terminos de servicio
+                      términos de servicio
                     </button>{" "}
                     y la{" "}
                     <button type="button" className="text-primary hover:text-primary/80 transition-colors">
-                      politica de privacidad
+                      política de privacidad
                     </button>
                   </label>
                 </div>
@@ -352,7 +354,7 @@ export default function RegisterPage() {
                 {/* Submit button */}
                 <Button
                   type="submit"
-                  className="w-full h-11 text-base font-medium mt-2"
+                  className="w-full h-10 text-base font-medium"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -369,13 +371,13 @@ export default function RegisterPage() {
                 </Button>
 
                 {/* Divider */}
-                <div className="relative my-6">
+                <div className="relative my-3">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs">
                     <span className="px-2 bg-card text-muted-foreground">
-                      o registrate con
+                      o regístrate con
                     </span>
                   </div>
                 </div>
@@ -385,7 +387,7 @@ export default function RegisterPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 bg-background/50"
+                    className="h-10 bg-background/50"
                     disabled={isSubmitting}
                   >
                     <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
@@ -411,7 +413,7 @@ export default function RegisterPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 bg-background/50"
+                    className="h-10 bg-background/50"
                     disabled={isSubmitting}
                   >
                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -423,13 +425,13 @@ export default function RegisterPage() {
               </form>
 
               {/* Login link */}
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                Ya tienes una cuenta?{" "}
-                <Link 
-                  href="/login" 
+              <p className="text-center text-sm text-muted-foreground mt-3">
+                ¿Ya tienes una cuenta?{" "}
+                <Link
+                  href="/login"
                   className="text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  Inicia sesion
+                  Inicia sesión
                 </Link>
               </p>
             </CardContent>

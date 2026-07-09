@@ -39,3 +39,10 @@ export interface CategorizeResponse {
   categoryId: number | null
   categoryName: string | null
 }
+
+export interface AiUsage {
+  used: number
+  limit: number
+  remaining: number
+  resetsAt: string
+}

@@ -79,9 +79,9 @@ VALUES (
 -- ---------------------------------------------------------------------------
 -- Incomes — steady salary every month, freelance only in Mar and May.
 -- ---------------------------------------------------------------------------
-INSERT INTO incomes (user_id, category_id, amount, description, date, source, created_at, updated_at)
+INSERT INTO incomes (user_id, category_id, amount, description, date, created_at, updated_at)
 SELECT 2, (SELECT id FROM categories WHERE user_id = 2 AND name = 'Salario' AND type = 'INCOME'),
-       amount, 'Salario mensual', txn_date, 'Salario', now(), now()
+       amount, 'Salario mensual', txn_date, now(), now()
 FROM (VALUES
     (5, 2850000.00, 1),  -- Feb
     (4, 2850000.00, 1),  -- Mar
@@ -94,12 +94,12 @@ CROSS JOIN LATERAL (
     SELECT (date_trunc('month', CURRENT_DATE) - (t.months_ago || ' months')::interval + (t.day - 1 || ' days')::interval)::date AS txn_date
 ) d;
 
-INSERT INTO incomes (user_id, category_id, amount, description, date, source, created_at, updated_at)
+INSERT INTO incomes (user_id, category_id, amount, description, date, created_at, updated_at)
 VALUES
     (2, NULL, 350000.00, 'Diseno de logo para un vecino',
-        (date_trunc('month', CURRENT_DATE) - interval '4 months' + interval '14 days')::date, 'Freelance', now(), now()),
+        (date_trunc('month', CURRENT_DATE) - interval '4 months' + interval '14 days')::date, now(), now()),
     (2, NULL, 280000.00, 'Soporte tecnico a domicilio',
-        (date_trunc('month', CURRENT_DATE) - interval '2 months' + interval '16 days')::date, 'Freelance', now(), now());
+        (date_trunc('month', CURRENT_DATE) - interval '2 months' + interval '16 days')::date, now(), now());
 
 -- ---------------------------------------------------------------------------
 -- Expenses — one row per category per month, amounts vary naturally.

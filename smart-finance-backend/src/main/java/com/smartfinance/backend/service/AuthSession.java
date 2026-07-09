@@ -4,6 +4,7 @@ import com.smartfinance.backend.dto.auth.AuthResponse;
 
 public record AuthSession(
         AuthResponse response,
-        String refreshToken
+        String refreshToken,
+        boolean rememberMe
 ) {
 }

@@ -28,7 +28,7 @@ public class RefreshTokenService {
     }
 
     @Transactional
-    public String createForUser(User user) {
+    public String createForUser(User user, boolean rememberMe) {
         UUID tokenId = UUID.randomUUID();
         String rawToken = jwtService.generateRefreshToken(user, tokenId);
         Claims claims = jwtService.parseRefreshToken(rawToken);
@@ -39,19 +39,26 @@ public class RefreshTokenService {
         refreshToken.setTokenHash(hashToken(rawToken));
         refreshToken.setCreatedAt(Instant.now());
         refreshToken.setExpiresAt(claims.getExpiration().toInstant());
+        refreshToken.setRememberMe(rememberMe);
         refreshTokenRepository.save(refreshToken);
 
         return rawToken;
     }
 
+    /**
+     * Revokes the presented token and issues a new one for the same user, propagating
+     * {@link RefreshToken#isRememberMe()} from the stored token so the persistent-vs-session
+     * cookie choice made at login survives every rotation.
+     */
     @Transactional
     public RotationResult rotate(String rawToken) {
         RefreshToken stored = resolveActiveToken(rawToken);
         stored.setRevokedAt(Instant.now());
         refreshTokenRepository.save(stored);
 
-        String newRefreshToken = createForUser(stored.getUser());
-        return new RotationResult(stored.getUser(), newRefreshToken);
+        boolean rememberMe = stored.isRememberMe();
+        String newRefreshToken = createForUser(stored.getUser(), rememberMe);
+        return new RotationResult(stored.getUser(), newRefreshToken, rememberMe);
     }
 
     @Transactional
@@ -119,7 +126,8 @@ public class RefreshTokenService {
 
     public record RotationResult(
             User user,
-            String refreshToken
+            String refreshToken,
+            boolean rememberMe
     ) {
     }
 }

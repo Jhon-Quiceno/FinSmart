@@ -1,15 +1,26 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import axios from "axios"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 import { toast } from "sonner"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AiInsightsCard } from "@/components/dashboard/ai-insights-card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useChatHistory, useSendMessage } from "@/hooks/use-ai"
+import { invalidateUsageCache, useAiUsage, useChatHistory, useSendMessage } from "@/hooks/use-ai"
 import { getApiErrorMessage } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
 import type { AiMessageRole, ChatMessage } from "@/lib/types/ai"
 import { Bot, Send, User } from "lucide-react"
+
+function formatResetDate(isoDate: string): string {
+  try {
+    return format(new Date(isoDate), "d 'de' MMMM 'de' yyyy", { locale: es })
+  } catch {
+    return ""
+  }
+}
 
 const suggestedQuestions = [
   "Como puedo reducir mis gastos mensuales?",
@@ -41,10 +52,19 @@ function toDisplayMessage(message: ChatMessage): DisplayMessage {
 export default function AsistenteIAPage() {
   const { history, isLoading: isLoadingHistory } = useChatHistory({ size: 50 })
   const { sendMessage, isLoading: isSending } = useSendMessage()
+  const { usage } = useAiUsage()
 
   const [inputValue, setInputValue] = useState("")
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
+  const [quotaMessage, setQuotaMessage] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const quotaExhausted = usage !== null && usage.remaining <= 0
+  const quotaNotice =
+    quotaMessage ??
+    (quotaExhausted && usage
+      ? `Alcanzaste el límite de ${usage.limit} mensajes de IA este mes. Tu límite se reinicia el ${formatResetDate(usage.resetsAt)}.`
+      : null)
 
   // The backend returns history most-recent-first (same convention as notifications);
   // the chat needs chronological order, oldest on top.
@@ -75,8 +95,9 @@ export default function AsistenteIAPage() {
 
   const handleSendMessage = async (rawContent: string) => {
     const content = rawContent.trim()
-    if (!content || isSending) return
+    if (!content || isSending || quotaExhausted) return
 
+    setQuotaMessage(null)
     setPendingMessage(content)
     setInputValue("")
 
@@ -87,7 +108,19 @@ export default function AsistenteIAPage() {
       setPendingMessage(null)
       // Keep the user's text in the input so they can retry without retyping.
       setInputValue(content)
-      toast.error(getApiErrorMessage(error, "No fue posible enviar tu mensaje. Intenta de nuevo mas tarde."))
+
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
+        setQuotaMessage(
+          getApiErrorMessage(error, "Alcanzaste el límite de mensajes de IA este mes. Intenta de nuevo el próximo mes."),
+        )
+        // Refresh the usage cache from the server so `quotaExhausted` (and therefore the
+        // disabled input) reflects the real remaining count immediately, instead of waiting
+        // for the next unrelated refetch.
+        invalidateUsageCache()
+        return
+      }
+
+      toast.error(getApiErrorMessage(error, "No fue posible enviar tu mensaje. Intenta de nuevo más tarde."))
     }
   }
 
@@ -233,27 +266,41 @@ export default function AsistenteIAPage() {
 
             {/* Input */}
             <div className="p-4 border-t border-border bg-muted/20">
+              {quotaNotice && (
+                <div className="mb-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                  {quotaNotice}
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(event) => setInputValue(event.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Escribe tu pregunta financiera..."
-                  className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  disabled={isSending}
+                  placeholder={
+                    quotaExhausted ? "Alcanzaste tu límite mensual de mensajes" : "Escribe tu pregunta financiera..."
+                  }
+                  className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-60"
+                  disabled={isSending || quotaExhausted}
                 />
                 <button
                   onClick={() => void handleSendMessage(inputValue)}
-                  disabled={!inputValue.trim() || isSending}
+                  disabled={!inputValue.trim() || isSending || quotaExhausted}
                   className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   <Send className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center mt-2">
-                El asistente utiliza IA para darte consejos basados en tus datos financieros
-              </p>
+              <div className="flex items-center justify-between gap-2 mt-2">
+                <p className="text-[10px] text-muted-foreground">
+                  El asistente utiliza IA para darte consejos basados en tus datos financieros
+                </p>
+                {usage && (
+                  <p className="text-[10px] text-muted-foreground shrink-0">
+                    {usage.used}/{usage.limit} mensajes este mes
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
