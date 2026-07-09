@@ -82,3 +82,13 @@ jobs:
             --memory 1Gi \
             --allow-unauthenticated \
             --env-vars-file=/tmp/cloud-run-env-vars.yaml
+
+      # Once any deploy uses --no-traffic (the PR validation above), Cloud Run pins
+      # traffic to a fixed revision instead of following LATEST, and later deploys
+      # no longer shift traffic automatically. Force it back after every prod deploy.
+      - name: Route traffic to latest revision
+        if: github.event_name == 'push'
+        run: |
+          gcloud run services update-traffic finsmart-backend \
+            --region us-central1 \
+            --to-latest
