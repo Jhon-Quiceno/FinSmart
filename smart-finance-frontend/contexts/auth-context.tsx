@@ -4,6 +4,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 import { usePathname, useRouter } from "next/navigation"
 import { clearAccessToken, getApiErrorMessage } from "@/lib/api-client"
 import { loginRequest, logoutRequest, refreshRequest, registerRequest } from "@/lib/services/auth.service"
+import { Spinner } from "@/components/ui/spinner"
 
 interface User {
   id: string
@@ -167,7 +168,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUser,
       }}
     >
-      {shouldRenderChildren ? children : null}
+      {shouldRenderChildren ? (
+        children
+      ) : (
+        // Shown while the mount-time session check (bootstrapSession) is resolving, and during
+        // the brief window before the redirect effect lands on the right route. Previously this
+        // rendered null, which looked like a blank/black screen whenever a stale refresh cookie
+        // made that check take longer (e.g. an expired session on a protected route).
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Spinner className="size-8 text-muted-foreground" />
+        </div>
+      )}
     </AuthContext.Provider>
   )
 }
