@@ -60,9 +60,6 @@ public class Income {
     @Column(name = "date", nullable = false)
     private LocalDate date;
 
-    @Column(length = 100)
-    private String source;
-
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

@@ -25,7 +25,6 @@ describe("income service", () => {
             amount: 1000.0,
             description: "Sueldo mensual",
             date: "2026-05-01",
-            source: "Salario",
             categoryId: 1,
             categoryName: "Salario",
           },
@@ -66,7 +65,6 @@ describe("income service", () => {
         amount: 2000.0,
         description: "Bono extra",
         date: "2026-05-20",
-        source: "Bonos",
         categoryId: 1,
       }
 
@@ -75,7 +73,6 @@ describe("income service", () => {
         amount: 2000.0,
         description: "Bono extra",
         date: "2026-05-20",
-        source: "Bonos",
         categoryId: 1,
         categoryName: "Otros ingresos",
       }
@@ -95,7 +92,6 @@ describe("income service", () => {
         amount: 450.0,
         description: "Ingreso actualizado",
         date: "2026-05-10",
-        source: "Freelance",
         categoryId: 3,
       }
 
@@ -104,7 +100,6 @@ describe("income service", () => {
         amount: 450.0,
         description: "Ingreso actualizado",
         date: "2026-05-10",
-        source: "Freelance",
         categoryId: 3,
         categoryName: "Freelance",
       }

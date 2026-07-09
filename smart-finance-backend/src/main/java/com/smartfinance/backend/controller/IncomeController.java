@@ -37,10 +37,9 @@ public class IncomeController {
     public ResponseEntity<Page<IncomeResponse>> getIncomes(
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) String source,
             @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(incomeService.getIncomes(month, year, source, pageable));
+        return ResponseEntity.ok(incomeService.getIncomes(month, year, pageable));
     }
 
     @PostMapping

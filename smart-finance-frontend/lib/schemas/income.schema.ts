@@ -21,7 +21,6 @@ export const incomeSchema = z.object({
   amount: z.coerce.number().gt(0, "El monto debe ser mayor a 0"),
   description: optionalText(255),
   date: dateSchema,
-  source: optionalText(50),
   categoryId: z.preprocess(
     (value) => {
       if (value === null || value === undefined || value === "" || value === "none") return null

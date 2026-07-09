@@ -22,7 +22,6 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
             <TableRow>
               <TableHead>Descripcion</TableHead>
               <TableHead>Categoria</TableHead>
-              <TableHead>Fuente</TableHead>
               <TableHead>Monto</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -32,7 +31,7 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
             {isLoading &&
               Array.from({ length: 6 }).map((_, index) => (
                 <TableRow key={`income-skeleton-${index}`}>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={5}>
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
@@ -40,7 +39,7 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
 
             {!isLoading && incomes.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                   No hay ingresos para los filtros seleccionados.
                 </TableCell>
               </TableRow>
@@ -51,7 +50,6 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
                 <TableRow key={income.id}>
                   <TableCell className="font-medium">{income.description || "Sin descripcion"}</TableCell>
                   <TableCell>{income.categoryName || "Sin categoria"}</TableCell>
-                  <TableCell>{income.source || "Sin fuente"}</TableCell>
                   <TableCell className="font-semibold text-success">
                     +${income.amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                   </TableCell>
@@ -102,10 +100,6 @@ export function IncomeTable({ incomes, isLoading, onEdit, onDelete }: IncomeTabl
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-muted-foreground">Categoria</span>
                   <span className="text-foreground">{income.categoryName || "Sin categoria"}</span>
-                </div>
-                <div>
-                  <span className="block text-xs uppercase tracking-wide text-muted-foreground">Fuente</span>
-                  <span className="text-foreground">{income.source || "Sin fuente"}</span>
                 </div>
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-muted-foreground">Fecha</span>

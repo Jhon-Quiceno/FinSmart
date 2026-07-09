@@ -3,12 +3,15 @@ package com.smartfinance.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartfinance.backend.config.JwtProperties;
 import com.smartfinance.backend.config.SecurityConfig;
+import com.smartfinance.backend.dto.auth.AuthResponse;
 import com.smartfinance.backend.dto.auth.ChangePasswordRequest;
+import com.smartfinance.backend.dto.auth.LoginRequest;
 import com.smartfinance.backend.dto.auth.UpdateProfileRequest;
 import com.smartfinance.backend.dto.auth.UserResponse;
 import com.smartfinance.backend.exception.EmailAlreadyExistsException;
 import com.smartfinance.backend.exception.InvalidCredentialsException;
 import com.smartfinance.backend.repository.UserRepository;
+import com.smartfinance.backend.service.AuthSession;
 import com.smartfinance.backend.service.JwtService;
 import com.smartfinance.backend.service.UserService;
 import io.jsonwebtoken.Claims;
@@ -18,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +31,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -63,6 +68,52 @@ class UserControllerTest {
         when(mockClaims.getSubject()).thenReturn("1");
         when(jwtService.parseAccessToken(any())).thenReturn(mockClaims);
         when(userRepository.existsById(1L)).thenReturn(true);
+        when(jwtProperties.refreshCookieName()).thenReturn("refresh_token");
+        when(jwtProperties.refreshCookieSecure()).thenReturn(true);
+        when(jwtProperties.refreshCookieSameSite()).thenReturn("Strict");
+        when(jwtProperties.refreshExpirationMs()).thenReturn(604_800_000L);
+    }
+
+    @Test
+    void loginSetsPersistentCookieWithMaxAgeWhenRememberMeIsTrue() throws Exception {
+        LoginRequest request = new LoginRequest("jane@example.com", "secret123", true);
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com")),
+                "refresh-token",
+                true
+        );
+        when(userService.login(any(LoginRequest.class))).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String setCookie = result.getResponse().getHeader(HttpHeaders.SET_COOKIE);
+                    org.assertj.core.api.Assertions.assertThat(setCookie).contains("Max-Age=604800");
+                });
+    }
+
+    @Test
+    void loginSetsSessionCookieWithoutMaxAgeWhenRememberMeIsFalse() throws Exception {
+        LoginRequest request = new LoginRequest("jane@example.com", "secret123", false);
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com")),
+                "refresh-token",
+                false
+        );
+        when(userService.login(any(LoginRequest.class))).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String setCookie = result.getResponse().getHeader(HttpHeaders.SET_COOKIE);
+                    org.assertj.core.api.Assertions.assertThat(setCookie).doesNotContain("Max-Age");
+                });
     }
 
     @Test

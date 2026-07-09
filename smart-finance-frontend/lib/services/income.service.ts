@@ -5,7 +5,6 @@ import type { PaginatedResponse } from "../types/pagination"
 export interface IncomeFilters {
   month?: number
   year?: number
-  source?: string
   page?: number
   size?: number
   sort?: string

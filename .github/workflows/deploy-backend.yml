@@ -62,6 +62,16 @@ jobs:
           BREVO_SMTP_LOGIN: "${{ secrets.BREVO_SMTP_LOGIN }}"
           BREVO_SMTP_KEY: "${{ secrets.BREVO_SMTP_KEY }}"
           MAIL_FROM: "${{ secrets.MAIL_FROM }}"
+          # AI providers (optional): a provider is enabled only when its API key
+          # is non-blank; priority is a comma-separated provider list.
+          AI_PROVIDER_PRIORITY: "${{ secrets.AI_PROVIDER_PRIORITY }}"
+          NVIDIA_API_KEY: "${{ secrets.NVIDIA_API_KEY }}"
+          NVIDIA_MODEL: "${{ secrets.NVIDIA_MODEL }}"
+          OPENCODE_API_KEY: "${{ secrets.OPENCODE_API_KEY }}"
+          OPENCODE_MODEL: "${{ secrets.OPENCODE_MODEL }}"
+          OPENROUTER_API_KEY: "${{ secrets.OPENROUTER_API_KEY }}"
+          OPENROUTER_MODEL: "${{ secrets.OPENROUTER_MODEL }}"
+          AI_MONTHLY_MESSAGE_LIMIT: "5"
           EOF
 
       # On a PR: deploy a real revision (proves auth + build + deploy all work) but never

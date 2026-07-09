@@ -36,6 +36,12 @@ public class AiProviderProperties {
     private Map<String, ProviderCredentials> providers = Map.of();
 
     /**
+     * Maximum number of {@code USER}-role AI chat messages a single user may send per UTC
+     * calendar month, enforced by {@code AiChatService#chat} before any provider is contacted.
+     */
+    private int monthlyMessageLimit = 5;
+
+    /**
      * @param apiKey the provider's raw API key, or blank/{@code null} if not configured
      * @param model  the model identifier to use, or blank/{@code null} to fall back to
      *               {@link SupportedAiProvider#defaultModel()}

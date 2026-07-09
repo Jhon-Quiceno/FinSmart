@@ -1,5 +1,6 @@
 package com.smartfinance.backend.controller;
 
+import com.smartfinance.backend.dto.ai.AiUsageResponse;
 import com.smartfinance.backend.dto.ai.ChatMessageResponse;
 import com.smartfinance.backend.dto.ai.ChatReplyResponse;
 import com.smartfinance.backend.dto.ai.ChatRequest;
@@ -18,7 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * REST endpoints for the current user's AI chat: {@code POST /api/ai/chat} sends a message and
- * gets a reply, {@code GET /api/ai/chat/history} lists past turns.
+ * gets a reply, {@code GET /api/ai/chat/history} lists past turns, and
+ * {@code GET /api/ai/chat/usage} reports the monthly message quota usage.
  */
 @RestController
 @RequestMapping("/api/ai/chat")
@@ -40,5 +42,10 @@ public class AiChatController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ResponseEntity.ok(aiChatService.getHistory(pageable));
+    }
+
+    @GetMapping("/usage")
+    public ResponseEntity<AiUsageResponse> getUsage() {
+        return ResponseEntity.ok(aiChatService.getUsage());
     }
 }

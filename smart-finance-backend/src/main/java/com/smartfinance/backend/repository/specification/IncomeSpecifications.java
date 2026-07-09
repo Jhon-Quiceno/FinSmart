@@ -12,8 +12,7 @@ import java.time.LocalDate;
  * which {@link Specification#and(Specification)} treats as "no restriction". This avoids
  * binding null parameters into JPQL comparisons directly, which fails against PostgreSQL
  * because the driver cannot infer the parameter's type when it is null — this previously broke
- * {@code source} filtering (wrapping a null parameter in {@code LOWER(...)} made PostgreSQL
- * infer it as {@code bytea}) and the {@code EXTRACT(MONTH/YEAR FROM ...)} filter.
+ * the {@code EXTRACT(MONTH/YEAR FROM ...)} filter.
  *
  * <p>{@link #inPeriod} replaces the original {@code EXTRACT(MONTH FROM date) = :month} filter
  * with a plain date-range comparison, which is both null-safe and able to use the {@code date}
@@ -51,11 +50,5 @@ public final class IncomeSpecifications {
                     cb.lessThan(root.get("date"), end)
             );
         };
-    }
-
-    public static Specification<Income> hasSource(String source) {
-        return (root, query, cb) -> source == null || source.isBlank()
-                ? null
-                : cb.equal(cb.lower(root.get("source")), source.toLowerCase());
     }
 }

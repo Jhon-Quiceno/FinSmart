@@ -33,7 +33,6 @@ describe("incomeSchema", () => {
       amount: 1000,
       description: "Freelance",
       date: "2026-03-01",
-      source: "Freelance",
       categoryId: 2,
     })
 
@@ -44,7 +43,6 @@ describe("incomeSchema", () => {
     const result = incomeSchema.safeParse({
       amount: 0,
       date: "2026-03-01",
-      source: "Salario",
       categoryId: null,
     })
 
@@ -56,7 +54,6 @@ describe("incomeSchema", () => {
       amount: 10,
       description: "Ingreso rapido",
       date: getTodayDateInput(),
-      source: "Otros",
       categoryId: null,
     })
 
