@@ -15,7 +15,10 @@ let refreshPromise: Promise<string> | null = null
 let csrfPromise: Promise<void> | null = null
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
+  // Same-origin by default: /api/* is proxied to the backend via the rewrite
+  // in next.config.mjs, so cookies stay first-party. NEXT_PUBLIC_API_URL
+  // remains as an escape hatch to hit a backend directly (e.g. tooling).
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

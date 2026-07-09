@@ -88,10 +88,13 @@ public class SecurityConfig {
      * The frontend must read XSRF-TOKEN cookie and send it as X-XSRF-TOKEN header
      * on requests that use cookie-based auth (e.g., POST /api/users/refresh).
      *
-     * Same-site/secure policy mirrors the refresh cookie's: when the frontend and
-     * backend are on different origins (e.g. Vercel + Cloud Run), SameSite=Lax would
-     * make the browser silently drop this cookie on cross-site requests, causing a
-     * 403 on every CSRF-protected endpoint even with a valid session.
+     * Same-site/secure policy mirrors the refresh cookie's. In production this
+     * relies on the frontend proxying /api/* through its own origin (the rewrite
+     * in smart-finance-frontend/next.config.mjs), which makes both cookies
+     * first-party on the frontend domain, so SameSite=Lax works. Without that
+     * proxy (frontend calling the Cloud Run origin directly), cookie-based CSRF
+     * cannot work at all: JavaScript on the frontend domain can never read a
+     * cookie set by the backend domain, regardless of the SameSite value.
      */
     @Bean
     public CookieCsrfTokenRepository csrfTokenRepository() {
