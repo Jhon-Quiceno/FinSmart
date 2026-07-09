@@ -64,7 +64,7 @@ class IncomeControllerTest {
     private static final String AUTH_HEADER = "Bearer test-token";
 
     private final IncomeResponse salaryIncome = new IncomeResponse(
-            1L, BigDecimal.valueOf(1500), "Sueldo mensual", LocalDate.of(2026, 6, 5), "Trabajo", 1L, "Salario"
+            1L, BigDecimal.valueOf(1500), "Sueldo mensual", LocalDate.of(2026, 6, 5), 1L, "Salario"
     );
 
     @BeforeEach
@@ -78,23 +78,22 @@ class IncomeControllerTest {
     @Test
     void getIncomesReturns200WithPagedResults() throws Exception {
         Pageable pageable = PageRequest.of(0, 20);
-        when(incomeService.getIncomes(isNull(), isNull(), isNull(), any(Pageable.class)))
+        when(incomeService.getIncomes(isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(salaryIncome), pageable, 1));
 
         mockMvc.perform(get("/api/incomes").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].source").value("Trabajo"))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
-    void getIncomesFiltersByMonthYearAndSource() throws Exception {
+    void getIncomesFiltersByMonthYear() throws Exception {
         Pageable pageable = PageRequest.of(0, 20);
-        when(incomeService.getIncomes(eq(6), eq(2026), eq("Trabajo"), any(Pageable.class)))
+        when(incomeService.getIncomes(eq(6), eq(2026), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(salaryIncome), pageable, 1));
 
-        mockMvc.perform(get("/api/incomes?month=6&year=2026&source=Trabajo").header("Authorization", AUTH_HEADER))
+        mockMvc.perform(get("/api/incomes?month=6&year=2026").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1));
     }
@@ -102,7 +101,7 @@ class IncomeControllerTest {
     @Test
     void createIncomeReturns201WhenValid() throws Exception {
         IncomeRequest request = new IncomeRequest(
-                BigDecimal.valueOf(1500), "Sueldo mensual", LocalDate.of(2026, 6, 5), "Trabajo", 1L
+                BigDecimal.valueOf(1500), "Sueldo mensual", LocalDate.of(2026, 6, 5), 1L
         );
         when(incomeService.createIncome(any(IncomeRequest.class))).thenReturn(salaryIncome);
 
@@ -118,7 +117,7 @@ class IncomeControllerTest {
     @Test
     void createIncomeReturns400WhenAmountIsNegative() throws Exception {
         IncomeRequest request = new IncomeRequest(
-                BigDecimal.valueOf(-10), "Sueldo mensual", LocalDate.of(2026, 6, 5), "Trabajo", null
+                BigDecimal.valueOf(-10), "Sueldo mensual", LocalDate.of(2026, 6, 5), null
         );
 
         mockMvc.perform(post("/api/incomes")
@@ -132,7 +131,7 @@ class IncomeControllerTest {
     @Test
     void createIncomeReturns400WhenDateIsInTheFuture() throws Exception {
         IncomeRequest request = new IncomeRequest(
-                BigDecimal.valueOf(100), "Sueldo mensual", LocalDate.now().plusDays(5), "Trabajo", null
+                BigDecimal.valueOf(100), "Sueldo mensual", LocalDate.now().plusDays(5), null
         );
 
         mockMvc.perform(post("/api/incomes")
@@ -146,7 +145,7 @@ class IncomeControllerTest {
     @Test
     void updateIncomeReturns200WhenUpdatingOwnIncome() throws Exception {
         IncomeRequest request = new IncomeRequest(
-                BigDecimal.valueOf(1600), "Sueldo actualizado", LocalDate.of(2026, 6, 5), "Trabajo", 1L
+                BigDecimal.valueOf(1600), "Sueldo actualizado", LocalDate.of(2026, 6, 5), 1L
         );
         when(incomeService.updateIncome(eq(1L), any(IncomeRequest.class))).thenReturn(salaryIncome);
 
@@ -161,7 +160,7 @@ class IncomeControllerTest {
     @Test
     void updateIncomeReturns404WhenUpdatingAnotherUsersIncome() throws Exception {
         IncomeRequest request = new IncomeRequest(
-                BigDecimal.valueOf(1600), "Sueldo actualizado", LocalDate.of(2026, 6, 5), "Trabajo", null
+                BigDecimal.valueOf(1600), "Sueldo actualizado", LocalDate.of(2026, 6, 5), null
         );
         when(incomeService.updateIncome(eq(99L), any(IncomeRequest.class)))
                 .thenThrow(new ResourceNotFoundException("Ingreso no encontrado"));

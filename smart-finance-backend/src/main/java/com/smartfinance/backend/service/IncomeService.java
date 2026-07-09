@@ -47,11 +47,10 @@ public class IncomeService {
     }
 
     @Transactional(readOnly = true)
-    public Page<IncomeResponse> getIncomes(Integer month, Integer year, String source, Pageable pageable) {
+    public Page<IncomeResponse> getIncomes(Integer month, Integer year, Pageable pageable) {
         Long userId = SecurityUtils.getCurrentUserId();
         Specification<Income> spec = IncomeSpecifications.ownedBy(userId)
-                .and(IncomeSpecifications.inPeriod(month, year))
-                .and(IncomeSpecifications.hasSource(source));
+                .and(IncomeSpecifications.inPeriod(month, year));
 
         return incomeRepository.findAll(spec, pageable)
                 .map(incomeMapper::toResponse);

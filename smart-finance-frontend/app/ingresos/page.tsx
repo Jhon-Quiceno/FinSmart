@@ -74,7 +74,6 @@ export default function IngresosPage() {
       amount: values.amount,
       description: values.description,
       date: values.date,
-      source: values.source?.trim() || "Salario",
       categoryId: values.categoryId ?? undefined,
     }
 

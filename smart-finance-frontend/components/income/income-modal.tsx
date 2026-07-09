@@ -9,12 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getTodayDateInput } from "@/lib/date"
 import { incomeSchema } from "@/lib/schemas/income.schema"
 import type { Income } from "@/lib/types/income"
-
-const incomeSources = ["Salario", "Freelance", "Inversiones", "Alquiler", "Bonos", "Otros"]
 
 type IncomeFormValues = z.infer<typeof incomeSchema>
 
@@ -30,7 +27,6 @@ const getDefaultValues = (income?: Income | null): IncomeFormValues => ({
   amount: income?.amount ?? 0,
   description: income?.description ?? "",
   date: income?.date ?? getTodayDateInput(),
-  source: income?.source ?? "Salario",
   categoryId: income?.categoryId ?? null,
 })
 
@@ -59,7 +55,7 @@ export function IncomeModal({ open, onOpenChange, initialValue, isSubmitting, on
         <DialogHeader>
           <DialogTitle>{initialValue ? "Editar ingreso" : "Crear ingreso"}</DialogTitle>
           <DialogDescription>
-            Completa la informacion para registrar el ingreso en tu historial.
+            Completa la información para registrar el ingreso en tu historial.
           </DialogDescription>
         </DialogHeader>
 
@@ -70,7 +66,7 @@ export function IncomeModal({ open, onOpenChange, initialValue, isSubmitting, on
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descripcion</FormLabel>
+                  <FormLabel>Descripción</FormLabel>
                   <FormControl>
                     <Input placeholder="Ej: Salario mensual" {...field} value={field.value ?? ""} />
                   </FormControl>
@@ -79,79 +75,54 @@ export function IncomeModal({ open, onOpenChange, initialValue, isSubmitting, on
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Monto</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      {...field}
-                      onChange={(event) => field.onChange(event.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Monto</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Categoria</FormLabel>
+                  <FormLabel>Categoría</FormLabel>
                   <FormControl>
                     <CategorySelect
                       type="INCOME"
                       value={field.value === null ? "none" : String(field.value)}
                       onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="source"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fuente</FormLabel>
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una fuente" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectGroup>
-                        {incomeSources.map((source) => (
-                          <SelectItem key={source} value={source}>
-                            {source}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
