@@ -57,6 +57,11 @@ jobs:
           JWT_REFRESH_COOKIE_SECURE: "true"
           JWT_REFRESH_COOKIE_SAME_SITE: "Lax"
           APP_CORS_ALLOWED_ORIGINS: "${{ secrets.APP_CORS_ALLOWED_ORIGINS }}"
+          # Brevo SMTP (optional): with empty values the backend degrades to
+          # in-app-only notifications (see EmailNotificationSender).
+          BREVO_SMTP_LOGIN: "${{ secrets.BREVO_SMTP_LOGIN }}"
+          BREVO_SMTP_KEY: "${{ secrets.BREVO_SMTP_KEY }}"
+          MAIL_FROM: "${{ secrets.MAIL_FROM }}"
           EOF
 
       # On a PR: deploy a real revision (proves auth + build + deploy all work) but never
