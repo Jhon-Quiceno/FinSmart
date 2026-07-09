@@ -7,6 +7,12 @@ on:
     paths:
       - "smart-finance-backend/**"
       - ".github/workflows/deploy-backend.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "smart-finance-backend/**"
+      - ".github/workflows/deploy-backend.yml"
 
 permissions:
   contents: read
@@ -14,7 +20,7 @@ permissions:
 
 concurrency:
   group: deploy-backend-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -51,7 +57,22 @@ jobs:
           APP_CORS_ALLOWED_ORIGINS: "${{ secrets.APP_CORS_ALLOWED_ORIGINS }}"
           EOF
 
-      - name: Deploy to Cloud Run
+      # On a PR: deploy a real revision (proves auth + build + deploy all work) but never
+      # shift production traffic to it, so a PR can be validated safely before merging.
+      - name: Deploy to Cloud Run (validate only, no traffic)
+        if: github.event_name == 'pull_request'
+        run: |
+          gcloud run deploy finsmart-backend \
+            --source ./smart-finance-backend \
+            --region us-central1 \
+            --memory 1Gi \
+            --allow-unauthenticated \
+            --no-traffic \
+            --tag "pr-${{ github.event.pull_request.number }}" \
+            --env-vars-file=/tmp/cloud-run-env-vars.yaml
+
+      - name: Deploy to Cloud Run (production)
+        if: github.event_name == 'push'
         run: |
           gcloud run deploy finsmart-backend \
             --source ./smart-finance-backend \
