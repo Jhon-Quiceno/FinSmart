@@ -2,52 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import axios from "axios"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
 import { toast } from "sonner"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AiInsightsCard } from "@/components/dashboard/ai-insights-card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { ChatHeader } from "@/components/ai/chat-header"
+import { ChatInput } from "@/components/ai/chat-input"
+import { ChatMessageList } from "@/components/ai/chat-message-list"
+import { toDisplayMessage } from "@/components/ai/chat-message"
+import type { DisplayMessage } from "@/components/ai/chat-message"
 import { invalidateUsageCache, useAiUsage, useChatHistory, useSendMessage } from "@/hooks/use-ai"
 import { getApiErrorMessage } from "@/lib/api-client"
-import { cn } from "@/lib/utils"
-import type { AiMessageRole, ChatMessage } from "@/lib/types/ai"
-import { Bot, Send, User } from "lucide-react"
-
-function formatResetDate(isoDate: string): string {
-  try {
-    return format(new Date(isoDate), "d 'de' MMMM 'de' yyyy", { locale: es })
-  } catch {
-    return ""
-  }
-}
-
-const suggestedQuestions = [
-  "Como puedo reducir mis gastos mensuales?",
-  "Cuanto deberia ahorrar cada mes?",
-  "Cual es mi mayor gasto este mes?",
-  "Como puedo pagar mis deudas mas rapido?",
-]
-
-interface DisplayMessage {
-  id: string
-  role: AiMessageRole
-  content: string
-  providerName: string | null
-  model: string | null
-  createdAt: string
-}
-
-function toDisplayMessage(message: ChatMessage): DisplayMessage {
-  return {
-    id: String(message.id),
-    role: message.role,
-    content: message.content,
-    providerName: message.providerName,
-    model: message.model,
-    createdAt: message.createdAt,
-  }
-}
 
 export default function AsistenteIAPage() {
   const { history, isLoading: isLoadingHistory } = useChatHistory({ size: 50 })
@@ -60,11 +24,6 @@ export default function AsistenteIAPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const quotaExhausted = usage !== null && usage.remaining <= 0
-  const quotaNotice =
-    quotaMessage ??
-    (quotaExhausted && usage
-      ? `Alcanzaste el límite de ${usage.limit} mensajes de IA este mes. Tu límite se reinicia el ${formatResetDate(usage.resetsAt)}.`
-      : null)
 
   // The backend returns history most-recent-first (same convention as notifications);
   // the chat needs chronological order, oldest on top.
@@ -150,158 +109,26 @@ export default function AsistenteIAPage() {
 
           {/* Chat Section */}
           <div className="lg:col-span-3 flex flex-col rounded-xl bg-card border border-border overflow-hidden h-[calc(100vh-200px)]">
-            {/* Chat Header */}
-            <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60">
-                <Bot className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground">Asistente Financiero</h3>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                  <span className="text-xs text-muted-foreground">En linea - Listo para ayudarte</span>
-                </div>
-              </div>
-            </div>
+            <ChatHeader />
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {isLoadingHistory ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-16 w-2/3" />
-                  <Skeleton className="ml-auto h-12 w-1/2" />
-                  <Skeleton className="h-16 w-3/4" />
-                </div>
-              ) : displayMessages.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60">
-                    <Bot className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                  <p className="max-w-sm text-sm text-muted-foreground">
-                    Hola! Soy tu asistente financiero. Conozco tus ingresos, gastos, deudas y servicios
-                    recurrentes reales, asi que podes preguntarme lo que necesites sobre tus finanzas.
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2 pt-2">
-                    {suggestedQuestions.map((question) => (
-                      <button
-                        key={question}
-                        onClick={() => setInputValue(question)}
-                        className="text-xs bg-muted/50 hover:bg-muted text-foreground px-3 py-1.5 rounded-full transition-colors border border-border hover:border-primary/30"
-                      >
-                        {question}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                displayMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn("flex gap-3", message.role === "USER" && "flex-row-reverse")}
-                  >
-                    <div
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full shrink-0",
-                        message.role === "ASSISTANT" ? "bg-gradient-to-br from-primary to-primary/60" : "bg-muted",
-                      )}
-                    >
-                      {message.role === "ASSISTANT" ? (
-                        <Bot className="h-4 w-4 text-primary-foreground" />
-                      ) : (
-                        <User className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div
-                      className={cn(
-                        "max-w-[80%] rounded-2xl px-4 py-3",
-                        message.role === "ASSISTANT"
-                          ? "bg-muted/50 rounded-tl-sm"
-                          : "bg-primary text-primary-foreground rounded-tr-sm",
-                      )}
-                    >
-                      <p
-                        className={cn(
-                          "text-sm whitespace-pre-line leading-relaxed",
-                          message.role === "ASSISTANT" ? "text-foreground" : "text-primary-foreground",
-                        )}
-                      >
-                        {message.content}
-                      </p>
-                      {message.role === "ASSISTANT" && message.providerName && (
-                        <p className="text-[10px] mt-1 text-muted-foreground">
-                          {message.providerName} · {message.model}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
+            <ChatMessageList
+              isLoadingHistory={isLoadingHistory}
+              messages={displayMessages}
+              isSending={isSending}
+              onSelectQuestion={setInputValue}
+              messagesEndRef={messagesEndRef}
+            />
 
-              {isSending && (
-                <div className="flex gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 shrink-0">
-                    <Bot className="h-4 w-4 text-primary-foreground" />
-                  </div>
-                  <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-4 py-3">
-                    <div className="flex gap-1">
-                      <span
-                        className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce"
-                        style={{ animationDelay: "0ms" }}
-                      />
-                      <span
-                        className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce"
-                        style={{ animationDelay: "150ms" }}
-                      />
-                      <span
-                        className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce"
-                        style={{ animationDelay: "300ms" }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="p-4 border-t border-border bg-muted/20">
-              {quotaNotice && (
-                <div className="mb-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
-                  {quotaNotice}
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(event) => setInputValue(event.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={
-                    quotaExhausted ? "Alcanzaste tu límite mensual de mensajes" : "Escribe tu pregunta financiera..."
-                  }
-                  className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-60"
-                  disabled={isSending || quotaExhausted}
-                />
-                <button
-                  onClick={() => void handleSendMessage(inputValue)}
-                  disabled={!inputValue.trim() || isSending || quotaExhausted}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  <Send className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between gap-2 mt-2">
-                <p className="text-[10px] text-muted-foreground">
-                  El asistente utiliza IA para darte consejos basados en tus datos financieros
-                </p>
-                {usage && (
-                  <p className="text-[10px] text-muted-foreground shrink-0">
-                    {usage.used}/{usage.limit} mensajes este mes
-                  </p>
-                )}
-              </div>
-            </div>
+            <ChatInput
+              value={inputValue}
+              onChange={setInputValue}
+              onKeyDown={handleKeyDown}
+              onSend={() => void handleSendMessage(inputValue)}
+              isSending={isSending}
+              quotaExhausted={quotaExhausted}
+              quotaMessage={quotaMessage}
+              usage={usage}
+            />
           </div>
         </div>
       </div>
