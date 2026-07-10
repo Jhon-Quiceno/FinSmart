@@ -1,5 +1,6 @@
 package com.smartfinance.backend.ingresos.repository;
 
+import com.smartfinance.backend.common.repository.MonthlyTotalProjection;
 import com.smartfinance.backend.common.repository.UserLastActivityProjection;
 import com.smartfinance.backend.ingresos.model.entity.Income;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +34,20 @@ public interface IncomeRepository extends JpaRepository<Income, Long>, JpaSpecif
     @Query("SELECT COALESCE(SUM(i.amount), 0) FROM Income i "
             + "WHERE i.user.id = :userId AND i.date >= :start AND i.date <= :end")
     BigDecimal sumAmountByUserAndPeriod(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
+    );
+
+    /**
+     * Totals grouped by calendar month across {@code [start, end]}, one row per month that has
+     * at least one income row. Backs {@code FinancialAnalysisService#buildMonthlySeries} (a
+     * single query for the whole 6-month window instead of one {@link #sumAmountByUserAndPeriod}
+     * call per month); months with no income are simply absent from the result, and the caller
+     * fills them in as zero.
+     */
+    @Query("SELECT YEAR(i.date) AS periodYear, MONTH(i.date) AS periodMonth, SUM(i.amount) AS total "
+            + "FROM Income i WHERE i.user.id = :userId AND i.date >= :start AND i.date <= :end "
+            + "GROUP BY YEAR(i.date), MONTH(i.date)")
+    List<MonthlyTotalProjection> sumAmountByUserGroupedByMonth(
             @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
     );
 

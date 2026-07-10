@@ -1,5 +1,6 @@
 package com.smartfinance.backend.gastos.repository;
 
+import com.smartfinance.backend.common.repository.MonthlyTotalProjection;
 import com.smartfinance.backend.common.repository.UserLastActivityProjection;
 import com.smartfinance.backend.gastos.model.entity.Expense;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,20 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e "
             + "WHERE e.user.id = :userId AND e.date >= :start AND e.date <= :end")
     BigDecimal sumAmountByUserAndPeriod(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
+    );
+
+    /**
+     * Totals grouped by calendar month across {@code [start, end]}, one row per month that has
+     * at least one expense row. Backs {@code FinancialAnalysisService#buildMonthlySeries} (a
+     * single query for the whole 6-month window instead of one {@link #sumAmountByUserAndPeriod}
+     * call per month); months with no expenses are simply absent from the result, and the caller
+     * fills them in as zero.
+     */
+    @Query("SELECT YEAR(e.date) AS periodYear, MONTH(e.date) AS periodMonth, SUM(e.amount) AS total "
+            + "FROM Expense e WHERE e.user.id = :userId AND e.date >= :start AND e.date <= :end "
+            + "GROUP BY YEAR(e.date), MONTH(e.date)")
+    List<MonthlyTotalProjection> sumAmountByUserGroupedByMonth(
             @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
     );
 

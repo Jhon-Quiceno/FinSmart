@@ -1,8 +1,10 @@
 package com.smartfinance.backend.analisis.service;
 
 import com.smartfinance.backend.analisis.model.dto.AnalysisSummaryResponse;
+import com.smartfinance.backend.analisis.model.dto.MonthlySeriesPoint;
 import com.smartfinance.backend.analisis.model.dto.RecommendationResponse;
 import com.smartfinance.backend.analisis.model.dto.RecommendationType;
+import com.smartfinance.backend.common.repository.MonthlyTotalProjection;
 import com.smartfinance.backend.gastos.repository.CategoryTotalProjection;
 import com.smartfinance.backend.deudas.repository.DebtRepository;
 import com.smartfinance.backend.gastos.repository.ExpenseRepository;
@@ -203,11 +205,14 @@ class FinancialAnalysisServiceTest {
 
         financialAnalysisService.getSummary(YEAR, MONTH);
 
-        // The main balance calculation plus the 6-month series both call sumAmountByUserAndPeriod
-        // (the series includes the current month too), so this is called 7 times in total — the
-        // important assertion is that every single call is scoped to userId 7, never another id.
-        verify(incomeRepository, org.mockito.Mockito.atLeastOnce()).sumAmountByUserAndPeriod(eq(7L), any(), any());
-        verify(expenseRepository, org.mockito.Mockito.atLeastOnce()).sumAmountByUserAndPeriod(eq(7L), any(), any());
+        // The main balance calculation calls sumAmountByUserAndPeriod once per repository, and
+        // the 6-month series is now a single grouped query per repository (see
+        // buildMonthlySeriesShould* tests below) — the important assertion here is that every
+        // single call is scoped to userId 7, never another id.
+        verify(incomeRepository).sumAmountByUserAndPeriod(eq(7L), any(), any());
+        verify(expenseRepository).sumAmountByUserAndPeriod(eq(7L), any(), any());
+        verify(incomeRepository).sumAmountByUserGroupedByMonth(eq(7L), any(), any());
+        verify(expenseRepository).sumAmountByUserGroupedByMonth(eq(7L), any(), any());
         verify(debtRepository).sumRemainingAmountByUser(7L);
         verify(expenseRepository).findTopCategoriesByUserAndPeriod(eq(7L), any(), any());
         verify(incomeRepository).findRecentByUserId(eq(7L), any());
@@ -356,9 +361,106 @@ class FinancialAnalysisServiceTest {
 
         financialAnalysisService.getRecommendations(YEAR, MONTH);
 
-        // 1 call for the main balance calculation + 6 for the monthly series = 7.
-        verify(incomeRepository, times(7)).sumAmountByUserAndPeriod(eq(9L), any(), any());
-        verify(expenseRepository, times(7)).sumAmountByUserAndPeriod(eq(9L), any(), any());
+        // 1 call for the main balance calculation; the monthly series is now a single grouped
+        // query per repository (sumAmountByUserGroupedByMonth), not one call per month.
+        verify(incomeRepository, times(1)).sumAmountByUserAndPeriod(eq(9L), any(), any());
+        verify(expenseRepository, times(1)).sumAmountByUserAndPeriod(eq(9L), any(), any());
+        verify(incomeRepository, times(1)).sumAmountByUserGroupedByMonth(eq(9L), any(), any());
+        verify(expenseRepository, times(1)).sumAmountByUserGroupedByMonth(eq(9L), any(), any());
+    }
+
+    @Test
+    void getRecommendationsShouldNotUpsertSnapshot() {
+        setAuthenticatedUser(1L);
+        when(incomeRepository.sumAmountByUserAndPeriod(eq(1L), eq(PERIOD_START), eq(PERIOD_END)))
+                .thenReturn(BigDecimal.valueOf(1000));
+        when(expenseRepository.sumAmountByUserAndPeriod(eq(1L), eq(PERIOD_START), eq(PERIOD_END)))
+                .thenReturn(BigDecimal.valueOf(400));
+
+        financialAnalysisService.getRecommendations(YEAR, MONTH);
+
+        verify(financialAnalysisRepository, never()).upsertSnapshot(
+                anyLong(), any(), any(), any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void buildMonthlySeriesShouldFillMissingMonthsWithZeroWhenNoDataReturned() {
+        setAuthenticatedUser(1L);
+        when(incomeRepository.sumAmountByUserGroupedByMonth(eq(1L), any(), any())).thenReturn(List.of());
+        when(expenseRepository.sumAmountByUserGroupedByMonth(eq(1L), any(), any())).thenReturn(List.of());
+
+        AnalysisSummaryResponse summary = financialAnalysisService.getSummary(YEAR, MONTH);
+
+        List<MonthlySeriesPoint> series = summary.monthlySeries();
+        Assertions.assertEquals(6, series.size());
+        Assertions.assertTrue(series.stream().allMatch(point ->
+                point.totalIncome().compareTo(BigDecimal.ZERO) == 0
+                        && point.totalExpense().compareTo(BigDecimal.ZERO) == 0
+        ));
+        // 2026-06 is the current period; the series covers 2026-01 through 2026-06 in order.
+        Assertions.assertEquals(2026, series.get(0).year());
+        Assertions.assertEquals(1, series.get(0).month());
+        Assertions.assertEquals(2026, series.get(5).year());
+        Assertions.assertEquals(6, series.get(5).month());
+    }
+
+    @Test
+    void buildMonthlySeriesShouldMapTotalsForMonthsWithDataAndZeroOutTheRest() {
+        setAuthenticatedUser(1L);
+        MonthlyTotalProjection marchIncome = mockMonthlyTotal(2026, 3, BigDecimal.valueOf(1500));
+        MonthlyTotalProjection juneIncome = mockMonthlyTotal(2026, 6, BigDecimal.valueOf(2000));
+        when(incomeRepository.sumAmountByUserGroupedByMonth(eq(1L), any(), any()))
+                .thenReturn(List.of(marchIncome, juneIncome));
+
+        MonthlyTotalProjection aprilExpense = mockMonthlyTotal(2026, 4, BigDecimal.valueOf(300));
+        when(expenseRepository.sumAmountByUserGroupedByMonth(eq(1L), any(), any()))
+                .thenReturn(List.of(aprilExpense));
+
+        AnalysisSummaryResponse summary = financialAnalysisService.getSummary(YEAR, MONTH);
+
+        List<MonthlySeriesPoint> series = summary.monthlySeries();
+        MonthlySeriesPoint march = findPoint(series, 3);
+        MonthlySeriesPoint april = findPoint(series, 4);
+        MonthlySeriesPoint june = findPoint(series, 6);
+
+        Assertions.assertEquals(BigDecimal.valueOf(1500), march.totalIncome());
+        Assertions.assertEquals(BigDecimal.ZERO, march.totalExpense());
+        Assertions.assertEquals(BigDecimal.ZERO, april.totalIncome());
+        Assertions.assertEquals(BigDecimal.valueOf(300), april.totalExpense());
+        Assertions.assertEquals(BigDecimal.valueOf(2000), june.totalIncome());
+    }
+
+    @Test
+    void buildMonthlySeriesShouldQueryFullRangeFromOldestMonthFirstDayToCurrentMonthLastDay() {
+        setAuthenticatedUser(1L);
+
+        financialAnalysisService.getSummary(YEAR, MONTH);
+
+        // Series covers the 6 months ending at 2026-06, so the oldest month is 2026-01: the
+        // grouped query must span its first day (2026-01-01) through the current month's last
+        // day (2026-06-30), not just the current month.
+        verify(incomeRepository).sumAmountByUserGroupedByMonth(
+                eq(1L), eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 6, 30))
+        );
+        verify(expenseRepository).sumAmountByUserGroupedByMonth(
+                eq(1L), eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 6, 30))
+        );
+    }
+
+    private static MonthlyTotalProjection mockMonthlyTotal(int year, int month, BigDecimal total) {
+        MonthlyTotalProjection projection = mock(MonthlyTotalProjection.class);
+        when(projection.getPeriodYear()).thenReturn(year);
+        when(projection.getPeriodMonth()).thenReturn(month);
+        when(projection.getTotal()).thenReturn(total);
+        return projection;
+    }
+
+    private static MonthlySeriesPoint findPoint(List<MonthlySeriesPoint> series, int month) {
+        return series.stream()
+                .filter(point -> point.month() == month)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No series point found for month " + month));
     }
 
     private void setAuthenticatedUser(Long userId) {
