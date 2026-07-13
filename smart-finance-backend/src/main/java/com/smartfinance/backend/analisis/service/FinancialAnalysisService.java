@@ -7,6 +7,7 @@ import com.smartfinance.backend.analisis.model.dto.RecommendationResponse;
 import com.smartfinance.backend.analisis.model.dto.RecommendationType;
 import com.smartfinance.backend.analisis.model.dto.Severity;
 import com.smartfinance.backend.analisis.model.dto.TopCategoryResponse;
+import com.smartfinance.backend.common.repository.MonthlyTotalProjection;
 import com.smartfinance.backend.gastos.model.entity.Expense;
 import com.smartfinance.backend.ingresos.model.entity.Income;
 import com.smartfinance.backend.gastos.repository.CategoryTotalProjection;
@@ -27,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -89,6 +92,26 @@ public class FinancialAnalysisService {
     public AnalysisSummaryResponse getSummary(Integer year, Integer month) {
         Long userId = SecurityUtils.getCurrentUserId();
         YearMonth period = resolvePeriod(year, month);
+        AnalysisSummaryResponse summary = computeSummary(userId, period);
+
+        Long topCategoryId = summary.topCategories().isEmpty() ? null : summary.topCategories().get(0).categoryId();
+        financialAnalysisRepository.upsertSnapshot(
+                userId, period.getYear(), period.getMonthValue(),
+                summary.totalIncome(), summary.totalExpense(), summary.savings(),
+                summary.expenseRatio(), summary.debtRatio(), topCategoryId
+        );
+
+        return summary;
+    }
+
+    /**
+     * Same computation as {@link #getSummary}, without refreshing the {@code financial_analysis}
+     * snapshot. {@link #getRecommendations} needs the summary purely to evaluate its rules and
+     * has no business writing a row every time it is called — {@link #getSummary} already
+     * refreshes the snapshot on every dashboard load, so nothing reads a stale snapshot because
+     * recommendations skip the upsert here.
+     */
+    private AnalysisSummaryResponse computeSummary(Long userId, YearMonth period) {
         LocalDate periodStart = period.atDay(1);
         LocalDate periodEnd = period.atEndOfMonth();
 
@@ -110,12 +133,6 @@ public class FinancialAnalysisService {
         List<MonthlySeriesPoint> monthlySeries = buildMonthlySeries(userId, period);
         List<RecentTransactionResponse> recentTransactions = buildRecentTransactions(userId);
 
-        Long topCategoryId = topCategories.isEmpty() ? null : topCategories.get(0).categoryId();
-        financialAnalysisRepository.upsertSnapshot(
-                userId, period.getYear(), period.getMonthValue(),
-                totalIncome, totalExpense, savings, expenseRatio, debtRatio, topCategoryId
-        );
-
         return new AnalysisSummaryResponse(
                 period.getYear(), period.getMonthValue(),
                 totalIncome, totalExpense, savings,
@@ -127,7 +144,9 @@ public class FinancialAnalysisService {
 
     @Transactional
     public List<RecommendationResponse> getRecommendations(Integer year, Integer month) {
-        AnalysisSummaryResponse summary = getSummary(year, month);
+        Long userId = SecurityUtils.getCurrentUserId();
+        YearMonth period = resolvePeriod(year, month);
+        AnalysisSummaryResponse summary = computeSummary(userId, period);
         return buildRecommendations(summary);
     }
 
@@ -207,17 +226,42 @@ public class FinancialAnalysisService {
                 .toList();
     }
 
+    /**
+     * Builds the {@value #MONTHLY_SERIES_LENGTH}-month income-vs-expense series ending at
+     * {@code currentPeriod} with two grouped queries (one per repository) covering the whole
+     * window, instead of one {@code sumAmountByUserAndPeriod} call per month per repository —
+     * {@value #MONTHLY_SERIES_LENGTH} months previously meant {@code 2 * MONTHLY_SERIES_LENGTH}
+     * round trips. Months with no income/expense rows are absent from the grouped result, so they
+     * are filled in as {@link BigDecimal#ZERO} here to keep exactly
+     * {@value #MONTHLY_SERIES_LENGTH} points in chronological order, unchanged from before.
+     */
     private List<MonthlySeriesPoint> buildMonthlySeries(Long userId, YearMonth currentPeriod) {
+        YearMonth oldestPeriod = currentPeriod.minusMonths(MONTHLY_SERIES_LENGTH - 1);
+        LocalDate seriesStart = oldestPeriod.atDay(1);
+        LocalDate seriesEnd = currentPeriod.atEndOfMonth();
+
+        Map<YearMonth, BigDecimal> incomeByMonth = groupTotalsByMonth(
+                incomeRepository.sumAmountByUserGroupedByMonth(userId, seriesStart, seriesEnd)
+        );
+        Map<YearMonth, BigDecimal> expenseByMonth = groupTotalsByMonth(
+                expenseRepository.sumAmountByUserGroupedByMonth(userId, seriesStart, seriesEnd)
+        );
+
         List<MonthlySeriesPoint> series = new ArrayList<>(MONTHLY_SERIES_LENGTH);
         for (int offset = MONTHLY_SERIES_LENGTH - 1; offset >= 0; offset--) {
             YearMonth point = currentPeriod.minusMonths(offset);
-            LocalDate start = point.atDay(1);
-            LocalDate end = point.atEndOfMonth();
-            BigDecimal income = nullSafe(incomeRepository.sumAmountByUserAndPeriod(userId, start, end));
-            BigDecimal expense = nullSafe(expenseRepository.sumAmountByUserAndPeriod(userId, start, end));
+            BigDecimal income = incomeByMonth.getOrDefault(point, BigDecimal.ZERO);
+            BigDecimal expense = expenseByMonth.getOrDefault(point, BigDecimal.ZERO);
             series.add(new MonthlySeriesPoint(point.getYear(), point.getMonthValue(), income, expense));
         }
         return series;
+    }
+
+    private static Map<YearMonth, BigDecimal> groupTotalsByMonth(List<MonthlyTotalProjection> projections) {
+        return projections.stream().collect(Collectors.toMap(
+                projection -> YearMonth.of(projection.getPeriodYear(), projection.getPeriodMonth()),
+                MonthlyTotalProjection::getTotal
+        ));
     }
 
     private List<RecentTransactionResponse> buildRecentTransactions(Long userId) {
