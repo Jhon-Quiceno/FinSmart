@@ -29,11 +29,10 @@ docs/
 │   └── capturas/                      ← Capturas de pantalla reales, por fecha y feature
 ├── video-evidencias/                  ← Video demo de la app (HyperFrames)
 │   └── finsmart-demo/                 ← Composición + capturas reales + finsmart-demo.mp4
-├── sprints/                           ← Planificación detallada por sprint
-├── finsmart_mvp_sprints.md            ← Tablero maestro del MVP (105 tareas)
+├── sprints/                           ← Planificación detallada por sprint (fase actual)
 ├── FRONTEND_DOC.md                    ← Documentación del frontend
 ├── notifications-future.md            ← Canales de notificación futuros
-└── roadmap-saas-automatizacion.md     ← Roadmap estratégico SaaS
+└── roadmap-saas-cuentas-reales.md     ← Roadmap estratégico: SaaS + cuentas/tarjetas reales
 ```
 
 ---
@@ -87,7 +86,8 @@ docs/
 | Ver el diseño del asistente IA | [`analisis-diseno/documentacion/06-ia-asistente.md`](analisis-diseno/documentacion/06-ia-asistente.md) |
 | Ver diagramas de arquitectura | [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) |
 | Ver un recorrido en video de la app | [`video-evidencias/finsmart-demo/`](video-evidencias/finsmart-demo/) |
-| Consultar el plan de sprints | [`finsmart_mvp_sprints.md`](finsmart_mvp_sprints.md) |
+| Consultar el plan de sprints de la fase actual | [`sprints/`](sprints/) |
+| Consultar la estrategia de producto (SaaS + cuentas reales) | [`roadmap-saas-cuentas-reales.md`](roadmap-saas-cuentas-reales.md) |
 | Ver evidencia de un sprint | [`evidencias/`](evidencias/) |
 | Revisar las auditorías | [`auditoria/`](auditoria/) |
 
