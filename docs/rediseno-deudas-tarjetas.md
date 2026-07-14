@@ -1,7 +1,7 @@
 # Rediseño de deudas: de préstamo fijo a crédito rotativo
 
 Propuesta de diseño para soportar tarjetas de crédito reales en FinSmart.
-Complementa el Nivel 1 de `docs/roadmap-cuentas-reales.md`. **Estado: idea aprobada,
+Complementa el Nivel 1 de `docs/roadmap-saas-cuentas-reales.md`. **Estado: idea aprobada,
 pendiente de implementación** (la fase B debe diseñarse con SDD antes de codificar).
 
 ---
@@ -140,4 +140,4 @@ El modelo de la sección 3: `CreditCard` + ledger + planes de cuotas + ciclos.
 
 Cuando se decida arrancar: fase A directa (rama corta), fase B con `/sdd-new`.
 El contexto completo de esta decisión está en la memoria del proyecto
-(`architecture/cuentas-reales`) y en `docs/roadmap-cuentas-reales.md`.
+(`architecture/cuentas-reales`) y en `docs/roadmap-saas-cuentas-reales.md`.
