@@ -1,4 +1,4 @@
-# API REST — FinSmart
+# API REST — KoroFin
 
 > **Propósito:** Documentar el diseño de la API REST, los endpoints disponibles y los contratos de entrada/salida.
 
@@ -232,4 +232,4 @@ Códigos de estado usados:
 
 ---
 
-*Documento de API REST — FinSmart MVP — 34 endpoints*
+*Documento de API REST — KoroFin MVP — 34 endpoints*

@@ -1,4 +1,4 @@
-# Convenciones del repositorio — FinSmart
+# Convenciones del repositorio — KoroFin
 
 Reglas obligatorias para commits, pull requests y comentarios de código.
 Aplican tanto a personas como a asistentes de IA que trabajen en este repositorio.

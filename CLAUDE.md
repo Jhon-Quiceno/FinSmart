@@ -1,4 +1,4 @@
-# FinSmart
+# KoroFin
 
 Aplicación de finanzas personales. Monorepo con dos proyectos:
 

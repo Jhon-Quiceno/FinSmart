@@ -1,6 +1,6 @@
-# Documentación del Frontend: FinSmart (FinanceAI)
+# Documentación del Frontend: KoroFin
 
-Este documento detalla la estructura, tecnologías y funcionalidades actuales del frontend de FinSmart.
+Este documento detalla la estructura, tecnologías y funcionalidades actuales del frontend de KoroFin.
 
 ## 🚀 Tecnologías Principales
 - **Framework:** Next.js 16.2.0 (App Router)

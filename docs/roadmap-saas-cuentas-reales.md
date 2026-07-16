@@ -1,4 +1,4 @@
-# Roadmap Estratégico — FinSmart hacia SaaS con cuentas/tarjetas reales y automatización de IA
+# Roadmap Estratégico — KoroFin hacia SaaS con cuentas/tarjetas reales y automatización de IA
 
 > Unifica dos investigaciones: 6 agentes especializados sobre el salto a SaaS multi-tenant
 > con automatización de IA (arquitectura backend, frontend/UX, base de datos,
@@ -8,7 +8,7 @@
 
 ## Resumen ejecutivo
 
-FinSmart es hoy un MVP funcional y bien probado (286 tests backend, 91 tests frontend,
+KoroFin es hoy un MVP funcional y bien probado (286 tests backend, 91 tests frontend,
 arquitectura por capas consistente, scoping por usuario correcto, refactor por dominios ya
 en `main`). El MVP (6 sprints, ver `docs/finsmart_mvp_sprints.md` en el historial de git)
 cerró formalmente el 2026-07-14 y este documento arranca la fase siguiente.
@@ -16,7 +16,7 @@ cerró formalmente el 2026-07-14 y este documento arranca la fase siguiente.
 El salto a SaaS multi-tenant con automatización de IA **no requiere reescribir nada** —
 requiere sumar capas nuevas (uso/cuotas, ingestión de mensajes, billing) sin romper lo que
 ya funciona, y tomar decisiones honestas sobre qué es viable en web vs qué exige una app
-móvil. En paralelo, FinSmart puede evolucionar del registro manual de movimientos hacia
+móvil. En paralelo, KoroFin puede evolucionar del registro manual de movimientos hacia
 funcionalidades conectadas con las finanzas reales de los usuarios en **tres niveles
 incrementales** (cuentas/tarjetas modeladas en la app → importación de extractos → Open
 Finance), cada uno con valor propio y sin depender de que el anterior esté "terminado" en
@@ -106,7 +106,7 @@ sprint1 y arranca con `/sdd-new` cuando se decida priorizarla.
 ## Nivel 2 — Importar extractos bancarios (datos reales sin credenciales)
 
 **Qué es:** el usuario descarga el extracto de su banco (CSV/Excel, todos los bancos
-colombianos lo ofrecen) y lo sube a FinSmart. El backend lo parsea y crea las
+colombianos lo ofrecen) y lo sube a KoroFin. El backend lo parsea y crea las
 transacciones, categorizadas por la IA que ya existe en la app.
 
 **Por qué es valioso:** datos reales sin pedirle credenciales bancarias a nadie, sin
@@ -134,7 +134,7 @@ tokens y datos normalizados.
 
 **Realidad de costos:** el sandbox es gratis y es un excelente proyecto de
 aprendizaje/portfolio, pero producción cobra por usuario/conexión y exige madurez de
-compliance. Para FinSmart hoy: **explorar en sandbox, no prometer a usuarios.** Verificar
+compliance. Para KoroFin hoy: **explorar en sandbox, no prometer a usuarios.** Verificar
 precios vigentes en belvo.com antes de comprometerse.
 
 ---
@@ -193,7 +193,7 @@ plataforma muy concretos que deberían moldear las expectativas del producto.
   Google la rechazaría en revisión de la tienda.
 - **iOS**: no existe ninguna API pública para que terceros lean SMS/iMessage de otras
   apps. Sandboxing absoluto, sin excepción real para este caso.
-- **Conclusión**: descartar SMS como fuente de ingesta. No es una limitación de FinSmart,
+- **Conclusión**: descartar SMS como fuente de ingesta. No es una limitación de KoroFin,
   es una limitación de las plataformas.
 
 ### Notificaciones push de otras apps (bancos, billeteras) — solo Android, y solo con app móvil
@@ -366,7 +366,7 @@ Fuente: investigación de mercado y estrategia (competidores activos en 2026).
 ### ¿Es un diferencial real?
 
 Honestamente: **no es un diferencial único**, pero sí de posicionamiento. El ángulo
-defendible de FinSmart no es "somos los únicos que leen correos" — es la combinación de:
+defendible de KoroFin no es "somos los únicos que leen correos" — es la combinación de:
 multiplataforma + motor de análisis financiero propio + IA multi-proveedor con fallback
 (reduce el riesgo de costo/disponibilidad propio) + foco en mercados donde la agregación
 bancaria tipo Plaid es débil o cara (Latam).
@@ -446,9 +446,10 @@ en una sola secuencia priorizada:
    3. Tracking de uso de IA (`ai_usage_events`) y rate limiting — necesarios antes de
       abrir el producto a más usuarios.
 2. **Corto plazo, en paralelo (ítems operativos ya en curso, no bloquean lo anterior):**
-   dominio de GitHub Students → activación de Brevo (DKIM/DMARC, `MAIL_FROM`) → subir los
-   18 secrets a GitHub Actions → PR `develop` → `main` → primer flujo real de n8n (bot de
-   Telegram para registrar gastos, sobre la infraestructura Docker ya levantada hoy).
+   dominio de GitHub Students → activación de Resend (DKIM/SPF sobre `korofin.jhonqui.dev`,
+   `MAIL_FROM`) → subir los 17 secrets a GitHub Actions → PR `develop` → `main` → primer
+   flujo real de n8n (bot de Telegram para registrar gastos, sobre la infraestructura
+   Docker ya levantada hoy).
 3. **Mediano plazo:**
    - Nivel 2: importar extractos bancarios (CSV/Excel) — datos reales sin terceros ni
      regulación, complementa el Nivel 1.
@@ -479,7 +480,7 @@ en una sola secuencia priorizada:
 | Extracción de componentes de `asistente-ia` (310→137 líneas) y `reportes` (269→119) | `main` |
 | Optimización de queries del análisis: summary ~19→9 consultas, recommendations ~19→8, log SQL sin duplicar (verificado en runtime) | `develop` |
 | Convenciones del repo en español (`docs/convenciones.md` + `CLAUDE.md`) | `main` |
-| Emails Brevo: diagnóstico completo (IP autorizada → remitente verificado → cuenta requiere activación manual; Brevo pidió dominio propio); credenciales SMTP verificadas. **Sin cambios respecto a lo anterior — sigue pendiente de activación por parte de Brevo.** | Configuración |
+| Emails Brevo: diagnóstico completo (IP autorizada → remitente verificado → cuenta requiere activación manual; Brevo pidió dominio propio); Brevo terminó bloqueando la cuenta y nunca la activó. **Decisión (2026-07-16): abandonar Brevo, migrar a Resend.** Dominio `korofin.jhonqui.dev` agregado en Resend, registros DNS (DKIM + SPF) cargados en Name.com, verificación en curso. | Configuración |
 | Decisión: mantener módulo de IA custom, no migrar a Spring AI (revisar si llega streaming/tools/RAG) | Documentada |
 | Decisión: n8n solo para canales e integraciones (patrón backend→webhook→n8n); la lógica de negocio queda en el backend | Documentada |
 | **n8n integrado en Docker local (hoy, 2026-07-14)**: servicio `n8n-db` (Postgres dedicado, separado del `db` del backend, sin puerto publicado al host — solo accesible dentro de la red de `docker-compose`) para persistencia propia de n8n. n8n corriendo en `http://localhost:5678`. | `chore/inicio-fase-saas` |
@@ -493,11 +494,13 @@ en una sola secuencia priorizada:
 
 ### Pendiente (en orden)
 
-1. **Dominio de GitHub Students** (esperando aprobación) → autenticarlo en Brevo
-   (DKIM/DMARC) → cambiar `MAIL_FROM` → prueba final de entrega → eliminar el test manual
-   `EmailSmokeManualTest.java` (está sin trackear, a propósito).
-2. **Subir secrets a GitHub Actions** (18 en total, valores nuevos del `.env`; el deploy a
-   Cloud Run los necesita).
+1. **Dominio `korofin.jhonqui.dev` en Resend** (registros DNS cargados, verificación en
+   curso) → confirmar estado `verified` → cambiar `MAIL_FROM` a una dirección del dominio
+   → prueba final de entrega → eliminar el test manual `EmailSmokeManualTest.java` (está
+   sin trackear, a propósito).
+2. **Subir secrets a GitHub Actions** (17 en total, valores nuevos del `.env`; el deploy a
+   Cloud Run los necesita — reemplazar `BREVO_SMTP_LOGIN`/`BREVO_SMTP_KEY` por
+   `RESEND_API_KEY`).
 3. **PR `develop` → `main`** (en pausa hasta completar 1 y 2) + limpieza de ramas.
 4. **Primer flujo real de n8n** (bot de Telegram para registrar gastos) — la
    infraestructura Docker local ya está lista, falta construir el flujo.

@@ -1,7 +1,7 @@
 @startuml
 !theme plain
 
-title Modelo de Datos - FinSmart
+title Modelo de Datos - KoroFin
 
 skinparam backgroundColor #FEFEFE
 skinparam defaultFontName Arial

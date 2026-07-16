@@ -1,4 +1,4 @@
-# Auditoria de codigo muerto — FinSmart (post Sprint 6)
+# Auditoria de codigo muerto — KoroFin (post Sprint 6)
 
 Fecha: 2026-07-05. Criterio aplicado (decision explicita del usuario): **borrado conservador** — solo se elimina codigo verificablemente muerto (cero referencias en toda la base de codigo), y no se poda la libreria de componentes shadcn/ui solo por tener componentes sin usar todavia, ya que forman parte de la libreria de diseno reutilizable del proyecto.
 

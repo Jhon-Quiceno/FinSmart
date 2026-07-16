@@ -1,4 +1,4 @@
-# Asistente IA — FinSmart
+# Asistente IA — KoroFin
 
 > **Propósito:** Describir el diseño del asistente de inteligencia artificial multi-proveedor, su arquitectura, failover y componentes.
 
@@ -6,7 +6,7 @@
 
 ## 1. Arquitectura Multi-Proveedor
 
-FinSmart no depende de un único proveedor de IA. El sistema está diseñado para soportar **múltiples proveedores** con **failover automático y transparente** para el usuario.
+KoroFin no depende de un único proveedor de IA. El sistema está diseñado para soportar **múltiples proveedores** con **failover automático y transparente** para el usuario.
 
 ```
                     ┌─────────────────────────────┐
@@ -147,4 +147,4 @@ CREATE INDEX idx_ai_messages_user_created ON ai_messages(user_id, created_at);
 
 ---
 
-*Documento de diseño del asistente IA — FinSmart MVP*
+*Documento de diseño del asistente IA — KoroFin MVP*

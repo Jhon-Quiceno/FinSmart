@@ -1,4 +1,4 @@
-# Pendientes fuera del alcance del Sprint 6 — FinSmart
+# Pendientes fuera del alcance del Sprint 6 — KoroFin
 
 Fecha: 2026-07-05. El Sprint 6 cierra el tablero del MVP (`docs/finsmart_mvp_sprints.md`), pero eso no significa que el proyecto no tenga trabajo pendiente. Este documento lista, sin filtro de prioridad de negocio, todo lo que quedo fuera del alcance de este sprint y deberia decidirse conscientemente (hacerlo, posponerlo o aceptarlo como limitacion conocida del MVP).
 

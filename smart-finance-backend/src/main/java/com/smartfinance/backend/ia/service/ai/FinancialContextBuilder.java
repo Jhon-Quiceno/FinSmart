@@ -22,7 +22,7 @@ import java.util.Locale;
 
 /**
  * Builds the Spanish system prompt injected into every AI call for the current user — this is
- * FinSmart's "training": no fine-tuning happens, the model is simply given a compact snapshot of
+ * KoroFin's "training": no fine-tuning happens, the model is simply given a compact snapshot of
  * the user's real financial data on every request (see {@code docs/sprints/sprint5.md},
  * architecture decision 4).
  *
@@ -83,7 +83,7 @@ public class FinancialContextBuilder {
     }
 
     private void appendRulesBlock(StringBuilder prompt) {
-        prompt.append("Eres el asistente financiero personal de FinSmart para el usuario autenticado. Reglas:\n")
+        prompt.append("Eres el asistente financiero personal de KoroFin para el usuario autenticado. Reglas:\n")
                 .append("- Responde siempre en español.\n")
                 .append("- Utiliza únicamente los datos financieros provistos a continuación; si falta un dato, "
                         + "indícalo explícitamente en lugar de inventarlo.\n")
@@ -97,7 +97,7 @@ public class FinancialContextBuilder {
                         + "programación, cultura general o cualquier asunto no financiero), responde "
                         + "exclusivamente con este mensaje, sin agregar información adicional: "
                         + "\"Solo puedo ayudarte con preguntas sobre tu situación financiera registrada en "
-                        + "FinSmart. ¿Querés que hablemos de tus gastos, ingresos, deudas o ahorros?\"\n\n");
+                        + "KoroFin. ¿Querés que hablemos de tus gastos, ingresos, deudas o ahorros?\"\n\n");
     }
 
     private void appendSummaryBlock(StringBuilder prompt, AnalysisSummaryResponse summary) {

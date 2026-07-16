@@ -1,4 +1,4 @@
-# 📚 Documentación de FinSmart
+# 📚 Documentación de KoroFin
 
 > Plataforma inteligente de gestión financiera personal.
 > Stack: Java 21 + Spring Boot 4 · PostgreSQL · Next.js 16 · TypeScript · Tailwind CSS v4
@@ -39,7 +39,7 @@ docs/
 
 ## Propósito del Proyecto
 
-**FinSmart** permite a cualquier persona tener control total de su dinero desde un solo lugar: ingresos, gastos, deudas, servicios recurrentes, reportes y un asistente IA que analiza hábitos financieros y ofrece recomendaciones personalizadas.
+**KoroFin** permite a cualquier persona tener control total de su dinero desde un solo lugar: ingresos, gastos, deudas, servicios recurrentes, reportes y un asistente IA que analiza hábitos financieros y ofrece recomendaciones personalizadas.
 
 | Módulo | Descripción |
 |--------|-------------|
@@ -62,7 +62,7 @@ docs/
 | **Backend** | Java 21, Spring Boot 4.0, Spring Security, Spring Data JPA, Flyway |
 | **Base de datos** | PostgreSQL 16 |
 | **IA** | Multi-proveedor: NVIDIA NIM, OpenCode Zen, OpenRouter (OpenAI-compatible) |
-| **Notificaciones** | In-app + Email vía Brevo SMTP |
+| **Notificaciones** | In-app + Email vía Resend SMTP |
 | **DevOps** | Docker, docker-compose |
 
 ---
@@ -103,4 +103,4 @@ docs/
 
 ---
 
-*Documentación generada para el proyecto FinSmart — Julio 2026*
+*Documentación generada para el proyecto KoroFin — Julio 2026*

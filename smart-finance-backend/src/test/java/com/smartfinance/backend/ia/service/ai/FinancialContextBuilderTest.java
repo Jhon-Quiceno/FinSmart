@@ -79,7 +79,7 @@ class FinancialContextBuilderTest {
 
         Assertions.assertTrue(prompt.contains("Responde siempre en español"));
         Assertions.assertTrue(prompt.contains(
-                "Solo puedo ayudarte con preguntas sobre tu situación financiera registrada en FinSmart"));
+                "Solo puedo ayudarte con preguntas sobre tu situación financiera registrada en KoroFin"));
         Assertions.assertTrue(prompt.contains("5.000.000"), prompt);
         Assertions.assertTrue(prompt.contains("Comida"));
         Assertions.assertTrue(prompt.contains("Almuerzo"));

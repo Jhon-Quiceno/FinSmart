@@ -1,11 +1,11 @@
-# DESIGN.md — Sistema de Diseño FinSmart
+# DESIGN.md — Sistema de Diseño KoroFin
 
-Documento fuente de verdad del sistema visual de FinSmart, resultado del refactor de diseño en `feature/visual-polish-motion`. Pensado para portarse a desarrollo móvil (React Native / Flutter) manteniendo consistencia de marca.
+Documento fuente de verdad del sistema visual de KoroFin, resultado del refactor de diseño en `feature/visual-polish-motion`. Pensado para portarse a desarrollo móvil (React Native / Flutter) manteniendo consistencia de marca.
 
 ## 1. Identidad
 
-- **Nombre:** FinSmart — Gestión Financiera Inteligente
-- **Logo:** `public/logo_finsmart.svg` (ícono de línea de tendencia ascendente, verde)
+- **Nombre:** KoroFin — Gestión Financiera Inteligente
+- **Logo:** `public/logo_korofin.svg` (ícono de línea de tendencia ascendente, verde)
 - **Tono visual:** fintech "evolución pulida" — verde de marca sobre superficies neutras, sin gradientes genéricos de IA. Motion sutil, nunca protagonista.
 
 ## 2. Color — tokens OKLCH

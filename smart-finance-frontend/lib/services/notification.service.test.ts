@@ -69,7 +69,7 @@ describe("notification service", () => {
         id: 1,
         type: "SYSTEM",
         title: "Bienvenido",
-        message: "Gracias por usar FinSmart",
+        message: "Gracias por usar KoroFin",
         read: true,
         readAt: "2026-07-03T10:00:00Z",
         createdAt: "2026-07-01T10:00:00Z",

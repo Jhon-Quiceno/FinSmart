@@ -1,10 +1,7 @@
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./smart-finance-frontend/public/icon-dark-32x32.png">
-    <img src="./smart-finance-frontend/public/icon-light-32x32.png" alt="FinSmart Logo" width="80" height="80">
-  </picture>
+  <img src="./smart-finance-frontend/public/logo_korofin.svg" alt="KoroFin Logo" width="96" height="96">
 
-  <h1 align="center" style="font-size: 2.5rem; margin-top: 0.5rem;">FinSmart</h1>
+  <h1 align="center" style="font-size: 2.5rem; margin-top: 0.5rem;">KoroFin</h1>
 
   <p align="center">
     <strong>Plataforma Inteligente de Gestión Financiera Personal</strong>
@@ -35,9 +32,9 @@
 
 ---
 
-## 🚀 ¿Qué es FinSmart?
+## 🚀 ¿Qué es KoroFin?
 
-**FinSmart** no es solo un registro de gastos. Es tu **asistente financiero inteligente 24/7** que analiza tus hábitos, anticipa problemas y te da recomendaciones personalizadas para mejorar tu salud económica.
+**KoroFin** no es solo un registro de gastos. Es tu **asistente financiero inteligente 24/7** que analiza tus hábitos, anticipa problemas y te da recomendaciones personalizadas para mejorar tu salud económica.
 
 > Registra ingresos y gastos, controla deudas, gestiona servicios recurrentes, recibe alertas predictivas y consulta a un asistente IA que conoce TUS finanzas reales.
 
@@ -67,7 +64,7 @@
 
 ## 🧠 El problema que resolvemos
 
-Millones de personas no saben en qué gastan su dinero, manejan múltiples medios de pago sin consolidación, olvidan fechas de vencimiento y no tienen herramientas que analicen su comportamiento financiero. **FinSmart resuelve todo eso en un solo lugar.**
+Millones de personas no saben en qué gastan su dinero, manejan múltiples medios de pago sin consolidación, olvidan fechas de vencimiento y no tienen herramientas que analicen su comportamiento financiero. **KoroFin resuelve todo eso en un solo lugar.**
 
 <br />
 
@@ -141,7 +138,7 @@ Millones de personas no saben en qué gastan su dinero, manejan múltiples medio
 | OpenCode API | Fallback automático |
 | OpenRouter | Fallback secundario (DeepSeek R1) |
 | n8n | Automatización de workflows |
-| Brevo SMTP | Envío de correos transaccionales |
+| Resend SMTP | Envío de correos transaccionales |
 
 ### Infraestructura
 | Tecnología | Uso |
@@ -197,7 +194,7 @@ Millones de personas no saben en qué gastan su dinero, manejan múltiples medio
 - `WeeklySummaryJob` → Resumen semanal automático
 - `InactivityReminderJob` → Reactivación tras inactividad
 - `MonthEndPredictionJob` → Predicción de cierre de mes
-- `EmailNotificationSender` → Envío de emails vía Brevo SMTP
+- `EmailNotificationSender` → Envío de emails vía Resend SMTP
 
 ### 💾 Base de Datos (12 tablas + migraciones Flyway)
 ```
@@ -319,7 +316,7 @@ cd smart-finance-backend && ./mvnw test
 ## 📁 Estructura del Proyecto
 
 ```
-FinSmart/
+KoroFin/
 ├── smart-finance-frontend/      ← Next.js 16 App Router
 │   ├── app/                     ← Páginas (dashboard, ingresos, gastos, etc.)
 │   ├── components/              ← Componentes React (ui, dashboard, layout, etc.)
@@ -394,6 +391,6 @@ FinSmart/
   <sub>
     Construido con ❤️ y mucha 🧠 para transformar la manera en que las personas gestionan su dinero.
     <br />
-    <strong>FinSmart</strong> — <em>No es solo una app de finanzas. Es tu coach financiero personal.</em>
+    <strong>KoroFin</strong> — <em>No es solo una app de finanzas. Es tu coach financiero personal.</em>
   </sub>
 </div>
