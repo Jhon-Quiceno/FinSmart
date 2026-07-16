@@ -20,12 +20,12 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("FinSmart API")
+                        .title("KoroFin API")
                         .version("1.0.0")
                         .description("API de gesti\u00f3n financiera personal con inteligencia artificial")
                         .contact(new Contact()
-                                .name("FinSmart")
-                                .email("dev@finsmart.com")))
+                                .name("KoroFin")
+                                .email("dev@korofin.jhonqui.dev")))
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Local server"),
                         new Server().url(allowedOrigins).description("Frontend origin")

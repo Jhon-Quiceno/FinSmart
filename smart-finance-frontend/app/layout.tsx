@@ -12,18 +12,18 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "FinSmart - Plataforma Inteligente de Gestion Financiera",
+  title: "KoroFin - Plataforma Inteligente de Gestion Financiera",
   description:
     "Gestiona tus finanzas personales con inteligencia artificial. Registra ingresos, gastos, deudas y recibe recomendaciones personalizadas.",
   generator: "v0.app",
   icons: {
     icon: [
       {
-        url: "/logo_finsmart.svg",
+        url: "/logo_korofin.svg",
         type: "image/svg+xml",
       },
     ],
-    apple: "/logo_finsmart.svg",
+    apple: "/logo_korofin.svg",
   },
 }
 

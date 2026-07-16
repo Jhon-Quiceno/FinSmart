@@ -60,8 +60,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             <Link href="/" className="flex items-center gap-2" onClick={onClose}>
               <div className="flex h-8 w-8 items-center justify-center shrink-0">
                 <Image
-                  src="/logo_finsmart.svg"
-                  alt="FinSmart"
+                  src="/logo_korofin.svg"
+                  alt="KoroFin"
                   width={32}
                   height={32}
                   className="h-8 w-8"
@@ -69,7 +69,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                 />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
-                FinSmart
+                KoroFin
               </span>
             </Link>
             <button

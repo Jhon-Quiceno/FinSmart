@@ -1,4 +1,4 @@
-# Modelo de Datos — FinSmart
+# Modelo de Datos — KoroFin
 
 > **Propósito:** Describir el modelo entidad-relación, las migraciones Flyway y el esquema de base de datos.
 
@@ -237,4 +237,4 @@ expenses N──1 debt_payments (nullable)
 
 ---
 
-*Documento de modelo de datos — FinSmart MVP*
+*Documento de modelo de datos — KoroFin MVP*

@@ -1,4 +1,4 @@
-# Seguridad — FinSmart
+# Seguridad — KoroFin
 
 > **Propósito:** Describir el diseño de seguridad, autenticación JWT y manejo de sesiones.
 
@@ -6,7 +6,7 @@
 
 ## 1. Modelo de Autenticación
 
-FinSmart usa **JWT (JSON Web Tokens)** con un esquema de **doble token**:
+KoroFin usa **JWT (JSON Web Tokens)** con un esquema de **doble token**:
 
 | Token | Dónde vive | Duración | Propósito |
 |-------|-----------|----------|-----------|
@@ -141,4 +141,4 @@ OPENROUTER_API_KEY=sk-or-...
 
 ---
 
-*Documento de seguridad — FinSmart MVP*
+*Documento de seguridad — KoroFin MVP*

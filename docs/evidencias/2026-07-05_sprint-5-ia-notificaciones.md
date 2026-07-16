@@ -77,4 +77,4 @@ AiChatOrchestrator
 
 ## 6. Conclusión
 
-El Sprint 5 es el más complejo del MVP y entrega el valor diferencial de FinSmart: IA multi-proveedor con failover transparente, notificaciones inteligentes y automatizaciones que reemplazan la infraestructura externa (n8n). La arquitectura está diseñada para ser resiliente, testeable y extensible.
+El Sprint 5 es el más complejo del MVP y entrega el valor diferencial de KoroFin: IA multi-proveedor con failover transparente, notificaciones inteligentes y automatizaciones que reemplazan la infraestructura externa (n8n). La arquitectura está diseñada para ser resiliente, testeable y extensible.

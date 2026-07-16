@@ -1,4 +1,4 @@
-# Auditoria de arquitectura — FinSmart (post Sprint 6)
+# Auditoria de arquitectura — KoroFin (post Sprint 6)
 
 Fecha: 2026-07-05. Alcance: revision de arquitectura backend y frontend tras el cierre del Sprint 6 (ultimo sprint del MVP), realizada por agentes revisores en contexto limpio mas verificacion manual.
 

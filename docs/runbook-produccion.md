@@ -1,4 +1,4 @@
-# Runbook de producción — diagnóstico de problemas en FinSmart
+# Runbook de producción — diagnóstico de problemas en KoroFin
 
 Guía para analizar y resolver fallas en producción. El deploy es automático
 (push a `main` → GitHub Actions → Cloud Run, y Vercel → frontend), pero el

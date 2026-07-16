@@ -41,13 +41,54 @@ services:
       OPENCODE_MODEL: ${OPENCODE_MODEL}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL}
-      BREVO_SMTP_LOGIN: ${BREVO_SMTP_LOGIN}
-      BREVO_SMTP_KEY: ${BREVO_SMTP_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
       MAIL_FROM: ${MAIL_FROM}
     depends_on:
       db:
         condition: service_healthy
     restart: on-failure
 
+  n8n-db:
+    image: postgres:16-alpine
+    container_name: smart-finance-n8n-db
+    environment:
+      POSTGRES_DB: ${N8N_DB_NAME}
+      POSTGRES_USER: ${N8N_DB_USER}
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD}
+    volumes:
+      - n8n_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${N8N_DB_USER} -d ${N8N_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: smart-finance-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME}
+      DB_POSTGRESDB_USER: ${N8N_DB_USER}
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_SECURE_COOKIE: false
+      GENERIC_TIMEZONE: America/Bogota
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+    restart: on-failure
+
 volumes:
   postgres_data:
+  n8n_postgres_data:
+  n8n_data:

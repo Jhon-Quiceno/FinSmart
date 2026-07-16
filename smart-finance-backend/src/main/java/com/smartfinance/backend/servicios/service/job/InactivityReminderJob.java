@@ -92,9 +92,9 @@ public class InactivityReminderJob {
     }
 
     private void remindUser(Long userId, LocalDate lastActivity) {
-        String title = "Te extrañamos en FinSmart";
+        String title = "Te extrañamos en KoroFin";
         String message = "No has registrado ingresos ni gastos en los últimos días. "
-                + "Vuelve a FinSmart para mantener tus finanzas al día.";
+                + "Vuelve a KoroFin para mantener tus finanzas al día.";
         String activityLabel = lastActivity != null ? lastActivity.toString() : NEVER_ACTIVE_LABEL;
         String dedupeKey = "inactivity:" + userId + ":" + activityLabel;
 

@@ -1,12 +1,12 @@
-# Análisis de Requisitos — FinSmart
+# Análisis de Requisitos — KoroFin
 
-> **Propósito:** Definir los requisitos funcionales y no funcionales que guían el desarrollo de FinSmart.
+> **Propósito:** Definir los requisitos funcionales y no funcionales que guían el desarrollo de KoroFin.
 
 ---
 
 ## 1. Visión del Producto
 
-FinSmart es una plataforma web inteligente de gestión financiera personal que permite a los usuarios registrar, visualizar y analizar sus ingresos, gastos, deudas y servicios recurrentes. Integra un asistente IA multi-proveedor que ofrece recomendaciones personalizadas, predicciones y clasificación automática de gastos.
+KoroFin es una plataforma web inteligente de gestión financiera personal que permite a los usuarios registrar, visualizar y analizar sus ingresos, gastos, deudas y servicios recurrentes. Integra un asistente IA multi-proveedor que ofrece recomendaciones personalizadas, predicciones y clasificación automática de gastos.
 
 ---
 
@@ -139,7 +139,7 @@ FinSmart es una plataforma web inteligente de gestión financiera personal que p
 
 ```
 ┌──────────────────────────────────────┐
-│           FinSmart System            │
+│           KoroFin System              │
 │  ┌─────────────────────────────────┐ │
 │  │ Actor: Usuario (Autenticado)    │ │
 │  └─────────────────────────────────┘ │
@@ -185,4 +185,4 @@ FinSmart es una plataforma web inteligente de gestión financiera personal que p
 
 ---
 
-*Documento de requisitos — FinSmart MVP*
+*Documento de requisitos — KoroFin MVP*

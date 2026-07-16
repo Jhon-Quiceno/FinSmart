@@ -141,12 +141,12 @@ describe("report service", () => {
       mock.onGet("/api/reports/export", { params: { year: 2026, month: 7, format: "csv" } }).reply(
         200,
         blob,
-        { "content-disposition": 'attachment; filename="finsmart-2026-07.csv"' },
+        { "content-disposition": 'attachment; filename="korofin-2026-07.csv"' },
       )
 
       const result = await exportReport(2026, 7, "csv")
 
-      expect(result.filename).toBe("finsmart-2026-07.csv")
+      expect(result.filename).toBe("korofin-2026-07.csv")
       expect(result.blob).toBeInstanceOf(Blob)
     })
 
@@ -157,7 +157,7 @@ describe("report service", () => {
 
       const result = await exportReport(2026, 3, "json")
 
-      expect(result.filename).toBe("finsmart-2026-03.json")
+      expect(result.filename).toBe("korofin-2026-03.json")
     })
 
     it("defaults to csv format", async () => {
@@ -167,7 +167,7 @@ describe("report service", () => {
 
       const result = await exportReport(2026, 7)
 
-      expect(result.filename).toBe("finsmart-2026-07.csv")
+      expect(result.filename).toBe("korofin-2026-07.csv")
     })
 
     it("propagates a 500 server error", async () => {
