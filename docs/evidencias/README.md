@@ -1,6 +1,6 @@
-# 📋 Evidencias de Desarrollo — FinSmart
+# 📋 Evidencias de Desarrollo — KoroFin
 
-> **Propósito:** Consolidar la evidencia técnica del desarrollo de FinSmart, demostrando qué se implementó, por qué y cómo se verificó.
+> **Propósito:** Consolidar la evidencia técnica del desarrollo de KoroFin, demostrando qué se implementó, por qué y cómo se verificó.
 
 ---
 
@@ -72,4 +72,4 @@ Cada documento incluye las siguientes secciones:
 
 ---
 
-*Documento de evidencias — FinSmart MVP — Julio 2026*
+*Documento de evidencias — KoroFin MVP — Julio 2026*

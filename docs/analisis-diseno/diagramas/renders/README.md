@@ -1,4 +1,4 @@
-# Diagramas Renderizados — FinSmart
+# Diagramas Renderizados — KoroFin
 
 Esta carpeta contiene los diagramas renderizados en formato SVG, generados a partir de los archivos fuente PlantUML en `../puml/`.
 

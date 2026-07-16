@@ -1,6 +1,6 @@
 # Rediseño de deudas: de préstamo fijo a crédito rotativo
 
-Propuesta de diseño para soportar tarjetas de crédito reales en FinSmart.
+Propuesta de diseño para soportar tarjetas de crédito reales en KoroFin.
 Complementa el Nivel 1 de `docs/roadmap-saas-cuentas-reales.md`. **Estado: idea aprobada,
 pendiente de implementación** (la fase B debe diseñarse con SDD antes de codificar).
 

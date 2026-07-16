@@ -160,7 +160,7 @@ public class ReportController {
     }
 
     private static String buildContentDisposition(YearMonth period, String extension) {
-        return "attachment; filename=\"finsmart-" + period.getYear() + "-"
+        return "attachment; filename=\"korofin-" + period.getYear() + "-"
                 + String.format(Locale.ROOT, "%02d", period.getMonthValue()) + "." + extension + "\"";
     }
 

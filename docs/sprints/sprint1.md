@@ -1,4 +1,4 @@
-# Sprint 1 - Cargos de Deuda, Quick-Add con IA y Control de Uso (FinSmart SaaS)
+# Sprint 1 - Cargos de Deuda, Quick-Add con IA y Control de Uso (KoroFin SaaS)
 
 Este sprint abre la fase SaaS del proyecto (post-MVP): resuelve el dolor real de que la deuda de una tarjeta hoy solo puede bajar, conecta la IA de categorizacion que ya existe en el backend a un flujo de carga rapida, y agrega la base de control de uso/rate limiting necesaria antes de abrir el producto a mas usuarios. Es el primer sprint del tablero de la fase SaaS (12 tareas).
 

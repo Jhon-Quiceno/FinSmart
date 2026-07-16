@@ -1,4 +1,4 @@
-# Auditoria de base de datos — FinSmart (post Sprint 6)
+# Auditoria de base de datos — KoroFin (post Sprint 6)
 
 Fecha: 2026-07-05 (actualizado tras el seguimiento post-Sprint-6 que agrego `V12`). Motor: PostgreSQL, migrado con Flyway. Migraciones en `smart-finance-backend/src/main/resources/db/migration/`: `V1` a `V8`, `V10` a `V12` (12 archivos; no existe `V9` en el codigo fuente — ver seccion "Gap V9" mas abajo).
 

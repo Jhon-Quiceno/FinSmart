@@ -1,4 +1,4 @@
-# Canales de notificacion futuros (FinSmart)
+# Canales de notificacion futuros (KoroFin)
 
 Investigacion realizada en Sprint 5 (julio 2026). En el MVP se implementaron **notificaciones in-app** (tabla `notifications` + campana del navbar) y **email via Brevo SMTP** (300 emails/dia gratis permanente, sin dominio propio, solo verificacion de remitente unico). Este documento deja el detalle de los canales evaluados y NO implementados, para retomarlos despues sin re-investigar.
 
@@ -8,8 +8,8 @@ Investigacion realizada en Sprint 5 (julio 2026). En el MVP se implementaron **n
 |-------|----------|------------------|------------|-----------|
 | Web Push (VAPID) | M-L | Si (infra gratis) | HTTPS en prod, service worker, tabla de suscripciones | **Mejor candidato futuro** |
 | Telegram Bot | S | Si (~1 msg/seg/chat) | Usuario debe iniciar el bot; capturar `chat_id` | **Segundo candidato** |
-| Resend (email) | S-M | Limitado sin dominio (100/dia solo a tu propio inbox) | Dominio verificado (DNS) | Cuando FinSmart tenga dominio |
-| Mailtrap (email) | S-M | Limitado sin dominio (150/dia) | Dominio con SPF/DKIM/DMARC | Cuando FinSmart tenga dominio |
+| Resend (email) | S-M | Limitado sin dominio (100/dia solo a tu propio inbox) | Dominio verificado (DNS) | Cuando KoroFin tenga dominio |
+| Mailtrap (email) | S-M | Limitado sin dominio (150/dia) | Dominio con SPF/DKIM/DMARC | Cuando KoroFin tenga dominio |
 | SendGrid | S | **No** — el plan gratis termino en 2025 | — | Descartado |
 | Gmail SMTP directo | S | Funciona pero con riesgo | App password; ~500 destinatarios/24h | Riesgo ToS/entregabilidad; Brevo es mejor |
 | WhatsApp Cloud API | M-L | **No** — cobra desde el mensaje #1 (jul-2025), ~$0.025-$0.12/msg | Verificacion de negocio en Meta | Solo si hay presupuesto |
@@ -40,11 +40,11 @@ API gratuita, sin SDK: un POST a `https://api.telegram.org/bot{token}/sendMessag
   3. Vinculacion: en `/configuracion`, mostrar link `t.me/{bot}?start={codigo-unico}`; un job o webhook procesa los updates del bot (`getUpdates` o webhook HTTPS) y asocia el `chat_id` al usuario por el codigo.
   4. Adaptador `TelegramAdapter` sobre el puerto `NotificationSender` (RestClient, sin dependencias nuevas).
 - **Tradeoff UX:** el usuario tiene que tener Telegram y arrancar el bot; la vinculacion `chat_id` ↔ usuario es el 80% del trabajo.
-- **Limites:** ~1 mensaje/segundo por chat, 30 msg/seg global — sobrado para FinSmart.
+- **Limites:** ~1 mensaje/segundo por chat, 30 msg/seg global — sobrado para KoroFin.
 
 ## 3. Email con dominio propio (Resend / Mailtrap)
 
-Cuando FinSmart tenga dominio, Resend (100/dia gratis, DX excelente) o Mailtrap (150/dia) con DNS verificado (SPF/DKIM/DMARC) dan mejor entregabilidad y branding que Brevo con remitente unico. La migracion es trivial: cambiar host/credenciales SMTP en las mismas propiedades `spring.mail.*` — el `BrevoEmailAdapter` no cambia (renombrarlo a `SmtpEmailAdapter` si se generaliza).
+Cuando KoroFin tenga dominio, Resend (100/dia gratis, DX excelente) o Mailtrap (150/dia) con DNS verificado (SPF/DKIM/DMARC) dan mejor entregabilidad y branding que Brevo con remitente unico. La migracion es trivial: cambiar host/credenciales SMTP en las mismas propiedades `spring.mail.*` — el `BrevoEmailAdapter` no cambia (renombrarlo a `SmtpEmailAdapter` si se generaliza).
 
 ## 4. WhatsApp — solo con presupuesto
 

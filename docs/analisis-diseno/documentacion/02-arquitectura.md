@@ -1,4 +1,4 @@
-# Arquitectura del Sistema — FinSmart
+# Arquitectura del Sistema — KoroFin
 
 > **Propósito:** Describir la arquitectura general del sistema, las capas, los patrones utilizados y las decisiones técnicas fundamentales.
 
@@ -6,7 +6,7 @@
 
 ## 1. Visión General
 
-FinSmart sigue una arquitectura **monolítica modular** con frontend y backend separados, comunicados via REST API. El backend implementa **Clean Architecture** con capas bien definidas, y el frontend usa **Next.js App Router** con componentes server-side y client-side según corresponda.
+KoroFin sigue una arquitectura **monolítica modular** con frontend y backend separados, comunicados via REST API. El backend implementa **Clean Architecture** con capas bien definidas, y el frontend usa **Next.js App Router** con componentes server-side y client-side según corresponda.
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -173,7 +173,7 @@ El `AiChatOrchestrator` implementa failover automático:
 
 ### 4.4 Notificaciones Degradables
 
-El sistema de email (Brevo SMTP) está diseñado para fallar sin afectar la experiencia:
+El sistema de email (Resend SMTP) está diseñado para fallar sin afectar la experiencia:
 
 - Envío async con `@Async`
 - Si no hay credenciales SMTP, solo funcionan notificaciones in-app
@@ -224,4 +224,4 @@ El sistema de email (Brevo SMTP) está diseñado para fallar sin afectar la expe
 
 ---
 
-*Documento de arquitectura — FinSmart MVP*
+*Documento de arquitectura — KoroFin MVP*

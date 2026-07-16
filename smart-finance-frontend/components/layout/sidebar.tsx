@@ -53,8 +53,8 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
             <Link href="/" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center shrink-0">
                 <Image
-                  src="/logo_finsmart.svg"
-                  alt="FinSmart"
+                  src="/logo_korofin.svg"
+                  alt="KoroFin"
                   width={32}
                   height={32}
                   className="h-8 w-8"
@@ -62,15 +62,15 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
                 />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
-                FinSmart
+                KoroFin
               </span>
             </Link>
           )}
           {collapsed && (
             <div className="flex items-center justify-center mx-auto">
               <Image
-                src="/logo_finsmart.svg"
-                alt="FinSmart"
+                src="/logo_korofin.svg"
+                alt="KoroFin"
                 width={32}
                 height={32}
                 className="h-8 w-8"

@@ -56,4 +56,4 @@ Todo ejecutado dentro del mismo `@Transactional(readOnly = true)`.
 
 ## 5. Conclusión
 
-El Sprint 4 convierte a FinSmart de un simple registrador de datos a una plataforma con inteligencia analítica. El dashboard ofrece una visión completa de la salud financiera del usuario con datos en tiempo real, alertas y recomendaciones prácticas.
+El Sprint 4 convierte a KoroFin de un simple registrador de datos a una plataforma con inteligencia analítica. El dashboard ofrece una visión completa de la salud financiera del usuario con datos en tiempo real, alertas y recomendaciones prácticas.

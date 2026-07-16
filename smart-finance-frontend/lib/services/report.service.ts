@@ -42,7 +42,7 @@ function resolveFilename(
     return match[1]
   }
 
-  return `finsmart-${year}-${String(month).padStart(2, "0")}.${format}`
+  return `korofin-${year}-${String(month).padStart(2, "0")}.${format}`
 }
 
 /**

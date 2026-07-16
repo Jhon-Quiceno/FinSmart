@@ -1,7 +1,7 @@
 @startuml
 !theme plain
 
-title Arquitectura General - FinSmart
+title Arquitectura General - KoroFin
 
 skinparam componentStyle rectangle
 skinparam backgroundColor #FEFEFE

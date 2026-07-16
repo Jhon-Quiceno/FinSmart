@@ -1,4 +1,4 @@
-# 🏗️ Análisis y Diseño — FinSmart
+# 🏗️ Análisis y Diseño — KoroFin
 
 > Documentación de arquitectura, modelo de datos, API, seguridad y diseño del asistente IA.
 
