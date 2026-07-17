@@ -438,12 +438,13 @@ puntual — es una limitación de plataforma real, no un compromiso técnico evi
 Fusiona el orden de 6 pasos de la investigación SaaS con los 3 niveles de cuentas reales
 en una sola secuencia priorizada:
 
-1. **Ahora — `docs/sprints/sprint1.md`, bajo esfuerzo y alto impacto:**
-   1. Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de hoy.
-   2. Quick-add + parser de texto conectado a `categorize()`/`useCategorize()`, y cerrar
-      la brecha de que `income-modal.tsx` no tiene la sugerencia de categoría que
-      `expense-modal.tsx` ya tiene.
-   3. Tracking de uso de IA (`ai_usage_events`) y rate limiting — necesarios antes de
+1. **`docs/sprints/sprint1.md`, bajo esfuerzo y alto impacto — HECHO (2026-07-16,
+   `feature/sprint-1-debt-charges-quick-add-ai-usage`, pendiente de merge a `develop`):**
+   1. ✅ Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de hoy.
+   2. ✅ Quick-add + parser de texto conectado a `categorize()`/`useCategorize()`, y cerrada
+      la brecha de que `income-modal.tsx` no tenía la sugerencia de categoría que
+      `expense-modal.tsx` ya tenía.
+   3. ✅ Tracking de uso de IA (`ai_usage_events`) y rate limiting — necesarios antes de
       abrir el producto a más usuarios.
 2. **Corto plazo, en paralelo (ítems operativos ya en curso, no bloquean lo anterior):**
    dominio de GitHub Students → activación de Resend (DKIM/SPF sobre `korofin.jhonqui.dev`,
@@ -504,11 +505,11 @@ en una sola secuencia priorizada:
 3. **PR `develop` → `main`** (en pausa hasta completar 1 y 2) + limpieza de ramas.
 4. **Primer flujo real de n8n** (bot de Telegram para registrar gastos) — la
    infraestructura Docker local ya está lista, falta construir el flujo.
-5. **`docs/sprints/sprint1.md`** (próximo paso ejecutable de producto): Fase A del
-   rediseño de deudas, quick-add conectado a la IA existente, y tracking de uso de
-   IA/rate limiting.
+5. ✅ **`docs/sprints/sprint1.md`** — HECHO (2026-07-16): Fase A del rediseño de deudas,
+   quick-add conectado a la IA existente, y tracking de uso de IA/rate limiting. Falta
+   mergear `feature/sprint-1-debt-charges-quick-add-ai-usage` a `develop`.
 6. **Nivel 1 completo de este documento**: dominio de cuentas/tarjetas — Fase B (tarjeta
-   rotativa con SDD), una vez validada la Fase A.
+   rotativa con SDD), una vez validada la Fase A (ya validada por el usuario en sprint1).
 
 ### Backlog técnico (sin urgencia)
 
