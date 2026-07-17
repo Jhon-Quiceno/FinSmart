@@ -6,6 +6,7 @@ import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
 import com.smartfinance.backend.ia.repository.AiUsageEventRepository;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.usuario.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -36,6 +39,11 @@ class AiUsageEventServiceTest {
 
     @InjectMocks
     private AiUsageEventService service;
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void recordShouldPersistUsageEventWithGivenFields() {
@@ -112,6 +120,22 @@ class AiUsageEventServiceTest {
         Assertions.assertEquals(0, summary.totalTokens());
         Assertions.assertEquals(0, summary.totalEvents());
         Assertions.assertTrue(summary.eventsByType().isEmpty());
+    }
+
+    @Test
+    void getUsageSummaryWithoutUserIdResolvesCurrentAuthenticatedUser() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(1L, null)
+        );
+        YearMonth period = YearMonth.of(2026, 7);
+        when(usageEventRepository.aggregateByEventType(eq(1L), any(), any())).thenReturn(List.of(
+                aggregate(AiUsageEventType.CHAT, 1, 100)
+        ));
+
+        AiUsageEventSummaryResponse summary = service.getUsageSummary(period);
+
+        Assertions.assertEquals(100, summary.totalTokens());
+        Assertions.assertEquals(1, summary.totalEvents());
     }
 
     private static AiUsageEventRepository.AiUsageEventTypeAggregate aggregate(AiUsageEventType type, long count, long tokens) {

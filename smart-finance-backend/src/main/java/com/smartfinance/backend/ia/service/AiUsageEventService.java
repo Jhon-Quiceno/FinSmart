@@ -1,5 +1,6 @@
 package com.smartfinance.backend.ia.service;
 
+import com.smartfinance.backend.common.security.SecurityUtils;
 import com.smartfinance.backend.ia.model.dto.AiUsageEventSummaryResponse;
 import com.smartfinance.backend.ia.model.entity.AiUsageEvent;
 import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
@@ -65,6 +66,16 @@ public class AiUsageEventService {
         } catch (RuntimeException ex) {
             log.warn("ai_usage_event_tracking_failed userId={} provider={} eventType={}", userId, provider, eventType, ex);
         }
+    }
+
+    /**
+     * Summarizes the current authenticated user's tracked AI usage for the given UTC calendar
+     * month. Convenience overload for {@code AiUsageEventController} — mirrors the pattern where
+     * controllers never call {@link SecurityUtils} directly (see {@code AiChatService#getUsage}).
+     */
+    @Transactional(readOnly = true)
+    public AiUsageEventSummaryResponse getUsageSummary(YearMonth period) {
+        return getUsageSummary(SecurityUtils.getCurrentUserId(), period);
     }
 
     /**
