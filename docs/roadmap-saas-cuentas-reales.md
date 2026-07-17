@@ -54,16 +54,16 @@ financieros (tarjetas de crédito, cuentas de ahorro) y asocia sus movimientos a
 
 **Costo:** cero terceros, cero regulación. Es puro modelado de dominio.
 
-### 1.1 Rediseño de deudas: de préstamo fijo a crédito rotativo
+### 1.1 Rediseño de deudas: de préstamo fijo a crédito rotativo — ✅ HECHO (2026-07-17)
 
-> Diseño completo (modelo, reglas de negocio, fases y decisiones abiertas) en
-> **[`docs/rediseno-deudas-tarjetas.md`](rediseno-deudas-tarjetas.md)**. Esta sección es un
-> resumen — no lo dupliques, andá al archivo original para el detalle.
+> El diseño completo (modelo, reglas de negocio, decisiones abiertas ya resueltas) vivía en
+> `docs/rediseno-deudas-tarjetas.md` — eliminado tras cerrar Fase A y Fase B (mismo criterio
+> que los sprints del MVP: el detalle queda en el historial de git, no como archivo vivo).
 
-El modelo actual (`Debt` con `totalAmount`/`remainingAmount` que solo baja con
-`DebtPayment`) representa un **préstamo**: nace con un monto y solo disminuye. Una tarjeta
-de crédito es **crédito rotativo**: la deuda sube con cada compra, baja con cada pago y
-genera intereses según cómo se difiera cada compra.
+El modelo anterior (`Debt` con `totalAmount`/`remainingAmount` que solo bajaba con
+`DebtPayment`) representaba un **préstamo**: nacía con un monto y solo disminuía. Una
+tarjeta de crédito es **crédito rotativo**: la deuda sube con cada compra, baja con cada
+pago y genera intereses según cómo se difiera cada compra.
 
 **Principio de diseño: la deuda no se edita, se deriva.** El saldo nunca es un campo que
 alguien modifica a mano; es el resultado de un libro de movimientos (ledger). Trazabilidad
@@ -91,15 +91,15 @@ saldo actual = Σ movimientos     (nunca un campo editable)
   compra de TV +$700.000 a 3 cuotas ⇒ saldo = **$1.975.000**, más 3 cuotas de ~$233.333 de
   capital con interés sobre el saldo pendiente de esa compra específica.
 
-**Implementación en dos fases:**
+**Implementación en dos fases — ambas hechas:**
 
-| Fase | Alcance | Esfuerzo |
-|------|---------|----------|
-| **A — cargos en deudas** | `DebtCharge` (espejo de `DebtPayment` con signo +): la deuda existente puede subir. No rompe nada del modelo ni la API actual. Resuelve el dolor de hoy. | Bajo |
-| **B — dominio tarjetas** | `CreditCard` + ledger + plan de cuotas + ciclo de corte + intereses. La Fase A migra naturalmente: una `Debt` de tipo tarjeta pasa a derivar su saldo del ledger. Requiere **proposal, spec y design con SDD antes de una línea de código** — decisiones abiertas: amortización francesa vs. capital fijo (validar contra extractos reales), materialización de intereses al cierre de ciclo vs. cálculo on-the-fly, migración/convivencia de tipos de deuda, vínculo `CardMovement`↔`Expense`. | Medio/alto — SDD |
+| Fase | Alcance | Esfuerzo | Estado |
+|------|---------|----------|--------|
+| **A — cargos en deudas** | `DebtCharge` (espejo de `DebtPayment` con signo +): la deuda existente puede subir. No rompe nada del modelo ni la API actual. | Bajo | ✅ sprint1, PR #82 |
+| **B — dominio tarjetas** | `CreditCard` + `CardMovement` (ledger) + `InstallmentPlan`/`Installment` (cuotas, capital fijo, interés decreciente por compra) + `CardCycleCloseJob` (cierre de ciclo, idempotente, con catch-up) + integración con `debtRatio`. `Debt` y `CreditCard` **coexisten** como modelos separados (sin migración de datos). Diseñada con SDD completo (proposal→spec→design→tasks, revisión con contexto fresco antes de tasks). | Medio/alto | ✅ 7 PRs encadenadas (#83-#89), dominio `tarjetas/` completo backend+frontend |
 
-La Fase A es la primera tarea de `docs/sprints/sprint1.md`. La Fase B queda fuera de
-sprint1 y arranca con `/sdd-new` cuando se decida priorizarla.
+Ambas fases resuelven el dolor original: "la deuda de mi tarjeta solo puede bajar" (Fase A)
+y el modelo completo de crédito rotativo con cuotas e intereses reales (Fase B).
 
 ---
 
@@ -468,7 +468,10 @@ en una sola secuencia priorizada:
    - [ ] Tests de componentes
    - [ ] Resto del backlog técnico de las tablas de mejoras pendientes
 6. **Al final:**
-   - [ ] Fase B del dominio de tarjetas (`CreditCard` + ledger + ciclos) — diseño con SDD.
+   - [x] Fase B del dominio de tarjetas (`CreditCard` + ledger + ciclos) — diseñada con SDD
+     y completa (2026-07-17, 7 PRs encadenadas #83-#89). Se adelantó respecto al orden
+     original (estaba planeada para "el final") porque se priorizó cerrarla junto con
+     Fase A en la misma sesión de trabajo.
    - [ ] App móvil React Native, empezando por paridad (v1) y recién en v2 la automatización
      por notificaciones en Android.
 
@@ -488,6 +491,8 @@ en una sola secuencia priorizada:
 | Emails Brevo: diagnóstico completo (IP autorizada → remitente verificado → cuenta requiere activación manual; Brevo pidió dominio propio); Brevo terminó bloqueando la cuenta y nunca la activó. **Decisión (2026-07-16): abandonar Brevo, migrar a Resend.** Dominio `korofin.jhonqui.dev` verificado en Resend, `MAIL_FROM` sobre el dominio propio, correo con template HTML con marca. | `main` (PR #80, commit `05ddc02`) |
 | Secrets de Resend (`RESEND_API_KEY`, `MAIL_FROM`) cargados en GitHub Actions (verificado con `gh secret list`, actualizados 2026-07-16) | GitHub Actions |
 | PR `develop` → `main` (PR #81) — el trabajo de `chore/inicio-fase-saas` (rebrand a KoroFin, migración a Resend, n8n en Docker) ya está en producción | `main` |
+| Sprint1 completo: Fase A de deudas (`DebtCharge`), quick-add con IA, tracking de uso de IA + rate limiting (PR #82) | `develop` |
+| Fase B del dominio de tarjetas completa: `CreditCard` + `CardMovement` (ledger) + `InstallmentPlan`/`Installment` (amortización capital fijo, interés decreciente por compra) + `CardCycleCloseJob` (cierre de ciclo idempotente con catch-up) + integración con `debtRatio` + UI completa. Diseñada con SDD (proposal→spec→design→tasks, revisión con contexto fresco antes de tasks — encontró y cerró 3 riesgos reales: capital negativo en cuotas, catch-up del job de cierre, laguna de alcance de interés rotativo). 7 PRs encadenadas stacked-to-main (#83-#89), 0 hallazgos de seguridad de alta confianza. | `develop` |
 | Decisión: mantener módulo de IA custom, no migrar a Spring AI (revisar si llega streaming/tools/RAG) | Documentada |
 | Decisión: n8n solo para canales e integraciones (patrón backend→webhook→n8n); la lógica de negocio queda en el backend | Documentada |
 | **n8n integrado en Docker local (hoy, 2026-07-14)**: servicio `n8n-db` (Postgres dedicado, separado del `db` del backend, sin puerto publicado al host — solo accesible dentro de la red de `docker-compose`) para persistencia propia de n8n. n8n corriendo en `http://localhost:5678`. | `chore/inicio-fase-saas` |
@@ -512,8 +517,8 @@ en una sola secuencia priorizada:
 - [ ] **Primer flujo real de n8n** (bot de Telegram para registrar gastos) — la
   infraestructura Docker local ya está lista y la cuenta de n8n ya se creó
   (2026-07-16/17), falta construir el flujo.
-- [ ] **Nivel 1 completo de este documento**: dominio de cuentas/tarjetas — Fase B (tarjeta
-  rotativa con SDD), una vez validada la Fase A (ya validada por el usuario en sprint1).
+- [x] **Nivel 1 completo de este documento**: dominio de cuentas/tarjetas — Fase A (sprint1,
+  PR #82) y Fase B (tarjeta rotativa con SDD, PRs #83-#89) ambas hechas y en `develop`.
 - [ ] **Integración de correo (Gmail API + Pub/Sub)** — todavía no arrancó. Es el paso
   "mediano plazo" del orden recomendado, después del Nivel 2 (extractos bancarios); no es
   parte de sprint1. Ver sección "Automatización con IA de correo/SMS/notificaciones" más
