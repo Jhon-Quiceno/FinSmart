@@ -8,7 +8,9 @@ import com.smartfinance.backend.common.security.JwtService;
 import com.smartfinance.backend.tarjetas.model.dto.CardMovementResponse;
 import com.smartfinance.backend.tarjetas.model.dto.CardPaymentRequest;
 import com.smartfinance.backend.tarjetas.model.dto.CardPurchaseRequest;
+import com.smartfinance.backend.tarjetas.model.dto.InstallmentResponse;
 import com.smartfinance.backend.tarjetas.model.entity.CardMovementType;
+import com.smartfinance.backend.tarjetas.model.entity.InstallmentStatus;
 import com.smartfinance.backend.tarjetas.service.CardMovementService;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -71,6 +73,11 @@ class CardMovementControllerTest {
             "Pago mensual", BigDecimal.valueOf(120_000), null, null, null
     );
 
+    private final CardMovementResponse installmentPurchase = new CardMovementResponse(
+            6L, 10L, CardMovementType.INSTALLMENT_PURCHASE, BigDecimal.valueOf(700_000), LocalDate.of(2026, 6, 1),
+            "TV", BigDecimal.valueOf(700_000), 88L, 42L, null
+    );
+
     @BeforeEach
     void setUp() {
         Claims mockClaims = org.mockito.Mockito.mock(Claims.class);
@@ -122,10 +129,27 @@ class CardMovementControllerTest {
     }
 
     @Test
-    void registerPurchaseReturns400WhenInstallmentsRequested() throws Exception {
-        CardPurchaseRequest request = new CardPurchaseRequest(BigDecimal.valueOf(700_000), null, null, 3);
+    void registerPurchaseReturns201WhenInstallmentPurchase() throws Exception {
+        CardPurchaseRequest request = new CardPurchaseRequest(BigDecimal.valueOf(700_000), LocalDate.of(2026, 6, 1), "TV", 3);
+        when(cardMovementService.registerPurchase(eq(10L), any(CardPurchaseRequest.class))).thenReturn(installmentPurchase);
+
+        mockMvc.perform(post("/api/cards/10/purchases")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(6L))
+                .andExpect(jsonPath("$.type").value("INSTALLMENT_PURCHASE"))
+                .andExpect(jsonPath("$.installmentPlanId").value(42L))
+                .andExpect(jsonPath("$.expenseId").value(88L));
+    }
+
+    @Test
+    void registerPurchaseReturns400WhenAmortizationRejectsAmountTooLowForInstallmentCount() throws Exception {
+        CardPurchaseRequest request = new CardPurchaseRequest(new BigDecimal("0.35"), null, null, 48);
         when(cardMovementService.registerPurchase(eq(10L), any(CardPurchaseRequest.class)))
-                .thenThrow(new IllegalArgumentException("Las compras a cuotas todavía no están disponibles"));
+                .thenThrow(new IllegalArgumentException("El monto de la compra es demasiado bajo para la cantidad de cuotas seleccionada"));
 
         mockMvc.perform(post("/api/cards/10/purchases")
                         .header("Authorization", AUTH_HEADER)
@@ -222,6 +246,40 @@ class CardMovementControllerTest {
                 .thenThrow(new ResourceNotFoundException("Tarjeta no encontrada"));
 
         mockMvc.perform(get("/api/cards/99/movements").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getInstallmentsReturns200WithScheduleOrderedByNumber() throws Exception {
+        List<InstallmentResponse> schedule = List.of(
+                new InstallmentResponse(1L, 1, BigDecimal.valueOf(233_333.33), BigDecimal.valueOf(14_700), LocalDate.of(2026, 6, 15), InstallmentStatus.PENDING),
+                new InstallmentResponse(2L, 2, BigDecimal.valueOf(233_333.33), BigDecimal.valueOf(9_800), LocalDate.of(2026, 7, 15), InstallmentStatus.PENDING),
+                new InstallmentResponse(3L, 3, BigDecimal.valueOf(233_333.34), BigDecimal.valueOf(4_900), LocalDate.of(2026, 8, 15), InstallmentStatus.PENDING)
+        );
+        when(cardMovementService.getInstallments(10L, 6L)).thenReturn(schedule);
+
+        mockMvc.perform(get("/api/cards/10/movements/6/installments").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].number").value(1))
+                .andExpect(jsonPath("$[2].number").value(3));
+    }
+
+    @Test
+    void getInstallmentsReturns404WhenCardBelongsToAnotherUser() throws Exception {
+        when(cardMovementService.getInstallments(99L, 6L))
+                .thenThrow(new ResourceNotFoundException("Tarjeta no encontrada"));
+
+        mockMvc.perform(get("/api/cards/99/movements/6/installments").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getInstallmentsReturns404WhenMovementHasNoInstallmentPlan() throws Exception {
+        when(cardMovementService.getInstallments(10L, 999L))
+                .thenThrow(new ResourceNotFoundException("Plan de cuotas no encontrado"));
+
+        mockMvc.perform(get("/api/cards/10/movements/999/installments").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound());
     }
 
