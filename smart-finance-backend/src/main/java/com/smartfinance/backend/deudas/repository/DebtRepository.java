@@ -51,6 +51,28 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     int decrementRemainingAmount(@Param("id") Long id, @Param("amount") BigDecimal amount);
 
     /**
+     * Atomically increments {@code remainingAmount}, the mirror of
+     * {@link #decrementRemainingAmount} used by {@code DebtChargeService#createCharge} when a
+     * charge (compra) is recorded against a debt. Unlike the decrement, this has no guard
+     * clause: {@link Debt} does not yet have a credit-limit field, so Fase A of the debt
+     * redesign does not validate a cap here (see {@code docs/rediseno-deudas-tarjetas.md},
+     * section 4).
+     *
+     * <p>{@code clearAutomatically = true} detaches the persistence context after this bulk
+     * update, so the caller's subsequent read of the {@link Debt} (needed to return the updated
+     * {@code remainingAmount} in the response) goes back to the database instead of returning a
+     * stale first-level-cache entity. This also prevents Hibernate's automatic dirty-checking
+     * flush from later overwriting {@code remainingAmount} with a value computed in Java, which
+     * would reintroduce the same lost-update race this atomic {@code UPDATE} exists to avoid.
+     *
+     * @return {@code 1} if the increment was applied, {@code 0} if the debt no longer exists
+     *         (e.g. deleted concurrently between the caller's ownership check and this update)
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Debt d SET d.remainingAmount = d.remainingAmount + :amount WHERE d.id = :id")
+    int incrementRemainingAmount(@Param("id") Long id, @Param("amount") BigDecimal amount);
+
+    /**
      * Sums {@code remainingAmount} across every debt owned by the user, used by
      * {@code FinancialAnalysisService} as "total debt" for the debt-ratio calculation. There is
      * no {@code status}/{@code isActive} flag on {@link Debt} (see the class Javadoc) — a debt

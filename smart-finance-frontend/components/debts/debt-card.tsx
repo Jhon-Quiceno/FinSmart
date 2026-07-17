@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, Calendar, CreditCard, History, MoreVertical, Pencil, Percent, Trash2, Wallet } from "lucide-react"
+import { AlertTriangle, Calendar, CreditCard, History, MoreVertical, Pencil, Percent, Plus, Trash2, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ interface DebtCardProps {
   onEdit: (debt: Debt) => void
   onDelete: (debt: Debt) => void
   onRegisterPayment: (debt: Debt) => void
+  onRegisterCharge: (debt: Debt) => void
   onViewHistory: (debt: Debt) => void
 }
 
@@ -30,7 +31,7 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
 }
 
-export function DebtCard({ debt, onEdit, onDelete, onRegisterPayment, onViewHistory }: DebtCardProps) {
+export function DebtCard({ debt, onEdit, onDelete, onRegisterPayment, onRegisterCharge, onViewHistory }: DebtCardProps) {
   const paidAmount = debt.totalAmount - debt.remainingAmount
   const progress = debt.totalAmount > 0 ? Math.min(Math.max((paidAmount / debt.totalAmount) * 100, 0), 100) : 0
   const isPaidOff = debt.remainingAmount <= 0
@@ -132,15 +133,25 @@ export function DebtCard({ debt, onEdit, onDelete, onRegisterPayment, onViewHist
         </div>
       </div>
 
-      <Button
-        variant="outline"
-        className="mt-4 w-full border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-        onClick={() => onRegisterPayment(debt)}
-        disabled={isPaidOff}
-      >
-        <Wallet className="h-4 w-4" />
-        {isPaidOff ? "Deuda saldada" : "Registrar pago"}
-      </Button>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          className="border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
+          onClick={() => onRegisterPayment(debt)}
+          disabled={isPaidOff}
+        >
+          <Wallet className="h-4 w-4" />
+          {isPaidOff ? "Deuda saldada" : "Registrar pago"}
+        </Button>
+        <Button
+          variant="outline"
+          className="border-warning/30 bg-warning/5 text-warning hover:bg-warning/10"
+          onClick={() => onRegisterCharge(debt)}
+        >
+          <Plus className="h-4 w-4" />
+          Registrar cargo
+        </Button>
+      </div>
     </div>
   )
 }

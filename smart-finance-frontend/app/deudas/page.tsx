@@ -19,14 +19,18 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Skeleton } from "@/components/ui/skeleton"
 import { DebtCard } from "@/components/debts/debt-card"
 import { DebtModal } from "@/components/debts/debt-modal"
+import { DebtChargeModal } from "@/components/debts/debt-charge-modal"
 import { DebtPaymentModal } from "@/components/debts/debt-payment-modal"
 import { DebtPaymentHistoryDialog } from "@/components/debts/debt-payment-history-dialog"
 import { useCreateDebt, useDebts, useDeleteDebt, useUpdateDebt } from "@/hooks/use-debts"
+import { useCreateDebtCharge } from "@/hooks/use-debt-charges"
 import { useCreateDebtPayment } from "@/hooks/use-debt-payments"
 import { toastApiError } from "@/lib/api-client"
 import type { DebtFormValues } from "@/lib/schemas/debt.schema"
+import type { DebtChargeFormValues } from "@/lib/schemas/debt-charge.schema"
 import type { DebtPaymentFormValues } from "@/lib/schemas/debt-payment.schema"
 import type { Debt, DebtCreateRequest, DebtUpdateRequest } from "@/lib/types/debt"
+import type { DebtChargeRequest } from "@/lib/types/debt-charge"
 import type { DebtPaymentRequest } from "@/lib/types/debt-payment"
 
 const pageSize = 9
@@ -37,6 +41,7 @@ export default function DeudasPage() {
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null)
   const [deletingDebt, setDeletingDebt] = useState<Debt | null>(null)
   const [payingDebt, setPayingDebt] = useState<Debt | null>(null)
+  const [chargingDebt, setChargingDebt] = useState<Debt | null>(null)
   const [historyDebt, setHistoryDebt] = useState<Debt | null>(null)
 
   const { debts, isLoading, error } = useDebts({ page: page - 1, size: pageSize })
@@ -45,6 +50,7 @@ export default function DeudasPage() {
   const { updateDebt, isLoading: isUpdating } = useUpdateDebt()
   const { deleteDebt, isLoading: isDeleting } = useDeleteDebt()
   const { createDebtPayment, isLoading: isPaying } = useCreateDebtPayment()
+  const { createDebtCharge, isLoading: isCharging } = useCreateDebtCharge()
 
   useEffect(() => {
     if (error) {
@@ -57,8 +63,11 @@ export default function DeudasPage() {
     () => debts.content.reduce((sum, debt) => sum + debt.remainingAmount, 0),
     [debts.content],
   )
-  const totalPaid = totalDebt - totalRemaining
-  const overallProgress = totalDebt > 0 ? (totalPaid / totalDebt) * 100 : 0
+  // Con DebtCharge (Fase A) remainingAmount puede superar totalAmount (compras nuevas),
+  // asi que "pagado" nunca puede ser negativo: eso solo significa que aun no se ha pagado nada
+  // de los cargos recientes, no un pago negativo.
+  const totalPaid = Math.max(totalDebt - totalRemaining, 0)
+  const overallProgress = totalDebt > 0 ? Math.min(Math.max((totalPaid / totalDebt) * 100, 0), 100) : 0
 
   const handleSubmit = async (values: DebtFormValues): Promise<boolean> => {
     try {
@@ -118,6 +127,28 @@ export default function DeudasPage() {
       return true
     } catch (error) {
       toastApiError(error, "No fue posible registrar el pago")
+      return false
+    }
+  }
+
+  const handleRegisterCharge = async (values: DebtChargeFormValues): Promise<boolean> => {
+    if (!chargingDebt) return false
+
+    const payload: DebtChargeRequest = {
+      amount: values.amount,
+      chargeDate: values.chargeDate,
+      description: values.description,
+    }
+
+    try {
+      const updatedDebt = await createDebtCharge(chargingDebt.id, payload)
+      toast.success(
+        `Cargo registrado correctamente. Nuevo saldo: $${updatedDebt.remainingAmount.toLocaleString("es-MX")}`,
+      )
+      setChargingDebt(null)
+      return true
+    } catch (error) {
+      toastApiError(error, "No fue posible registrar el cargo")
       return false
     }
   }
@@ -254,6 +285,7 @@ export default function DeudasPage() {
                 }}
                 onDelete={(value) => setDeletingDebt(value)}
                 onRegisterPayment={(value) => setPayingDebt(value)}
+                onRegisterCharge={(value) => setChargingDebt(value)}
                 onViewHistory={(value) => setHistoryDebt(value)}
               />
             ))}
@@ -280,6 +312,16 @@ export default function DeudasPage() {
         debt={payingDebt}
         onSubmit={handleRegisterPayment}
         isSubmitting={isPaying}
+      />
+
+      <DebtChargeModal
+        open={!!chargingDebt}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setChargingDebt(null)
+        }}
+        debt={chargingDebt}
+        onSubmit={handleRegisterCharge}
+        isSubmitting={isCharging}
       />
 
       <DebtPaymentHistoryDialog
