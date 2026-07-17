@@ -10,6 +10,7 @@ import com.smartfinance.backend.deudas.repository.DebtRepository;
 import com.smartfinance.backend.gastos.repository.ExpenseRepository;
 import com.smartfinance.backend.analisis.repository.FinancialAnalysisRepository;
 import com.smartfinance.backend.ingresos.repository.IncomeRepository;
+import com.smartfinance.backend.tarjetas.repository.CreditCardRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,9 @@ class FinancialAnalysisServiceTest {
 
     @Mock
     private DebtRepository debtRepository;
+
+    @Mock
+    private CreditCardRepository creditCardRepository;
 
     @Mock
     private FinancialAnalysisRepository financialAnalysisRepository;
@@ -130,6 +134,37 @@ class FinancialAnalysisServiceTest {
         Assertions.assertEquals(BigDecimal.valueOf(1000), summary.totalDebt());
         Assertions.assertEquals(new BigDecimal("0.5000"), summary.debtRatio());
         verify(debtRepository).sumRemainingAmountByUser(1L);
+    }
+
+    @Test
+    void getSummaryShouldLeaveDebtRatioUnchangedWhenUserHasNoCreditCards() {
+        // Regresión: la integración cruzada con tarjetas (Fase B.2) es aditiva — un usuario sin
+        // tarjetas no debe ver alterado su debtRatio. creditCardRepository no se stubea a
+        // propósito: el default de Mockito (null) debe tratarse como 0 vía nullSafe().
+        setAuthenticatedUser(1L);
+        when(incomeRepository.sumAmountByUserAndPeriod(eq(1L), eq(PERIOD_START), eq(PERIOD_END)))
+                .thenReturn(BigDecimal.valueOf(2000));
+        when(debtRepository.sumRemainingAmountByUser(1L)).thenReturn(BigDecimal.valueOf(1000));
+
+        AnalysisSummaryResponse summary = financialAnalysisService.getSummary(YEAR, MONTH);
+
+        Assertions.assertEquals(BigDecimal.valueOf(1000), summary.totalDebt());
+        Assertions.assertEquals(new BigDecimal("0.5000"), summary.debtRatio());
+    }
+
+    @Test
+    void getSummaryShouldIncludeCreditCardBalanceInDebtRatio() {
+        setAuthenticatedUser(1L);
+        when(incomeRepository.sumAmountByUserAndPeriod(eq(1L), eq(PERIOD_START), eq(PERIOD_END)))
+                .thenReturn(BigDecimal.valueOf(2000));
+        when(debtRepository.sumRemainingAmountByUser(1L)).thenReturn(BigDecimal.valueOf(1000));
+        when(creditCardRepository.sumCurrentBalanceByUser(1L)).thenReturn(BigDecimal.valueOf(500));
+
+        AnalysisSummaryResponse summary = financialAnalysisService.getSummary(YEAR, MONTH);
+
+        Assertions.assertEquals(BigDecimal.valueOf(1500), summary.totalDebt());
+        Assertions.assertEquals(new BigDecimal("0.7500"), summary.debtRatio());
+        verify(creditCardRepository).sumCurrentBalanceByUser(1L);
     }
 
     @Test
