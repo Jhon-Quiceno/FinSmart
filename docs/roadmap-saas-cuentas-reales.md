@@ -438,12 +438,13 @@ puntual — es una limitación de plataforma real, no un compromiso técnico evi
 Fusiona el orden de 6 pasos de la investigación SaaS con los 3 niveles de cuentas reales
 en una sola secuencia priorizada:
 
-1. **Ahora — `docs/sprints/sprint1.md`, bajo esfuerzo y alto impacto:**
-   1. Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de hoy.
-   2. Quick-add + parser de texto conectado a `categorize()`/`useCategorize()`, y cerrar
-      la brecha de que `income-modal.tsx` no tiene la sugerencia de categoría que
-      `expense-modal.tsx` ya tiene.
-   3. Tracking de uso de IA (`ai_usage_events`) y rate limiting — necesarios antes de
+1. **`docs/sprints/sprint1.md`, bajo esfuerzo y alto impacto — HECHO (2026-07-16,
+   `feature/sprint-1-debt-charges-quick-add-ai-usage`, pendiente de merge a `develop`):**
+   1. ✅ Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de hoy.
+   2. ✅ Quick-add + parser de texto conectado a `categorize()`/`useCategorize()`, y cerrada
+      la brecha de que `income-modal.tsx` no tenía la sugerencia de categoría que
+      `expense-modal.tsx` ya tenía.
+   3. ✅ Tracking de uso de IA (`ai_usage_events`) y rate limiting — necesarios antes de
       abrir el producto a más usuarios.
 2. **Corto plazo, en paralelo (ítems operativos ya en curso, no bloquean lo anterior):**
    dominio de GitHub Students → activación de Resend (DKIM/SPF sobre `korofin.jhonqui.dev`,
@@ -480,7 +481,9 @@ en una sola secuencia priorizada:
 | Extracción de componentes de `asistente-ia` (310→137 líneas) y `reportes` (269→119) | `main` |
 | Optimización de queries del análisis: summary ~19→9 consultas, recommendations ~19→8, log SQL sin duplicar (verificado en runtime) | `develop` |
 | Convenciones del repo en español (`docs/convenciones.md` + `CLAUDE.md`) | `main` |
-| Emails Brevo: diagnóstico completo (IP autorizada → remitente verificado → cuenta requiere activación manual; Brevo pidió dominio propio); Brevo terminó bloqueando la cuenta y nunca la activó. **Decisión (2026-07-16): abandonar Brevo, migrar a Resend.** Dominio `korofin.jhonqui.dev` agregado en Resend, registros DNS (DKIM + SPF) cargados en Name.com, verificación en curso. | Configuración |
+| Emails Brevo: diagnóstico completo (IP autorizada → remitente verificado → cuenta requiere activación manual; Brevo pidió dominio propio); Brevo terminó bloqueando la cuenta y nunca la activó. **Decisión (2026-07-16): abandonar Brevo, migrar a Resend.** Dominio `korofin.jhonqui.dev` verificado en Resend, `MAIL_FROM` sobre el dominio propio, correo con template HTML con marca. | `main` (PR #80, commit `05ddc02`) |
+| Secrets de Resend (`RESEND_API_KEY`, `MAIL_FROM`) cargados en GitHub Actions (verificado con `gh secret list`, actualizados 2026-07-16) | GitHub Actions |
+| PR `develop` → `main` (PR #81) — el trabajo de `chore/inicio-fase-saas` (rebrand a KoroFin, migración a Resend, n8n en Docker) ya está en producción | `main` |
 | Decisión: mantener módulo de IA custom, no migrar a Spring AI (revisar si llega streaming/tools/RAG) | Documentada |
 | Decisión: n8n solo para canales e integraciones (patrón backend→webhook→n8n); la lógica de negocio queda en el backend | Documentada |
 | **n8n integrado en Docker local (hoy, 2026-07-14)**: servicio `n8n-db` (Postgres dedicado, separado del `db` del backend, sin puerto publicado al host — solo accesible dentro de la red de `docker-compose`) para persistencia propia de n8n. n8n corriendo en `http://localhost:5678`. | `chore/inicio-fase-saas` |
@@ -494,21 +497,25 @@ en una sola secuencia priorizada:
 
 ### Pendiente (en orden)
 
-1. **Dominio `korofin.jhonqui.dev` en Resend** (registros DNS cargados, verificación en
-   curso) → confirmar estado `verified` → cambiar `MAIL_FROM` a una dirección del dominio
-   → prueba final de entrega → eliminar el test manual `EmailSmokeManualTest.java` (está
-   sin trackear, a propósito).
-2. **Subir secrets a GitHub Actions** (17 en total, valores nuevos del `.env`; el deploy a
-   Cloud Run los necesita — reemplazar `BREVO_SMTP_LOGIN`/`BREVO_SMTP_KEY` por
-   `RESEND_API_KEY`).
-3. **PR `develop` → `main`** (en pausa hasta completar 1 y 2) + limpieza de ramas.
+1. ✅ ~~Dominio `korofin.jhonqui.dev` en Resend~~ — HECHO, ver "Hecho y mergeado" arriba.
+   Sigue suelto: eliminar el test manual `EmailSmokeManualTest.java` (está sin trackear,
+   a propósito) si ya no hace falta para verificar entrega.
+2. ✅ ~~Subir secrets a GitHub Actions~~ — HECHO (`RESEND_API_KEY`, `MAIL_FROM` confirmados
+   con `gh secret list`).
+3. ✅ ~~PR `develop` → `main`~~ — HECHO (PR #81).
 4. **Primer flujo real de n8n** (bot de Telegram para registrar gastos) — la
-   infraestructura Docker local ya está lista, falta construir el flujo.
-5. **`docs/sprints/sprint1.md`** (próximo paso ejecutable de producto): Fase A del
-   rediseño de deudas, quick-add conectado a la IA existente, y tracking de uso de
-   IA/rate limiting.
+   infraestructura Docker local ya está lista y la cuenta de n8n ya se creó
+   (2026-07-16/17), falta construir el flujo.
+5. ✅ **`docs/sprints/sprint1.md`** — HECHO: Fase A del rediseño de deudas, quick-add
+   conectado a la IA existente, y tracking de uso de IA/rate limiting. Falta mergear
+   `feature/sprint-1-debt-charges-quick-add-ai-usage` a `develop`.
 6. **Nivel 1 completo de este documento**: dominio de cuentas/tarjetas — Fase B (tarjeta
-   rotativa con SDD), una vez validada la Fase A.
+   rotativa con SDD), una vez validada la Fase A (ya validada por el usuario en sprint1).
+7. **Integración de correo (Gmail API + Pub/Sub)** — todavía no arrancó. Es el paso
+   "mediano plazo" del orden recomendado, después del Nivel 2 (extractos bancarios); no es
+   parte de sprint1. Ver sección "Automatización con IA de correo/SMS/notificaciones" más
+   abajo para el diseño completo (arquitectura, bandeja de revisión, por qué correo es
+   viable hoy y SMS/notificaciones de otras apps no lo son sin app móvil).
 
 ### Backlog técnico (sin urgencia)
 

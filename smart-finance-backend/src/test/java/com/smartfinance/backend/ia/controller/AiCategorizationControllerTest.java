@@ -3,6 +3,7 @@ package com.smartfinance.backend.ia.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.smartfinance.backend.common.config.SecurityConfig;
+import com.smartfinance.backend.gastos.model.entity.CategoryType;
 import com.smartfinance.backend.ia.model.dto.CategorizeRequest;
 import com.smartfinance.backend.ia.model.dto.CategorizeResponse;
 import com.smartfinance.backend.usuario.repository.UserRepository;
@@ -62,7 +63,7 @@ class AiCategorizationControllerTest {
 
     @Test
     void categorizeReturns200WithMatchedCategory() throws Exception {
-        CategorizeRequest request = new CategorizeRequest("Almuerzo en restaurante", BigDecimal.valueOf(25000));
+        CategorizeRequest request = new CategorizeRequest("Almuerzo en restaurante", BigDecimal.valueOf(25000), CategoryType.EXPENSE);
         when(service.categorize(eq(request))).thenReturn(new CategorizeResponse(1L, "Comida"));
 
         mockMvc.perform(post("/api/ai/categorize")
@@ -77,7 +78,7 @@ class AiCategorizationControllerTest {
 
     @Test
     void categorizeReturns200WithNullMatchWhenNoneFound() throws Exception {
-        CategorizeRequest request = new CategorizeRequest("Pago de arriendo", null);
+        CategorizeRequest request = new CategorizeRequest("Pago de arriendo", null, CategoryType.EXPENSE);
         when(service.categorize(eq(request))).thenReturn(new CategorizeResponse(null, null));
 
         mockMvc.perform(post("/api/ai/categorize")
@@ -87,6 +88,38 @@ class AiCategorizationControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.categoryId").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void categorizeReturns200WithMatchedIncomeCategoryWhenTypeIsIncome() throws Exception {
+        CategorizeRequest request = new CategorizeRequest("Pago mensual de nomina", BigDecimal.valueOf(2500000), CategoryType.INCOME);
+        when(service.categorize(eq(request))).thenReturn(new CategorizeResponse(3L, "Salario"));
+
+        mockMvc.perform(post("/api/ai/categorize")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").value(3))
+                .andExpect(jsonPath("$.categoryName").value("Salario"));
+    }
+
+    @Test
+    void categorizeDefaultsToExpenseTypeWhenTypeIsAbsentFromPayload() throws Exception {
+        CategorizeRequest expectedRequest = new CategorizeRequest("Mercado semanal", null, CategoryType.EXPENSE);
+        when(service.categorize(eq(expectedRequest))).thenReturn(new CategorizeResponse(1L, "Comida"));
+        String bodyWithoutType = """
+                {"description": "Mercado semanal", "amount": null}
+                """;
+
+        mockMvc.perform(post("/api/ai/categorize")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyWithoutType))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").value(1));
     }
 
     @Test

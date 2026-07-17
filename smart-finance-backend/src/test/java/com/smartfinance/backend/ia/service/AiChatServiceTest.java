@@ -10,6 +10,7 @@ import com.smartfinance.backend.ia.mapper.AiMessageMapper;
 import com.smartfinance.backend.ia.model.entity.AiMessage;
 import com.smartfinance.backend.ia.model.entity.AiMessageKind;
 import com.smartfinance.backend.ia.model.entity.AiMessageRole;
+import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -68,6 +70,9 @@ class AiChatServiceTest {
     @Mock
     private AiMessageMapper aiMessageMapper;
 
+    @Mock
+    private AiUsageEventService aiUsageEventService;
+
     private AiChatService aiChatService;
 
     @BeforeEach
@@ -76,7 +81,7 @@ class AiChatServiceTest {
         aiProviderProperties.setMonthlyMessageLimit(5);
         aiChatService = new AiChatService(
                 messageRepository, userRepository, aiChatOrchestrator, contextBuilder, aiMessageMapper,
-                aiProviderProperties, FIXED_CLOCK
+                aiProviderProperties, aiUsageEventService, FIXED_CLOCK
         );
     }
 
@@ -106,6 +111,7 @@ class AiChatServiceTest {
         // only assert that no compensating call is made here — the rollback itself is exercised by
         // Spring at runtime, not by this test.
         verify(userRepository, never()).releaseAiChatQuota(any(), any());
+        verify(aiUsageEventService, never()).record(any(), any(), any(), anyInt(), any());
     }
 
     @Test
@@ -146,6 +152,8 @@ class AiChatServiceTest {
         Assertions.assertEquals("Vas bien este mes", response.reply());
         Assertions.assertEquals("groq", response.providerName());
         Assertions.assertEquals("llama-3.3", response.model());
+
+        verify(aiUsageEventService).record(2L, "groq", AiUsageEventType.CHAT, 120, null);
     }
 
     @Test
