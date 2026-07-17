@@ -3,6 +3,7 @@ package com.smartfinance.backend.tarjetas.controller;
 import com.smartfinance.backend.tarjetas.model.dto.CardMovementResponse;
 import com.smartfinance.backend.tarjetas.model.dto.CardPaymentRequest;
 import com.smartfinance.backend.tarjetas.model.dto.CardPurchaseRequest;
+import com.smartfinance.backend.tarjetas.model.dto.InstallmentResponse;
 import com.smartfinance.backend.tarjetas.model.entity.CardMovementType;
 import com.smartfinance.backend.tarjetas.service.CardMovementService;
 import jakarta.validation.Valid;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * Endpoints REST para los {@link com.smartfinance.backend.tarjetas.model.entity.CardMovement}
@@ -56,5 +59,13 @@ public class CardMovementController {
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return ResponseEntity.ok(cardMovementService.getMovements(cardId, type, pageable));
+    }
+
+    @GetMapping("/movements/{movementId}/installments")
+    public ResponseEntity<List<InstallmentResponse>> getInstallments(
+            @PathVariable("cardId") Long cardId,
+            @PathVariable("movementId") Long movementId
+    ) {
+        return ResponseEntity.ok(cardMovementService.getInstallments(cardId, movementId));
     }
 }

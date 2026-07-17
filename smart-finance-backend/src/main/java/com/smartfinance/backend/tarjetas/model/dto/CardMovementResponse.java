@@ -18,9 +18,8 @@ import java.time.LocalDate;
  * @param cardBalanceAfter  saldo de la tarjeta luego de aplicar este movimiento
  * @param expenseId         identificador del {@link com.smartfinance.backend.gastos.model.entity.Expense}
  *                          creado junto con este movimiento (solo compras; {@code null} en pagos)
- * @param installmentPlanId identificador del plan de cuotas asociado (solo compras diferidas;
- *                          {@code null} en esta fase, ya que las compras a cuotas se habilitan en
- *                          Fase B.3)
+ * @param installmentPlanId identificador del plan de cuotas asociado (solo compras diferidas a 2+
+ *                          cuotas; {@code null} en compras simples y en pagos)
  * @param createdAt         marca de tiempo de creación
  */
 public record CardMovementResponse(

@@ -19,9 +19,9 @@ import java.time.LocalDate;
  * @param date             fecha de la compra; por defecto hoy cuando se omite
  * @param description      descripción libre opcional
  * @param installmentCount número de cuotas ({@code null} o {@code 1} = compra simple, una sola
- *                         cuota). Valores entre 2 y 48 son válidos a nivel de formato, pero en
- *                         esta fase (B.2) el servicio los rechaza — el diferido a cuotas se
- *                         habilita en Fase B.3.
+ *                         cuota). Valores entre 2 y 48 generan una compra diferida
+ *                         ({@code INSTALLMENT_PURCHASE} + {@code InstallmentPlan}, ver
+ *                         {@code AmortizationService}).
  */
 public record CardPurchaseRequest(
         @NotNull(message = "El monto de la compra es obligatorio")
