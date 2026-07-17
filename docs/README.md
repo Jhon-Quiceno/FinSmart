@@ -10,7 +10,19 @@
 ```
 docs/
 ├── README.md                          ← Este archivo — índice general
-├── analisis-diseno/                   ← Análisis, arquitectura y diseño del sistema
+│
+│  # Documentos vivos — fase SaaS actual
+├── roadmap-saas-cuentas-reales.md     ← Roadmap estratégico: SaaS + cuentas/tarjetas reales
+├── rediseno-deudas-tarjetas.md        ← Diseño del crédito rotativo (Fase A hecha, Fase B pendiente)
+├── ideas-adicionales-producto.md      ← Funcionalidades investigadas fuera del roadmap actual
+├── notifications-future.md            ← Canales de notificación futuros (Web Push, Telegram, WhatsApp)
+├── sprints/                           ← Planificación detallada del sprint en curso
+│
+│  # Referencia técnica y de proceso
+├── convenciones.md                    ← Commits, PRs, comentarios — obligatorio (citado en CLAUDE.md)
+├── DESIGN.md                          ← Sistema de diseño visual (tokens, motion, dark mode)
+├── runbook-produccion.md              ← Diagnóstico de fallas en producción
+├── analisis-diseno/                   ← Análisis, arquitectura y diseño — ⚠️ desactualizado, ver nota abajo
 │   ├── README.md                      ← Índice de análisis y diseño
 │   ├── documentacion/
 │   │   ├── 01-analisis-requisitos.md  ← Requisitos funcionales y no funcionales
@@ -22,18 +34,22 @@ docs/
 │   └── diagramas/
 │       ├── puml/                      ← Diagramas fuente en PlantUML
 │       └── renders/                   ← Diagramas renderizados (generados)
-├── assets/                            ← Recursos estáticos compartidos (íconos, imágenes generales)
-├── auditoria/                         ← Auditorías de arquitectura, BD y código
-├── evidencias/                        ← Evidencias técnicas por sprint
-│   ├── README.md                      ← Índice y guía de evidencias
-│   └── capturas/                      ← Capturas de pantalla reales, por fecha y feature
-├── video-evidencias/                  ← Video demo de la app (HyperFrames)
-│   └── finsmart-demo/                 ← Composición + capturas reales + finsmart-demo.mp4
-├── sprints/                           ← Planificación detallada por sprint (fase actual)
-├── FRONTEND_DOC.md                    ← Documentación del frontend
-├── notifications-future.md            ← Canales de notificación futuros
-└── roadmap-saas-cuentas-reales.md     ← Roadmap estratégico: SaaS + cuentas/tarjetas reales
+│
+└── archivo/                           ← Histórico cerrado, no se toca (ver archivo/README.md)
+    └── mvp/                           ← Evidencia, auditoría y demo del MVP (6 sprints, cerrado)
+        ├── evidencias/
+        ├── auditoria/
+        ├── video-evidencias/
+        └── FRONTEND_DOC.md
 ```
+
+> ⚠️ **`analisis-diseno/` describe la arquitectura pre-refactor de dominios.**
+> `02-arquitectura.md` todavía muestra paquetes planos (`config/, controller/, dto/...`); el
+> backend real está organizado en 9 dominios (`common, usuario, ingresos, gastos, deudas,
+> servicios, analisis, ia, reportes`) desde el refactor documentado en el roadmap. Sigue
+> siendo el material más completo de requisitos/API/seguridad del repo, pero el diagrama de
+> arquitectura y el modelo de datos (sin `DebtCharge`/`ai_usage_events`) necesitan una
+> actualización antes de usarse como referencia de la estructura de paquetes actual.
 
 ---
 
@@ -69,9 +85,9 @@ docs/
 
 ## Documentación Visual
 
-- 🎬 **Video demo:** [`video-evidencias/finsmart-demo/finsmart-demo.mp4`](video-evidencias/finsmart-demo/finsmart-demo.mp4) — recorrido de ~30s por login, registro, dashboard y los 8 módulos, con capturas reales de la aplicación.
-- 🖼️ **Capturas reales:** [`evidencias/capturas/`](evidencias/capturas/) — screenshots por fecha y feature, referenciados desde las evidencias de sprint.
-- 📐 **Diagramas de arquitectura:** [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) — fuente PlantUML + renders SVG.
+- 🎬 **Video demo del MVP:** [`archivo/mvp/video-evidencias/finsmart-demo/finsmart-demo.mp4`](archivo/mvp/video-evidencias/finsmart-demo/finsmart-demo.mp4) — recorrido de ~30s por login, registro, dashboard y los 8 módulos, con capturas reales de la aplicación.
+- 🖼️ **Capturas reales del MVP:** [`archivo/mvp/evidencias/capturas/`](archivo/mvp/evidencias/capturas/) — screenshots por fecha y feature, referenciados desde las evidencias de sprint.
+- 📐 **Diagramas de arquitectura:** [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) — fuente PlantUML + renders SVG (⚠️ ver nota de desactualización arriba).
 
 ---
 
@@ -85,11 +101,15 @@ docs/
 | Entender la seguridad | [`analisis-diseno/documentacion/05-seguridad.md`](analisis-diseno/documentacion/05-seguridad.md) |
 | Ver el diseño del asistente IA | [`analisis-diseno/documentacion/06-ia-asistente.md`](analisis-diseno/documentacion/06-ia-asistente.md) |
 | Ver diagramas de arquitectura | [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) |
-| Ver un recorrido en video de la app | [`video-evidencias/finsmart-demo/`](video-evidencias/finsmart-demo/) |
+| Ver un recorrido en video del MVP | [`archivo/mvp/video-evidencias/finsmart-demo/`](archivo/mvp/video-evidencias/finsmart-demo/) |
 | Consultar el plan de sprints de la fase actual | [`sprints/`](sprints/) |
 | Consultar la estrategia de producto (SaaS + cuentas reales) | [`roadmap-saas-cuentas-reales.md`](roadmap-saas-cuentas-reales.md) |
-| Ver evidencia de un sprint | [`evidencias/`](evidencias/) |
-| Revisar las auditorías | [`auditoria/`](auditoria/) |
+| Ver el diseño de crédito rotativo (tarjetas) | [`rediseno-deudas-tarjetas.md`](rediseno-deudas-tarjetas.md) |
+| Ver ideas de producto fuera del roadmap actual | [`ideas-adicionales-producto.md`](ideas-adicionales-producto.md) |
+| Ver convenciones de commits/PRs (obligatorio) | [`convenciones.md`](convenciones.md) |
+| Diagnosticar una falla en producción | [`runbook-produccion.md`](runbook-produccion.md) |
+| Ver evidencia de un sprint del MVP | [`archivo/mvp/evidencias/`](archivo/mvp/evidencias/) |
+| Revisar las auditorías del MVP | [`archivo/mvp/auditoria/`](archivo/mvp/auditoria/) |
 
 ---
 

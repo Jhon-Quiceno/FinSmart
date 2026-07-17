@@ -1,8 +1,10 @@
 # Rediseño de deudas: de préstamo fijo a crédito rotativo
 
 Propuesta de diseño para soportar tarjetas de crédito reales en KoroFin.
-Complementa el Nivel 1 de `docs/roadmap-saas-cuentas-reales.md`. **Estado: idea aprobada,
-pendiente de implementación** (la fase B debe diseñarse con SDD antes de codificar).
+Complementa el Nivel 1 de `docs/roadmap-saas-cuentas-reales.md`. **Estado (2026-07-17):
+Fase A implementada y en `develop`** (`DebtCharge`, sprint1, PR #82). **Fase B pendiente**
+(debe diseñarse con SDD antes de codificar) — este documento se mantiene completo porque
+sigue siendo el diseño de referencia para esa fase.
 
 ---
 
@@ -108,15 +110,15 @@ cupo disponible            = creditLimit − saldo actual
 
 ## 4. Plan de implementación en dos fases
 
-### Fase A — Cargos en deudas (esfuerzo bajo, valor inmediato)
+### Fase A — Cargos en deudas (esfuerzo bajo, valor inmediato) — ✅ HECHO (2026-07-17)
 
 Agregar `DebtCharge`: el espejo de `DebtPayment` con signo contrario.
 `remainingAmount` puede subir cuando se gasta con la tarjeta.
 
-- No rompe nada del modelo actual ni de la API existente.
-- Resuelve el dolor de hoy: "la deuda de mi tarjeta solo puede bajar".
-- Cambios: entidad + repository + endpoint `POST /api/debts/{id}/charges` + UI mínima.
-- Puede entrar como una rama corta en cualquier momento.
+- [x] No rompe nada del modelo actual ni de la API existente.
+- [x] Resuelve el dolor de hoy: "la deuda de mi tarjeta solo puede bajar".
+- [x] Cambios: entidad + repository + endpoint `POST /api/debts/{id}/charges` + UI mínima.
+- [x] Entró en `feature/sprint-1-debt-charges-quick-add-ai-usage`, PR #82, mergeada a `develop`.
 
 ### Fase B — Dominio de tarjetas completo (diseñar con SDD)
 

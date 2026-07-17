@@ -438,34 +438,38 @@ puntual — es una limitación de plataforma real, no un compromiso técnico evi
 Fusiona el orden de 6 pasos de la investigación SaaS con los 3 niveles de cuentas reales
 en una sola secuencia priorizada:
 
-1. **`docs/sprints/sprint1.md`, bajo esfuerzo y alto impacto — HECHO (2026-07-16,
-   `feature/sprint-1-debt-charges-quick-add-ai-usage`, pendiente de merge a `develop`):**
-   1. ✅ Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de hoy.
-   2. ✅ Quick-add + parser de texto conectado a `categorize()`/`useCategorize()`, y cerrada
-      la brecha de que `income-modal.tsx` no tenía la sugerencia de categoría que
-      `expense-modal.tsx` ya tenía.
-   3. ✅ Tracking de uso de IA (`ai_usage_events`) y rate limiting — necesarios antes de
-      abrir el producto a más usuarios.
-2. **Corto plazo, en paralelo (ítems operativos ya en curso, no bloquean lo anterior):**
-   dominio de GitHub Students → activación de Resend (DKIM/SPF sobre `korofin.jhonqui.dev`,
-   `MAIL_FROM`) → subir los 17 secrets a GitHub Actions → PR `develop` → `main` → primer
-   flujo real de n8n (bot de Telegram para registrar gastos, sobre la infraestructura
-   Docker ya levantada hoy).
+1. **`docs/sprints/sprint1.md`, bajo esfuerzo y alto impacto — ✅ HECHO (2026-07-17,
+   PR #82 mergeada a `develop`):**
+   - [x] Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de hoy.
+   - [x] Quick-add + parser de texto conectado a `categorize()`/`useCategorize()`, y cerrada
+     la brecha de que `income-modal.tsx` no tenía la sugerencia de categoría que
+     `expense-modal.tsx` ya tenía.
+   - [x] Tracking de uso de IA (`ai_usage_events`, consultable vía `GET /api/ai/usage`) y
+     rate limiting — necesarios antes de abrir el producto a más usuarios.
+2. **Corto plazo, en paralelo (ítems operativos):**
+   - [ ] Dominio de GitHub Students
+   - [x] Activación de Resend (DKIM/SPF sobre `korofin.jhonqui.dev`, `MAIL_FROM`)
+   - [x] Subir secrets a GitHub Actions
+   - [x] PR `develop` → `main`
+   - [ ] Primer flujo real de n8n (bot de Telegram para registrar gastos, sobre la
+     infraestructura Docker ya levantada; cuenta de n8n ya creada)
 3. **Mediano plazo:**
-   - Nivel 2: importar extractos bancarios (CSV/Excel) — datos reales sin terceros ni
+   - [ ] Nivel 2: importar extractos bancarios (CSV/Excel) — datos reales sin terceros ni
      regulación, complementa el Nivel 1.
-   - Integración de correo (Gmail API + Pub/Sub) con bandeja de revisión — el corazón de
+   - [ ] Integración de correo (Gmail API + Pub/Sub) con bandeja de revisión — el corazón de
      la visión de automatización por IA, no depende de nada más.
 4. **Mediano-largo plazo:**
-   - Nivel 3: Open Finance (Belvo/Prometeo) en sandbox, sin prometer a usuarios todavía.
-   - Planes/suscripciones + Stripe/Metronome, una vez que el consumo de IA esté medido y
+   - [ ] Nivel 3: Open Finance (Belvo/Prometeo) en sandbox, sin prometer a usuarios todavía.
+   - [ ] Planes/suscripciones + Stripe/Metronome, una vez que el consumo de IA esté medido y
      la automatización de correo esté validada con usuarios reales.
-5. **Largo plazo, en paralelo (no bloquean nada de lo anterior):** Row-Level Security,
-   migración de cache a react-query, tests de componentes, y el resto del backlog técnico
-   de las tablas de mejoras pendientes.
+5. **Largo plazo, en paralelo (no bloquean nada de lo anterior):**
+   - [ ] Row-Level Security
+   - [ ] Migración de cache a react-query
+   - [ ] Tests de componentes
+   - [ ] Resto del backlog técnico de las tablas de mejoras pendientes
 6. **Al final:**
-   - Fase B del dominio de tarjetas (`CreditCard` + ledger + ciclos) — diseño con SDD.
-   - App móvil React Native, empezando por paridad (v1) y recién en v2 la automatización
+   - [ ] Fase B del dominio de tarjetas (`CreditCard` + ledger + ciclos) — diseño con SDD.
+   - [ ] App móvil React Native, empezando por paridad (v1) y recién en v2 la automatización
      por notificaciones en Android.
 
 ---
@@ -497,25 +501,24 @@ en una sola secuencia priorizada:
 
 ### Pendiente (en orden)
 
-1. ✅ ~~Dominio `korofin.jhonqui.dev` en Resend~~ — HECHO, ver "Hecho y mergeado" arriba.
-   Sigue suelto: eliminar el test manual `EmailSmokeManualTest.java` (está sin trackear,
-   a propósito) si ya no hace falta para verificar entrega.
-2. ✅ ~~Subir secrets a GitHub Actions~~ — HECHO (`RESEND_API_KEY`, `MAIL_FROM` confirmados
-   con `gh secret list`).
-3. ✅ ~~PR `develop` → `main`~~ — HECHO (PR #81).
-4. **Primer flujo real de n8n** (bot de Telegram para registrar gastos) — la
-   infraestructura Docker local ya está lista y la cuenta de n8n ya se creó
-   (2026-07-16/17), falta construir el flujo.
-5. ✅ **`docs/sprints/sprint1.md`** — HECHO: Fase A del rediseño de deudas, quick-add
-   conectado a la IA existente, y tracking de uso de IA/rate limiting. Falta mergear
-   `feature/sprint-1-debt-charges-quick-add-ai-usage` a `develop`.
-6. **Nivel 1 completo de este documento**: dominio de cuentas/tarjetas — Fase B (tarjeta
-   rotativa con SDD), una vez validada la Fase A (ya validada por el usuario en sprint1).
-7. **Integración de correo (Gmail API + Pub/Sub)** — todavía no arrancó. Es el paso
-   "mediano plazo" del orden recomendado, después del Nivel 2 (extractos bancarios); no es
-   parte de sprint1. Ver sección "Automatización con IA de correo/SMS/notificaciones" más
-   abajo para el diseño completo (arquitectura, bandeja de revisión, por qué correo es
-   viable hoy y SMS/notificaciones de otras apps no lo son sin app móvil).
+- [x] Dominio `korofin.jhonqui.dev` en Resend — ver "Hecho y mergeado" arriba.
+- [ ] Eliminar el test manual `EmailSmokeManualTest.java` (sin trackear, a propósito) si ya
+  no hace falta para verificar entrega.
+- [x] Subir secrets a GitHub Actions (`RESEND_API_KEY`, `MAIL_FROM` confirmados con
+  `gh secret list`).
+- [x] PR `develop` → `main` (PR #81).
+- [x] **`docs/sprints/sprint1.md`** — Fase A del rediseño de deudas, quick-add conectado a
+  la IA existente, y tracking de uso de IA/rate limiting. PR #82 mergeada a `develop`.
+- [ ] **Primer flujo real de n8n** (bot de Telegram para registrar gastos) — la
+  infraestructura Docker local ya está lista y la cuenta de n8n ya se creó
+  (2026-07-16/17), falta construir el flujo.
+- [ ] **Nivel 1 completo de este documento**: dominio de cuentas/tarjetas — Fase B (tarjeta
+  rotativa con SDD), una vez validada la Fase A (ya validada por el usuario en sprint1).
+- [ ] **Integración de correo (Gmail API + Pub/Sub)** — todavía no arrancó. Es el paso
+  "mediano plazo" del orden recomendado, después del Nivel 2 (extractos bancarios); no es
+  parte de sprint1. Ver sección "Automatización con IA de correo/SMS/notificaciones" más
+  abajo para el diseño completo (arquitectura, bandeja de revisión, por qué correo es
+  viable hoy y SMS/notificaciones de otras apps no lo son sin app móvil).
 
 ### Backlog técnico (sin urgencia)
 

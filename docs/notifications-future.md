@@ -2,6 +2,16 @@
 
 Investigacion realizada en Sprint 5 (julio 2026). En el MVP se implementaron **notificaciones in-app** (tabla `notifications` + campana del navbar) y **email via Brevo SMTP** (300 emails/dia gratis permanente, sin dominio propio, solo verificacion de remitente unico). Este documento deja el detalle de los canales evaluados y NO implementados, para retomarlos despues sin re-investigar.
 
+> **Actualizacion (2026-07-16):** Brevo bloqueo la cuenta sin activarla nunca. Se abandono y
+> se migro a **Resend**, con dominio propio verificado (`korofin.jhonqui.dev`) — exactamente
+> el escenario que la fila de Resend de la tabla de abajo preveia como "cuando KoroFin tenga
+> dominio". El adaptador real es `EmailNotificationSender`
+> (`servicios/service/notification/EmailNotificationSender.java`), no
+> `BrevoEmailAdapter`/`SmtpEmailAdapter` como se nombraba mas abajo antes de esta nota — se
+> dejan los nombres viejos en el cuerpo del documento sin reescribir, es investigacion
+> historica). El resto de este documento (Web Push, Telegram, WhatsApp) sigue sin implementar
+> y vigente tal cual.
+
 ## Comparativa general
 
 | Canal | Esfuerzo | Gratis de verdad | Requisitos | Veredicto |
