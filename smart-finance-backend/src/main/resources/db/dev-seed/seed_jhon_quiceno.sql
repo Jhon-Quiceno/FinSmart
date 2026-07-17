@@ -162,7 +162,25 @@ FROM generate_series(0, 5) AS months_ago;
 -- header note above: comparing this stock against one month's income will
 -- still push the debt ratio over 40%, which is expected given the sprint's
 -- own ratio definition, not a sign the amount itself is unrealistic.
+--
+-- remaining_amount here already reflects the two DebtCharge rows below
+-- (1,500,000 base + 320,000 + 85,000 = 1,905,000), since this script inserts
+-- rows directly instead of going through DebtChargeService.
 -- ---------------------------------------------------------------------------
 INSERT INTO debts (user_id, name, total_amount, remaining_amount, interest_rate, due_date, created_at, updated_at)
-VALUES (2, 'Tarjeta de credito', 2000000.00, 1500000.00, 2.10,
+VALUES (2, 'Tarjeta de credito', 2000000.00, 1905000.00, 2.10,
         (CURRENT_DATE + interval '6 months')::date, now(), now());
+
+-- ---------------------------------------------------------------------------
+-- Debt charges (Fase A) — two card purchases: one last month, one this month.
+-- Demonstrates that a credit card debt can go UP, not just down with payments.
+-- ---------------------------------------------------------------------------
+INSERT INTO debt_charges (debt_id, amount, charge_date, description, created_at)
+SELECT (SELECT id FROM debts WHERE user_id = 2 AND name = 'Tarjeta de credito'),
+       amount, charge_date, description, now()
+FROM (VALUES
+    (320000.00, (date_trunc('month', CURRENT_DATE) - interval '1 month' + interval '17 days')::date,
+        'Electrodomestico - Falabella'),
+    (85000.00, (date_trunc('month', CURRENT_DATE) + interval '10 days')::date,
+        'Mercado con tarjeta')
+) AS t(amount, charge_date, description);
