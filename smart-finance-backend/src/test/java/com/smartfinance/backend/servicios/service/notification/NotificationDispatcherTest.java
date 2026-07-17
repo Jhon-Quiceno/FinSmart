@@ -110,6 +110,33 @@ class NotificationDispatcherTest {
     }
 
     @Test
+    void dispatchShouldSkipEntirelyWhenCardCycleCloseIsDisabledInPreferences() {
+        NotificationPreference preference = new NotificationPreference();
+        preference.setCardCycleClose(false);
+        preference.setEmailEnabled(true);
+        when(notificationPreferenceRepository.findByUser_Id(6L)).thenReturn(Optional.of(preference));
+
+        notificationDispatcher.dispatch(6L, NotificationType.CARD_CYCLE_CLOSE, "Título", "Mensaje", null);
+
+        verify(notificationService, never()).createNotification(any(), any(), anyString(), anyString(), any());
+        verify(notificationSender, never()).send(any(EmailRecipient.class), anyString(), anyString());
+    }
+
+    @Test
+    void dispatchShouldCreateInAppWhenCardCycleCloseIsEnabledInPreferences() {
+        NotificationPreference preference = new NotificationPreference();
+        preference.setCardCycleClose(true);
+        preference.setEmailEnabled(false);
+        when(notificationPreferenceRepository.findByUser_Id(7L)).thenReturn(Optional.of(preference));
+
+        notificationDispatcher.dispatch(7L, NotificationType.CARD_CYCLE_CLOSE, "Título", "Mensaje", "card-cycle-close:1:2026-07-15");
+
+        verify(notificationService).createNotification(
+                7L, NotificationType.CARD_CYCLE_CLOSE, "Título", "Mensaje", "card-cycle-close:1:2026-07-15"
+        );
+    }
+
+    @Test
     void dispatchShouldAlwaysDeliverTypesWithoutADedicatedPreferenceToggle() {
         NotificationPreference preference = new NotificationPreference();
         preference.setEmailEnabled(false);

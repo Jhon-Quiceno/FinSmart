@@ -91,6 +91,7 @@ public class NotificationDispatcher {
             case OVERSPEND_ALERT -> preference.isOverspendAlerts();
             case WEEKLY_SUMMARY -> preference.isWeeklySummary();
             case INACTIVITY_REMINDER -> preference.isInactivityReminders();
+            case CARD_CYCLE_CLOSE -> preference.isCardCycleClose();
             case MONTH_END_PREDICTION, SYSTEM -> true;
         };
     }

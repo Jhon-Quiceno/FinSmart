@@ -7,6 +7,7 @@ package com.smartfinance.backend.servicios.model.dto;
  * @param overspendAlerts     whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#OVERSPEND_ALERT} is delivered
  * @param weeklySummary       whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#WEEKLY_SUMMARY} is delivered
  * @param inactivityReminders whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#INACTIVITY_REMINDER} is delivered
+ * @param cardCycleClose      whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#CARD_CYCLE_CLOSE} is delivered
  * @param emailEnabled        whether enabled notification types are also delivered by email
  */
 public record NotificationPreferenceResponse(
@@ -14,6 +15,7 @@ public record NotificationPreferenceResponse(
         boolean overspendAlerts,
         boolean weeklySummary,
         boolean inactivityReminders,
+        boolean cardCycleClose,
         boolean emailEnabled
 ) {
 }

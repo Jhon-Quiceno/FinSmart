@@ -13,6 +13,7 @@ import jakarta.validation.constraints.NotNull;
  * @param overspendAlerts     whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#OVERSPEND_ALERT} is delivered
  * @param weeklySummary       whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#WEEKLY_SUMMARY} is delivered
  * @param inactivityReminders whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#INACTIVITY_REMINDER} is delivered
+ * @param cardCycleClose      whether {@link com.smartfinance.backend.servicios.model.entity.NotificationType#CARD_CYCLE_CLOSE} is delivered
  * @param emailEnabled        whether enabled notification types are also delivered by email
  */
 public record NotificationPreferenceRequest(
@@ -24,6 +25,8 @@ public record NotificationPreferenceRequest(
         Boolean weeklySummary,
         @NotNull(message = "El campo inactivityReminders es obligatorio")
         Boolean inactivityReminders,
+        @NotNull(message = "El campo cardCycleClose es obligatorio")
+        Boolean cardCycleClose,
         @NotNull(message = "El campo emailEnabled es obligatorio")
         Boolean emailEnabled
 ) {
