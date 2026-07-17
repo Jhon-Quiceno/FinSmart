@@ -2,16 +2,22 @@
 
 import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Sparkles } from "lucide-react"
+import { useForm, useWatch } from "react-hook-form"
+import { toast } from "sonner"
 import { z } from "zod"
 import { CategorySelect } from "@/components/shared/category-select"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { useCategorize } from "@/hooks/use-ai"
+import { getApiErrorMessage } from "@/lib/api-client"
 import { getTodayDateInput } from "@/lib/date"
 import { incomeSchema } from "@/lib/schemas/income.schema"
 import type { Income } from "@/lib/types/income"
+
+const MIN_DESCRIPTION_LENGTH_FOR_SUGGESTION = 3
 
 type IncomeFormValues = z.infer<typeof incomeSchema>
 
@@ -48,6 +54,36 @@ export function IncomeModal({ open, onOpenChange, initialValue, isSubmitting, on
     await onSubmit(values)
     form.reset(getDefaultValues(null))
   })
+
+  const { categorize, isLoading: isCategorizing } = useCategorize()
+  const watchedDescription = useWatch({ control: form.control, name: "description" })
+  const watchedAmount = useWatch({ control: form.control, name: "amount" })
+
+  const trimmedDescription = typeof watchedDescription === "string" ? watchedDescription.trim() : ""
+  const canSuggestCategory = trimmedDescription.length >= MIN_DESCRIPTION_LENGTH_FOR_SUGGESTION
+
+  const handleSuggestCategory = async () => {
+    if (!canSuggestCategory || isCategorizing) return
+
+    const parsedAmount = typeof watchedAmount === "number" ? watchedAmount : Number(watchedAmount)
+
+    try {
+      const result = await categorize({
+        description: trimmedDescription,
+        amount: Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : undefined,
+        type: "INCOME",
+      })
+
+      if (result.categoryId !== null) {
+        form.setValue("categoryId", result.categoryId, { shouldValidate: true })
+        toast.success(`Categoria sugerida: ${result.categoryName}`)
+      } else {
+        toast.info("No encontramos una categoria clara para esa descripcion")
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "No fue posible sugerir una categoria"))
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,7 +152,19 @@ export function IncomeModal({ open, onOpenChange, initialValue, isSubmitting, on
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Categoría</FormLabel>
+                  <div className="flex items-center justify-between gap-2">
+                    <FormLabel>Categoría</FormLabel>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={!canSuggestCategory || isCategorizing}
+                      onClick={() => void handleSuggestCategory()}
+                    >
+                      <Sparkles data-icon="inline-start" />
+                      {isCategorizing ? "Sugiriendo..." : "Sugerir categoria"}
+                    </Button>
+                  </div>
                   <FormControl>
                     <CategorySelect
                       type="INCOME"

@@ -81,6 +81,7 @@ export function ExpenseModal({ open, onOpenChange, initialValue, isSubmitting, o
       const result = await categorize({
         description: trimmedDescription,
         amount: Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : undefined,
+        type: "EXPENSE",
       })
 
       if (result.categoryId !== null) {

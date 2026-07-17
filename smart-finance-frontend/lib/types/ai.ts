@@ -33,6 +33,7 @@ export interface Insight {
 export interface CategorizeRequest {
   description: string
   amount?: number
+  type?: "INCOME" | "EXPENSE"
 }
 
 export interface CategorizeResponse {
