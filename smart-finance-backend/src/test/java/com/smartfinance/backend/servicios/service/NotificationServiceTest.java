@@ -116,7 +116,7 @@ class NotificationServiceTest {
         when(notificationPreferenceRepository.save(any(NotificationPreference.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         NotificationPreferenceResponse expectedResponse = new NotificationPreferenceResponse(
-                true, true, true, true, false
+                true, true, true, true, true, false
         );
         when(notificationPreferenceMapper.toResponse(any(NotificationPreference.class))).thenReturn(expectedResponse);
 
@@ -128,6 +128,7 @@ class NotificationServiceTest {
         Assertions.assertTrue(captor.getValue().isOverspendAlerts());
         Assertions.assertTrue(captor.getValue().isWeeklySummary());
         Assertions.assertTrue(captor.getValue().isInactivityReminders());
+        Assertions.assertTrue(captor.getValue().isCardCycleClose());
         Assertions.assertFalse(captor.getValue().isEmailEnabled());
         Assertions.assertEquals(expectedResponse, response);
     }
@@ -139,7 +140,7 @@ class NotificationServiceTest {
         existing.setId(10L);
         when(notificationPreferenceRepository.findByUser_Id(4L)).thenReturn(Optional.of(existing));
         when(notificationPreferenceMapper.toResponse(existing))
-                .thenReturn(new NotificationPreferenceResponse(true, false, true, false, true));
+                .thenReturn(new NotificationPreferenceResponse(true, false, true, false, true, true));
 
         notificationService.getPreferences();
 
@@ -151,11 +152,11 @@ class NotificationServiceTest {
         setAuthenticatedUser(5L);
         NotificationPreference existing = new NotificationPreference();
         existing.setId(11L);
-        NotificationPreferenceRequest request = new NotificationPreferenceRequest(false, false, false, false, true);
+        NotificationPreferenceRequest request = new NotificationPreferenceRequest(false, false, false, false, true, true);
         when(notificationPreferenceRepository.findByUser_Id(5L)).thenReturn(Optional.of(existing));
         when(notificationPreferenceRepository.save(existing)).thenReturn(existing);
         when(notificationPreferenceMapper.toResponse(existing))
-                .thenReturn(new NotificationPreferenceResponse(false, false, false, false, true));
+                .thenReturn(new NotificationPreferenceResponse(false, false, false, false, true, true));
 
         NotificationPreferenceResponse response = notificationService.updatePreferences(request);
 

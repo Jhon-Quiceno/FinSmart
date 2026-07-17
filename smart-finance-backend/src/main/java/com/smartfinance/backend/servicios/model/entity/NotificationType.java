@@ -12,6 +12,9 @@ package com.smartfinance.backend.servicios.model.entity;
  *
  * <p>{@link #MONTH_END_PREDICTION} and {@link #SYSTEM} have no dedicated preference toggle —
  * they are always delivered in-app when created.
+ *
+ * <p>{@link #CARD_CYCLE_CLOSE} was added in Fase B.4 for {@code CardCycleCloseJob}
+ * ({@code tarjetas/service/job/}), fired once per credit card cycle close.
  */
 public enum NotificationType {
     PAYMENT_REMINDER,
@@ -19,5 +22,6 @@ public enum NotificationType {
     WEEKLY_SUMMARY,
     INACTIVITY_REMINDER,
     MONTH_END_PREDICTION,
-    SYSTEM
+    SYSTEM,
+    CARD_CYCLE_CLOSE
 }

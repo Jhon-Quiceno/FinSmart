@@ -175,6 +175,7 @@ public class NotificationService {
                     defaults.setOverspendAlerts(true);
                     defaults.setWeeklySummary(true);
                     defaults.setInactivityReminders(true);
+                    defaults.setCardCycleClose(true);
                     defaults.setEmailEnabled(false);
                     return notificationPreferenceRepository.save(defaults);
                 });

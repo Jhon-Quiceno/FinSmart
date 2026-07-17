@@ -62,6 +62,10 @@ public class NotificationPreference {
     @Column(name = "inactivity_reminders", nullable = false)
     private boolean inactivityReminders;
 
+    /** Toggle for {@link NotificationType#CARD_CYCLE_CLOSE}, added in Fase B.4. */
+    @Column(name = "card_cycle_close", nullable = false)
+    private boolean cardCycleClose;
+
     @Column(name = "email_enabled", nullable = false)
     private boolean emailEnabled;
 

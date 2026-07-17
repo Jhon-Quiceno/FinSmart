@@ -68,7 +68,7 @@ class NotificationControllerTest {
     );
 
     private final NotificationPreferenceResponse defaultPreferences = new NotificationPreferenceResponse(
-            true, true, true, true, false
+            true, true, true, true, true, false
     );
 
     @BeforeEach
@@ -146,9 +146,9 @@ class NotificationControllerTest {
 
     @Test
     void updatePreferencesReturns200WhenValid() throws Exception {
-        NotificationPreferenceRequest request = new NotificationPreferenceRequest(false, true, false, true, true);
+        NotificationPreferenceRequest request = new NotificationPreferenceRequest(false, true, false, true, true, true);
         when(notificationService.updatePreferences(eq(request))).thenReturn(
-                new NotificationPreferenceResponse(false, true, false, true, true)
+                new NotificationPreferenceResponse(false, true, false, true, true, true)
         );
 
         mockMvc.perform(put("/api/notifications/preferences")
