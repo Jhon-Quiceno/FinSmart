@@ -15,6 +15,7 @@ import com.smartfinance.backend.deudas.repository.DebtRepository;
 import com.smartfinance.backend.gastos.repository.ExpenseRepository;
 import com.smartfinance.backend.analisis.repository.FinancialAnalysisRepository;
 import com.smartfinance.backend.ingresos.repository.IncomeRepository;
+import com.smartfinance.backend.tarjetas.repository.CreditCardRepository;
 import com.smartfinance.backend.common.security.SecurityUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -50,6 +51,12 @@ import java.util.stream.Stream;
  * not {@code totalAmount}: {@link com.smartfinance.backend.deudas.model.entity.Debt} has no
  * {@code status}/{@code isActive} flag, and a fully-paid debt naturally contributes {@code 0} to
  * the sum once its {@code remainingAmount} reaches {@code 0}.
+ *
+ * <p>{@code totalDebt} additionally sums {@code currentBalance} across every credit card owned
+ * by the user (see {@link CreditCardRepository#sumCurrentBalanceByUser}), Fase B.2's cross-domain
+ * integration: revolving credit card debt counts toward {@code debtRatio} the same way a
+ * {@link com.smartfinance.backend.deudas.model.entity.Debt} does. Purely additive — a user with
+ * no cards contributes {@code 0}, so {@code debtRatio} is unchanged from before this integration.
  */
 @Service
 public class FinancialAnalysisService {
@@ -74,17 +81,20 @@ public class FinancialAnalysisService {
     private final IncomeRepository incomeRepository;
     private final ExpenseRepository expenseRepository;
     private final DebtRepository debtRepository;
+    private final CreditCardRepository creditCardRepository;
     private final FinancialAnalysisRepository financialAnalysisRepository;
 
     public FinancialAnalysisService(
             IncomeRepository incomeRepository,
             ExpenseRepository expenseRepository,
             DebtRepository debtRepository,
+            CreditCardRepository creditCardRepository,
             FinancialAnalysisRepository financialAnalysisRepository
     ) {
         this.incomeRepository = incomeRepository;
         this.expenseRepository = expenseRepository;
         this.debtRepository = debtRepository;
+        this.creditCardRepository = creditCardRepository;
         this.financialAnalysisRepository = financialAnalysisRepository;
     }
 
@@ -122,7 +132,8 @@ public class FinancialAnalysisService {
         BigDecimal expenseRatio = safeDivide(totalExpense, totalIncome);
         boolean expenseAlert = expenseRatio.compareTo(EXPENSE_ALERT_THRESHOLD) > 0;
 
-        BigDecimal totalDebt = nullSafe(debtRepository.sumRemainingAmountByUser(userId));
+        BigDecimal totalDebt = nullSafe(debtRepository.sumRemainingAmountByUser(userId))
+                .add(nullSafe(creditCardRepository.sumCurrentBalanceByUser(userId)));
         BigDecimal debtRatio = safeDivide(totalDebt, totalIncome);
 
         BigDecimal annualSavingsProjection = savings.multiply(BigDecimal.valueOf(12));
