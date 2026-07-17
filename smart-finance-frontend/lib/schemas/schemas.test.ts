@@ -5,6 +5,8 @@ import { expenseSchema } from "./expense.schema"
 import { debtSchema, debtEditSchema } from "./debt.schema"
 import { debtPaymentSchema } from "./debt-payment.schema"
 import { recurringPaymentSchema, recurringPaymentEditSchema } from "./recurring-payment.schema"
+import { creditCardSchema, creditCardEditSchema } from "./credit-card.schema"
+import { cardPurchaseSchema, cardPaymentSchema } from "./card-movement.schema"
 import { getTodayDateInput } from "../date"
 
 describe("categorySchema", () => {
@@ -255,6 +257,179 @@ describe("recurringPaymentEditSchema", () => {
 
     expect(result.success).toBe(true)
     expect(result.success && "firstPaymentDate" in result.data).toBe(false)
+  })
+})
+
+describe("creditCardSchema", () => {
+  it("acepta una tarjeta valida", () => {
+    const result = creditCardSchema.safeParse({
+      name: "Visa Platinum",
+      bank: "Bancolombia",
+      franchise: "VISA",
+      creditLimit: 5000000,
+      monthlyRate: 0.025,
+      cutoffDay: 15,
+      paymentDueDay: 5,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("requiere que el cupo sea mayor a 0", () => {
+    const result = creditCardSchema.safeParse({
+      name: "Visa Platinum",
+      franchise: "VISA",
+      creditLimit: 0,
+      monthlyRate: 0.025,
+      cutoffDay: 15,
+      paymentDueDay: 5,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rechaza una tasa mensual negativa", () => {
+    const result = creditCardSchema.safeParse({
+      name: "Visa Platinum",
+      franchise: "VISA",
+      creditLimit: 5000000,
+      monthlyRate: -0.01,
+      cutoffDay: 15,
+      paymentDueDay: 5,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rechaza un dia de corte fuera de 1-31", () => {
+    const result = creditCardSchema.safeParse({
+      name: "Visa Platinum",
+      franchise: "VISA",
+      creditLimit: 5000000,
+      monthlyRate: 0.025,
+      cutoffDay: 32,
+      paymentDueDay: 5,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("requiere una franquicia valida", () => {
+    const result = creditCardSchema.safeParse({
+      name: "Visa Platinum",
+      franchise: "UNKNOWN",
+      creditLimit: 5000000,
+      monthlyRate: 0.025,
+      cutoffDay: 15,
+      paymentDueDay: 5,
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("creditCardEditSchema", () => {
+  it("no incluye franquicia ni cupo", () => {
+    const result = creditCardEditSchema.safeParse({
+      name: "Visa Platinum Renovada",
+      monthlyRate: 0.02,
+      cutoffDay: 20,
+      paymentDueDay: 10,
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.success && "franchise" in result.data).toBe(false)
+    expect(result.success && "creditLimit" in result.data).toBe(false)
+  })
+
+  it("requiere un nombre", () => {
+    const result = creditCardEditSchema.safeParse({
+      name: "",
+      monthlyRate: 0.02,
+      cutoffDay: 20,
+      paymentDueDay: 10,
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("cardPurchaseSchema", () => {
+  it("acepta una compra simple valida", () => {
+    const result = cardPurchaseSchema.safeParse({
+      amount: 150000,
+      date: "2026-06-15",
+      description: "Compra supermercado",
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("acepta una compra diferida con cuotas", () => {
+    const result = cardPurchaseSchema.safeParse({
+      amount: 700000,
+      date: "2026-06-15",
+      installmentCount: 3,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("requiere que el monto sea mayor a 0", () => {
+    const result = cardPurchaseSchema.safeParse({
+      amount: 0,
+      date: "2026-06-15",
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rechaza una cantidad de cuotas menor a 2", () => {
+    const result = cardPurchaseSchema.safeParse({
+      amount: 150000,
+      date: "2026-06-15",
+      installmentCount: 1,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rechaza una fecha futura", () => {
+    const result = cardPurchaseSchema.safeParse({
+      amount: 150000,
+      date: "2099-01-01",
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("acepta la fecha actual", () => {
+    const result = cardPurchaseSchema.safeParse({
+      amount: 150000,
+      date: getTodayDateInput(),
+    })
+
+    expect(result.success).toBe(true)
+  })
+})
+
+describe("cardPaymentSchema", () => {
+  it("acepta un pago valido", () => {
+    const result = cardPaymentSchema.safeParse({
+      amount: 200000,
+      date: "2026-06-25",
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("requiere que el monto sea mayor a 0", () => {
+    const result = cardPaymentSchema.safeParse({
+      amount: 0,
+      date: "2026-06-25",
+    })
+
+    expect(result.success).toBe(false)
   })
 })
 
