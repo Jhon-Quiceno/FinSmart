@@ -6,6 +6,7 @@ import com.smartfinance.backend.ia.mapper.AiMessageMapper;
 import com.smartfinance.backend.ia.model.entity.AiMessage;
 import com.smartfinance.backend.ia.model.entity.AiMessageKind;
 import com.smartfinance.backend.ia.model.entity.AiMessageRole;
+import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
@@ -26,6 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -48,6 +50,9 @@ class AiInsightServiceTest {
 
     @Mock
     private AiMessageMapper aiMessageMapper;
+
+    @Mock
+    private AiUsageEventService aiUsageEventService;
 
     @InjectMocks
     private AiInsightService aiInsightService;
@@ -94,6 +99,7 @@ class AiInsightServiceTest {
 
         Assertions.assertThrows(AiProviderNotConfiguredException.class, () -> aiInsightService.generateInsight());
         verify(messageRepository, never()).save(any(AiMessage.class));
+        verify(aiUsageEventService, never()).record(any(), any(), any(), anyInt(), any());
     }
 
     @Test
@@ -119,6 +125,7 @@ class AiInsightServiceTest {
         Assertions.assertEquals("groq", saved.getProviderName());
         Assertions.assertEquals("llama-3.3", saved.getModel());
         Assertions.assertEquals("- Reduce gastos en comida\n- Aumenta tu ahorro", response.content());
+        verify(aiUsageEventService).record(4L, "groq", AiUsageEventType.INSIGHT, 0, null);
     }
 
     private void setAuthenticatedUser(Long userId) {

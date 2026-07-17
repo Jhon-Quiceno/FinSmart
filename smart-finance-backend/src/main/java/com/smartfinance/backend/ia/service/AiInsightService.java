@@ -5,6 +5,7 @@ import com.smartfinance.backend.ia.mapper.AiMessageMapper;
 import com.smartfinance.backend.ia.model.entity.AiMessage;
 import com.smartfinance.backend.ia.model.entity.AiMessageKind;
 import com.smartfinance.backend.ia.model.entity.AiMessageRole;
+import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import com.smartfinance.backend.common.security.SecurityUtils;
@@ -38,19 +39,22 @@ public class AiInsightService {
     private final AiChatOrchestrator aiChatOrchestrator;
     private final FinancialContextBuilder contextBuilder;
     private final AiMessageMapper aiMessageMapper;
+    private final AiUsageEventService aiUsageEventService;
 
     public AiInsightService(
             AiMessageRepository messageRepository,
             UserRepository userRepository,
             AiChatOrchestrator aiChatOrchestrator,
             FinancialContextBuilder contextBuilder,
-            AiMessageMapper aiMessageMapper
+            AiMessageMapper aiMessageMapper,
+            AiUsageEventService aiUsageEventService
     ) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.aiChatOrchestrator = aiChatOrchestrator;
         this.contextBuilder = contextBuilder;
         this.aiMessageMapper = aiMessageMapper;
+        this.aiUsageEventService = aiUsageEventService;
     }
 
     /**
@@ -75,6 +79,7 @@ public class AiInsightService {
                 ChatMessage.user(INSIGHT_INSTRUCTION)
         );
         ChatCompletionResult result = aiChatOrchestrator.complete(messages);
+        aiUsageEventService.record(userId, result.providerName(), AiUsageEventType.INSIGHT, totalTokens(result), null);
 
         AiMessage insight = new AiMessage();
         insight.setUser(userRepository.getReferenceById(userId));
@@ -85,5 +90,12 @@ public class AiInsightService {
         insight.setModel(result.model());
 
         return aiMessageMapper.toInsightResponse(messageRepository.save(insight));
+    }
+
+    /** Sums {@code promptTokens + completionTokens}, treating either as {@code 0} when the provider did not report it. */
+    private static int totalTokens(ChatCompletionResult result) {
+        int prompt = result.promptTokens() != null ? result.promptTokens() : 0;
+        int completion = result.completionTokens() != null ? result.completionTokens() : 0;
+        return prompt + completion;
     }
 }
