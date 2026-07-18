@@ -103,7 +103,9 @@ y el modelo completo de crédito rotativo con cuotas e intereses reales (Fase B)
 
 ---
 
-## Nivel 2 — Importar extractos bancarios (datos reales sin credenciales)
+## Nivel 2 — Importar extractos bancarios (datos reales sin credenciales) — 🔜 Sprint 2 (propuesto)
+
+> Detalle completo de implementación en `docs/sprints/sprint2.md` cuando se prioriza.
 
 **Qué es:** el usuario descarga el extracto de su banco (CSV/Excel, todos los bancos
 colombianos lo ofrecen) y lo sube a KoroFin. El backend lo parsea y crea las
@@ -113,13 +115,17 @@ transacciones, categorizadas por la IA que ya existe en la app.
 costos de terceros y sin carga regulatoria. Complementa el Nivel 1 (los movimientos
 importados se asocian a la cuenta/tarjeta correspondiente).
 
-**Consideraciones:** cada banco tiene su propio formato → empezar con 1-2 bancos (parser
-por banco detrás de una interfaz común) y deduplicar contra lo ya registrado (fecha +
-monto + descripción).
+**Alcance propuesto para Sprint 2:**
+
+- [ ] Parser por banco detrás de una interfaz común, empezando con 1-2 bancos (Bancolombia
+  y Davivienda propuestos en `sprint2.md` — validar formato contra un extracto real antes de
+  darlo por cerrado).
+- [ ] Deduplicar contra lo ya registrado (fecha + monto + descripción).
+- [ ] Flujo preview→confirm: nada se persiste hasta que el usuario confirma.
 
 ---
 
-## Nivel 3 — Agregación automática vía Open Finance (terceros)
+## Nivel 3 — Agregación automática vía Open Finance (terceros) — 🔲 Sprint 6 (propuesto)
 
 **Qué es:** conexión directa a los bancos con consentimiento del usuario, a través de un
 agregador. **Nunca se almacenan credenciales bancarias propias** — el agregador entrega
@@ -137,39 +143,39 @@ aprendizaje/portfolio, pero producción cobra por usuario/conexión y exige madu
 compliance. Para KoroFin hoy: **explorar en sandbox, no prometer a usuarios.** Verificar
 precios vigentes en belvo.com antes de comprometerse.
 
----
+**Alcance propuesto para Sprint 6:**
 
-## Automatizaciones rápidas sin esperar la IA de correo
-
-Esto se puede construir **ahora mismo**, con el stack actual, sin depender de ninguna
-integración externa:
-
-| Mejora | Prioridad | Esfuerzo |
-|---|---|---|
-| Quick-add flotante (FAB) global, accesible desde cualquier página, con atajo de teclado tipo `Ctrl+K` | Alta | Mediano |
-| Modal ultra-mínimo (solo monto + descripción, resto colapsado/opcional) con defaults inteligentes: última categoría usada, fecha = hoy, método de pago más frecuente | Alta | Chico |
-| Parser de texto libre tipo "Uber 15000" → autocompleta monto + descripción + categoría, conectado a `categorize()`/`useCategorize()` | Alta | Mediano |
-| Plantillas de gastos frecuentes (chips tipo "Uber", "Supermercado" con monto/categoría precargados) | Media | Chico |
-| Entrada por voz | Baja | Grande (bajo ROI hasta validar el parser de texto) |
-
-**Estado real verificado hoy (2026-07-14) — corrige la investigación original:** el backend
-ya expone `categorize()` (`lib/services/ai.service.ts`) y el hook `useCategorize()`
-(`hooks/use-ai.ts`), y **`components/expenses/expense-modal.tsx` ya tiene un botón
-"Sugerir categoría" conectado** (agregado en el Sprint 5, commit `b67b760`, 2026-07-04 —
-antes incluso de que se escribiera la investigación original que decía que no estaba
-conectado a ningún formulario). Lo que falta realmente:
-
-- **`components/income/income-modal.tsx` no tiene esa misma sugerencia** — es la brecha
-  real a cerrar, replicando el patrón ya probado en gastos.
-- El **quick-add global** (FAB + `Ctrl+K` + modal ultra-mínimo) y el **parser de texto
-  libre** ("Uber 15000" → monto + descripción + categoría en un solo campo) son
-  funcionalidad nueva, no existen hoy en ninguna forma.
-- Ya existe `components/ui/command.tsx` (shadcn `cmdk`) importado pero sin usar en
-  ninguna página — es el punto de partida natural para el command palette del quick-add.
+- [ ] Exploración de Belvo/Prometeo en sandbox — cuentas, saldos, movimientos.
+- [ ] Verificar precios vigentes antes de comprometerse con usuarios reales.
+- [ ] Sin promesas a usuarios todavía (explorar, no lanzar).
 
 ---
 
-## Automatización con IA de correo/SMS/notificaciones — arquitectura y honestidad de plataforma
+## Automatizaciones rápidas sin esperar la IA de correo — ✅ Sprint 1 (hecho, 2026-07-17)
+
+Esto se podía construir sin depender de ninguna integración externa — y así fue: todo lo de
+esta tabla quedó resuelto en Sprint 1 (2026-07-17, PR #82).
+
+| Mejora | Prioridad | Esfuerzo | Estado |
+|---|---|---|---|
+| Quick-add flotante (FAB) global, accesible desde cualquier página, con atajo de teclado tipo `Ctrl+K` | Alta | Mediano | ✅ Sprint 1 |
+| Modal ultra-mínimo (solo monto + descripción, resto colapsado/opcional) con defaults inteligentes: última categoría usada, fecha = hoy, método de pago más frecuente | Alta | Chico | ✅ Sprint 1 |
+| Parser de texto libre tipo "Uber 15000" → autocompleta monto + descripción + categoría, conectado a `categorize()`/`useCategorize()` | Alta | Mediano | ✅ Sprint 1 |
+| Sugerencia de categoría en `income-modal.tsx` (brecha vs. `expense-modal.tsx`, que ya la tenía desde Sprint 5 MVP) | Alta | Chico | ✅ Sprint 1 |
+| Plantillas de gastos frecuentes (chips tipo "Uber", "Supermercado" con monto/categoría precargados) | Media | Chico | 🔲 sin sprint asignado |
+| Entrada por voz | Baja | Grande (bajo ROI hasta validar el parser de texto) | 🔲 sin sprint asignado |
+
+**Verificado en Sprint 1:** `expense-modal.tsx` ya tenía el botón "Sugerir categoría"
+conectado desde el Sprint 5 del MVP (commit `b67b760`); la brecha real era
+`income-modal.tsx`, ya cerrada. `components/ui/command.tsx` (shadcn `cmdk`), que estaba
+importado sin usar, es ahora la base del quick-add global.
+
+---
+
+## Automatización con IA de correo/SMS/notificaciones — arquitectura y honestidad de plataforma — 🔲 Sprint 3 (propuesto, correo únicamente; SMS descartado, notificaciones requieren app móvil)
+
+> Detalle completo de implementación en `docs/sprints/sprint3.md` cuando se prioriza.
+> Probablemente demasiado grande para un solo sprint — evaluar partir en 2 al detallarlo.
 
 Esta es la pieza central de la visión de largo plazo. La investigación deja hechos de
 plataforma muy concretos que deberían moldear las expectativas del producto.
@@ -239,35 +245,45 @@ Fuente: auditoría de base de datos + arquitectura backend/frontend, cruzadas.
 
 ### Backend — módulos nuevos necesarios
 
-- **Tracking de uso/cuotas de IA**: no existe hoy ninguna tabla que registre tokens/costo
-  por usuario. Es la base de todo el futuro modelo de cobro.
-- **Ingestión de correo/SMS/notificaciones**: módulo de ingesta + cola async + extracción
-  con LLM — es el corazón de la visión del producto.
-- **Motor de reglas de automatización**: para que el usuario pueda afinar/override la
+- [x] **Tracking de uso/cuotas de IA** — ✅ Sprint 1: `ai_usage_events` (V16), consultable
+  vía `GET /api/ai/usage`. Es la base de todo el futuro modelo de cobro.
+- [ ] **Ingestión de correo/SMS/notificaciones** — 🔲 Sprint 3: módulo de ingesta + cola
+  async + extracción con LLM — es el corazón de la visión del producto.
+- [ ] **Motor de reglas de automatización** — 🔲 Sprint 3 (junto con la ingesta de correo,
+  son la misma pieza de dominio): para que el usuario pueda afinar/override la
   clasificación automática de la IA (ej. "todo lo que venga de tal remitente,
   categorizarlo como tal cosa").
-- **Credenciales de integraciones de terceros**: OAuth de Gmail, webhooks bancarios —
-  deben vivir separadas de la config de proveedores de IA del operador, y **cifradas
-  at-rest**, nunca en texto plano.
+- [ ] **Credenciales de integraciones de terceros** — 🔲 Sprint 3: OAuth de Gmail, webhooks
+  bancarios — deben vivir separadas de la config de proveedores de IA del operador, y
+  **cifradas at-rest**, nunca en texto plano. (El vínculo de Telegram de Sprint 2 usa su
+  propio mecanismo más simple, sin OAuth — ver `docs/sprints/sprint2.md` — este modelo
+  genérico queda reservado para cuando Gmail lo necesite de verdad.)
 
 ### Base de datos — tablas nuevas propuestas (boceto, no DDL final)
 
 ```
+# 🔲 Sprint 3
 ingested_messages     (id, user_id, source[EMAIL|SMS|PUSH], external_ref, encrypted_content,
                        received_at, processing_status[PENDING|PROCESSED|FAILED|IGNORED],
                        processed_at, matched_expense_id, matched_income_id, ai_confidence,
                        error_detail, created_at)
 
+# 🔲 Sprint 3
 automation_rules      (id, user_id, name, match_type[sender|regex|keyword], match_value,
                        target_category_id, is_active, priority, created_at, updated_at)
 
+# 🔲 Sprint 3
 integration_credentials (id, user_id, provider[GMAIL|BANK_WEBHOOK], encrypted_access_token,
                          encrypted_refresh_token, token_expires_at, scopes, status,
                          last_synced_at, created_at, updated_at)
 
+# ✅ Sprint 1 — implementada (V16__create_ai_usage_events.sql), campos reales difieren
+# levemente de este boceto original (usa created_at + agregación por rango, no
+# period_year/period_month como columnas propias — ver la migración real)
 ai_usage_events       (id, user_id, period_year, period_month, event_type, tokens_used,
                        cost_estimate, created_at)
 
+# 🔲 Sprint 7
 plans                 (id, name, price, limits jsonb)
 subscriptions         (id, user_id, plan_id, status, current_period_start, current_period_end,
                        external_billing_id)
@@ -302,7 +318,7 @@ soft-delete (`deleted_at`) en `users`/`subscriptions` para auditoría de factura
 
 ## Mejoras técnicas pendientes — backend y frontend
 
-### Backend
+### Backend — 🔲 Sprint 4 (propuesto), salvo lo ya marcado hecho
 
 Fuente: auditoría de arquitectura backend (Spring Boot 4.0.7, 201 archivos Java, ~35
 clases de test).
@@ -313,41 +329,46 @@ propio — depende de que `DebtPaymentService` valide la propiedad del `Debt` pa
 tocar el repositorio. Es un patrón intencional pero frágil ante un endpoint nuevo que lo
 saltee.
 
-| Mejora | Prioridad | Esfuerzo |
-|---|---|---|
-| Agregar `user_id` desnormalizado (o test de contrato) en `debt_payments` para blindar contra un futuro IDOR | Alta | Chico |
-| Row-Level Security de Postgres como defensa en profundidad (el aislamiento hoy depende 100% de que cada query en el código filtre por usuario) | Alta | Mediano |
-| Rate limiting en `/api/users/login`, `/api/users/register` y `/api/ai/chat` (hoy sin protección de fuerza bruta ni de abuso a proveedores de IA de pago) | Alta | Mediano |
-| `@Scheduled` in-process (`PaymentReminderJob`, `WeeklySummaryJob`) duplica envíos si en algún momento hay 2+ instancias del backend corriendo | Alta | Mediano |
-| Configurar HikariCP (`maximum-pool-size`, `connection-timeout`) — hoy usa defaults de Spring Boot | Media | Chico |
-| Caching corto (Caffeine/Redis) para reportes y análisis mensual, que hoy recalculan agregados en cada request | Media | Mediano |
-| `AsyncConfig` solo cubre el envío de mails; cualquier otro trabajo pesado (categorización IA, insights) corre en el hilo de request | Media | Chico |
-| Testcontainers/Postgres real en CI (hoy los tests son unit/MockMvc puros) | Media | Mediano |
-| Logging estructurado (JSON) + correlación de request-id, necesario para depurar un SaaS multi-tenant en producción | Media | Mediano |
-| Análisis estático (Checkstyle/SpotBugs) y `dependency-check` OWASP sobre Maven en CI (hoy solo hay Trivy sobre la imagen Docker) | Baja | Chico |
+| Mejora | Prioridad | Esfuerzo | Estado |
+|---|---|---|---|
+| Agregar `user_id` desnormalizado (o test de contrato) en `debt_payments` para blindar contra un futuro IDOR | Alta | Chico | 🔲 Sprint 4 |
+| Row-Level Security de Postgres como defensa en profundidad (el aislamiento hoy depende 100% de que cada query en el código filtre por usuario) | Alta | Mediano | 🔲 Sprint 4 |
+| Rate limiting en `/api/users/login`, `/api/users/register` y `/api/ai/chat` (hoy sin protección de fuerza bruta ni de abuso a proveedores de IA de pago) | Alta | Mediano | ✅ Sprint 1 |
+| `@Scheduled` in-process (`PaymentReminderJob`, `WeeklySummaryJob`) duplica envíos si en algún momento hay 2+ instancias del backend corriendo | Alta | Mediano | 🔲 Sprint 4 |
+| Configurar HikariCP (`maximum-pool-size`, `connection-timeout`) — hoy usa defaults de Spring Boot | Media | Chico | 🔲 Sprint 4 |
+| Caching corto (Caffeine/Redis) para reportes y análisis mensual, que hoy recalculan agregados en cada request | Media | Mediano | 🔲 sin sprint asignado |
+| `AsyncConfig` solo cubre el envío de mails; cualquier otro trabajo pesado (categorización IA, insights) corre en el hilo de request | Media | Chico | 🔲 sin sprint asignado |
+| Testcontainers/Postgres real en CI (hoy los tests son unit/MockMvc puros) | Media | Mediano | 🔲 Sprint 4 |
+| Logging estructurado (JSON) + correlación de request-id, necesario para depurar un SaaS multi-tenant en producción | Media | Mediano | 🔲 Sprint 4 |
+| Análisis estático (Checkstyle/SpotBugs) y `dependency-check` OWASP sobre Maven en CI (hoy solo hay Trivy sobre la imagen Docker) | Baja | Chico | 🔲 sin sprint asignado |
 
-### Frontend
+### Frontend — 🔲 Sprint 5 (propuesto)
 
 Fuente: auditoría de arquitectura frontend (Next.js 16, hooks caseros con Map-cache +
 listeners).
 
 **Estado actual**: el patrón de cache casero (`Map` + `Set<() => void>` +
 `invalidateXCache()`) se repite copiado en cada hook (`use-incomes.ts`, `use-ai.ts`, etc.,
-~140 líneas de boilerplate cada uno). Funciona hoy, pero cada dominio nuevo (facturación,
-automatizaciones, integraciones) implica copiar ese boilerplate de nuevo, y la
-invalidación es total (`.clear()` de todo el Map) en vez de quirúrgica por clave.
+~140 líneas de boilerplate cada uno, incluidos los hooks nuevos de Fase B). Funciona hoy,
+pero cada dominio nuevo (facturación, automatizaciones, integraciones) implica copiar ese
+boilerplate de nuevo, y la invalidación es total (`.clear()` de todo el Map) en vez de
+quirúrgica por clave.
 
-| Mejora | Prioridad | Esfuerzo |
-|---|---|---|
-| Migrar a TanStack Query (react-query) — no por rendimiento actual, sino porque cada módulo nuevo de la automatización va a heredar el mismo boilerplate si no se corta ahora. Puede convivir incrementalmente con los hooks legacy | Alta | Grande |
-| Tests de componentes — hoy `package.json` no tiene `@testing-library/react` ni Playwright/Cypress; formularios críticos como `IncomeModal`/`ExpenseModal` no tienen cobertura | Alta | Mediano |
-| Inputs custom en `asistente-ia/page.tsx` sin usar los primitivos de `components/ui/input.tsx`/`button.tsx` (inconsistencia de sistema de diseño y de accesibilidad) | Media | Chico |
-| Botones "Google"/"GitHub" en login son decorativos (sin `onClick`) — o se implementan o se quitan antes de un SaaS real | Media | Chico |
-| El `useEffect` + `setTimeout(0)` repetido en cada hook para evitar fetch en el render es un anti-patrón que react-query resuelve de raíz | Baja | (incluido en la migración de arriba) |
+| Mejora | Prioridad | Esfuerzo | Estado |
+|---|---|---|---|
+| Migrar a TanStack Query (react-query) — no por rendimiento actual, sino porque cada módulo nuevo de la automatización va a heredar el mismo boilerplate si no se corta ahora. Puede convivir incrementalmente con los hooks legacy | Alta | Grande | 🔲 Sprint 5 |
+| Tests de componentes — hoy `package.json` no tiene `@testing-library/react` ni Playwright/Cypress; formularios críticos como `IncomeModal`/`ExpenseModal` no tienen cobertura | Alta | Mediano | 🔲 Sprint 5 |
+| Inputs custom en `asistente-ia/page.tsx` sin usar los primitivos de `components/ui/input.tsx`/`button.tsx` (inconsistencia de sistema de diseño y de accesibilidad) | Media | Chico | 🔲 Sprint 5 |
+| Botones "Google"/"GitHub" en login son decorativos (sin `onClick`) — o se implementan o se quitan antes de un SaaS real | Media | Chico | 🔲 Sprint 5 |
+| El `useEffect` + `setTimeout(0)` repetido en cada hook para evitar fetch en el render es un anti-patrón que react-query resuelve de raíz | Baja | (incluido en la migración de arriba) | 🔲 Sprint 5 |
 
 ---
 
-## SaaS multi-tenant y modelo de negocio
+## SaaS multi-tenant y modelo de negocio — 🔲 Sprint 7 (propuesto, billing)
+
+> Detalle completo de implementación en `docs/sprints/sprint7.md` cuando se prioriza —
+> depende de Sprint 1 (`ai_usage_events`, ya hecho) y Sprint 3 (correo validado con
+> usuarios reales).
 
 Fuente: investigación de mercado y estrategia (competidores activos en 2026).
 
@@ -383,6 +404,13 @@ bancaria tipo Plaid es débil o cara (Latam).
   billing de IA) es la integración más directa para suscripciones + overage.
 - Soft-cap que degrada a plan free al agotar cuota, no corte abrupto del servicio.
 
+**Alcance propuesto para Sprint 7:**
+
+- [ ] Modelo freemium: plan gratis + plan pago con overage medido.
+- [ ] Stripe Billing + Metronome (metered billing de IA).
+- [ ] Tablas `plans`/`subscriptions`, `plan_id`/`stripe_customer_id` en `users`.
+- [ ] Soft-cap que degrada a plan free al agotar cuota.
+
 ### Riesgos de negocio
 
 - **Regulatorio**: leer correos es dato personal sensible bajo GDPR — requiere DPIA antes
@@ -395,7 +423,7 @@ bancaria tipo Plaid es débil o cara (Latam).
 
 ---
 
-## App móvil
+## App móvil — 🔲 Futuro (propuesto, al final de todos los sprints numerados)
 
 Fuente: investigación de framework y viabilidad de plataforma.
 
@@ -409,11 +437,11 @@ velocidad de soporte para APIs nuevas de Android/iOS con equipos chicos.
 
 ### Fases sugeridas
 
-| Fase | Alcance | Esfuerzo |
-|------|---------|----------|
-| v1 | Paridad con la web: dashboard, carga manual, push del backend | Mediano |
-| v2 | Android only: `NotificationListenerService` + módulo nativo Kotlin, matching con IA | Grande |
-| v3 | Widgets, biometría, modo offline | Chico-Mediano |
+| Fase | Alcance | Esfuerzo | Estado |
+|------|---------|----------|--------|
+| v1 | Paridad con la web: dashboard, carga manual, push del backend | Mediano | 🔲 Futuro |
+| v2 | Android only: `NotificationListenerService` + módulo nativo Kotlin, matching con IA | Grande | 🔲 Futuro, depende de Sprint 3 (correo) maduro |
+| v3 | Widgets, biometría, modo offline | Chico-Mediano | 🔲 Futuro |
 
 ### Por qué al final del roadmap
 
@@ -433,124 +461,29 @@ puntual — es una limitación de plataforma real, no un compromiso técnico evi
 
 ---
 
-## Roadmap por Sprints
+## Índice por sprint
 
-Fuente única de verdad del progreso del proyecto. Cada sprint acá listado, cuando se
-prioriza, se expande en su propio archivo `docs/sprints/sprintN.md` (mismo nivel de detalle
-que `docs/sprints/sprint1.md`: objetivo, decisiones de arquitectura, alcance backend/BD/
-frontend, DoD, referencia de endpoints). Esta sección es el checklist de progreso; el
-archivo de sprint es el plan de ejecución. Marcar acá con `[x]` cuando el sprint correspondiente
-esté mergeado a `develop`.
+Cada sección del documento (Nivel 1/2/3, automatizaciones, módulos backend, mejoras
+técnicas, modelo de negocio, app móvil) ya está etiquetada en su propio título con el
+sprint al que pertenece y tiene sus checkboxes `[x]`/`[ ]` en el lugar — **no se repiten
+acá**. Esta tabla es solo para saltar rápido a cada uno.
 
 No confundir "sprint" con "fase": las fases (A/B del rediseño de deudas) fueron un caso
 puntual con reglas de negocio propias, diseñadas con SDD fuera de la numeración secuencial
-de sprints — no cuentan como un sprint numerado.
+de sprints.
 
-### ✅ Sprint 1 — Deudas Fase A + quick-add IA + tracking/rate limiting (HECHO, 2026-07-17)
-
-- [x] Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de "la deuda de
-  mi tarjeta solo puede bajar".
-- [x] Quick-add global + parser de texto conectado a `categorize()`/`useCategorize()`, y
-  cerrada la brecha de que `income-modal.tsx` no tenía la sugerencia de categoría que
-  `expense-modal.tsx` ya tenía.
-- [x] Tracking de uso de IA (`ai_usage_events`, consultable vía `GET /api/ai/usage`) y rate
-  limiting en login/register/ai-chat.
-
-PR #82 mergeada a `develop`. Detalle completo: `docs/sprints/sprint1.md`.
-
-### ✅ Fase B — Dominio de tarjetas de crédito completo (HECHA, 2026-07-17, fuera de la numeración de sprints)
-
-- [x] `CreditCard` + `CardMovement` (ledger) + `InstallmentPlan`/`Installment` (amortización
-  capital fijo, interés decreciente por compra) + `CardCycleCloseJob` (cierre de ciclo
-  idempotente con catch-up) + integración con `debtRatio` + UI completa.
-
-Diseñada con SDD completo (proposal→spec→design→tasks, revisión con contexto fresco antes
-de tasks). 7 PRs encadenadas stacked-to-main (#83-#89), 0 hallazgos de seguridad de alta
-confianza. Ver "Hecho y mergeado" más abajo para el detalle.
-
-### 🔜 Sprint 2 — Nivel 2 (extractos bancarios) + primer flujo n8n (PROPUESTO)
-
-Siguiente en la cola: ambos ítems ya están desbloqueados (sin dependencias pendientes) y
-comparten el mismo objetivo de fondo — más datos reales entrando a la app con menos carga
-manual del usuario.
-
-- [ ] Nivel 2: importar extractos bancarios (CSV/Excel) — parser por banco (empezar con 1-2
-  bancos) detrás de una interfaz común, deduplicar contra lo ya registrado (fecha + monto +
-  descripción), categorización automática de lo importado vía la IA existente.
-- [ ] Primer flujo real de n8n: bot de Telegram para registrar gastos — infraestructura
-  Docker y cuenta de n8n ya listas, patrón `backend → webhook → n8n` ya decidido, falta
-  construir el flujo.
-- [ ] Limpieza chica: eliminar el test manual `EmailSmokeManualTest.java` (sin trackear, a
-  propósito) si ya no hace falta para verificar entrega de Resend.
-
-Ver `docs/sprints/sprint2.md` para el detalle completo.
-
-### 🔲 Sprint 3 — Integración de correo (Gmail API + Pub/Sub) (PROPUESTO)
-
-El corazón de la visión de automatización por IA — no depende de nada más que no esté ya
-resuelto. Ver sección "Automatización con IA de correo/SMS/notificaciones" más abajo para
-el diseño de arquitectura completo (OAuth2, Pub/Sub, pipeline de extracción, bandeja de
-revisión obligatoria).
-
-- [ ] OAuth2 Gmail (scope `gmail.readonly`) + registro de `watch()` + renovación cron.
-- [ ] Webhook de Pub/Sub + IMAP genérico con IDLE para proveedores no-Gmail.
-- [ ] Extracción con LLM (monto, comercio, fecha, tipo) + score de confianza.
-- [ ] Bandeja de revisión pendiente (obligatoria, no opcional) antes de crear el movimiento
-  real.
-- [ ] Tabla `ingested_messages` con cifrado at-rest y purga del payload crudo tras procesar.
-
-Probablemente demasiado grande para un sprint solo — evaluar partir en 2 al momento de
-detallarlo (ej. Sprint 3: ingesta + extracción; Sprint 4: bandeja de revisión + UI).
-
-### 🔲 Sprint 4 — Seguridad y confiabilidad de backend (PROPUESTO)
-
-Backlog técnico de la auditoría de arquitectura backend, priorizado alto que todavía no se
-atacó (rate limiting de sprint1 ya cerró uno de estos ítems).
-
-- [ ] Row-Level Security de Postgres (defensa en profundidad).
-- [ ] `user_id` desnormalizado (o test de contrato) en `debt_payments` contra IDOR futuro.
-- [ ] Configurar HikariCP (`maximum-pool-size`, `connection-timeout`).
-- [ ] Testcontainers/Postgres real en CI.
-- [ ] Logging estructurado (JSON) + correlación de request-id.
-- [ ] `@Scheduled` in-process: resolver duplicación si hay 2+ instancias del backend.
-
-### 🔲 Sprint 5 — Modernización frontend (PROPUESTO)
-
-- [ ] Migrar a TanStack Query (react-query) — puede convivir incrementalmente con los hooks
-  legacy.
-- [ ] Tests de componentes (`@testing-library/react`), empezando por `IncomeModal`/
-  `ExpenseModal`.
-- [ ] Inputs custom en `asistente-ia/page.tsx` → primitivos de `components/ui/`.
-- [ ] Botones "Google"/"GitHub" en login: implementar o quitar.
-
-### 🔲 Sprint 6 — Nivel 3: Open Finance en sandbox (PROPUESTO)
-
-- [ ] Exploración de Belvo/Prometeo en sandbox — cuentas, saldos, movimientos.
-- [ ] Verificar precios vigentes antes de comprometerse con usuarios reales.
-- [ ] Sin promesas a usuarios todavía (explorar, no lanzar).
-
-### 🔲 Sprint 7 — Planes, suscripciones y billing (PROPUESTO)
-
-Una vez que el consumo de IA esté medido (ya lo está, `ai_usage_events` de sprint1) y la
-automatización de correo esté validada con usuarios reales (Sprint 3).
-
-- [ ] Modelo freemium: plan gratis + plan pago con overage medido.
-- [ ] Stripe Billing + Metronome (metered billing de IA).
-- [ ] Tablas `plans`/`subscriptions`, `plan_id`/`stripe_customer_id` en `users`.
-- [ ] Soft-cap que degrada a plan free al agotar cuota.
-
-### 🔲 Futuro — App móvil React Native (PROPUESTO, al final)
-
-Fase más cara en esfuerzo relativo; v2 depende de que el motor de categorización por IA ya
-esté maduro con datos reales de correo (Sprint 3).
-
-- [ ] v1 — Paridad con la web: dashboard, carga manual, push del backend.
-- [ ] v2 — Android only: `NotificationListenerService` + módulo nativo Kotlin.
-- [ ] v3 — Widgets, biometría, modo offline.
-
-### Operativo, sin sprint asignado (en paralelo, no bloquea nada)
-
-- [ ] Dominio de GitHub Students (administrativo, no requiere código).
+| Sprint | Título | Estado | Dónde vive el contenido |
+|---|---|---|---|
+| 1 | Deudas Fase A + quick-add IA + tracking/rate limiting | ✅ Hecho (PR #82) | §"Nivel 1" 1.1 (Fase A), §"Automatizaciones rápidas", §"Módulos backend" (`ai_usage_events`), §"Mejoras técnicas backend" (rate limiting) |
+| — | Fase B — Dominio de tarjetas completo | ✅ Hecho (#83-#89) | §"Nivel 1" 1.1 (Fase B) — no es un sprint numerado |
+| 2 | Extractos bancarios + primer flujo n8n | 🔜 Propuesto, `docs/sprints/sprint2.md` ya escrito | §"Nivel 2" |
+| 3 | Integración de correo (Gmail API + Pub/Sub) | 🔲 Propuesto | §"Automatización con IA de correo/SMS/notificaciones", §"Módulos backend" (`ingested_messages`, `automation_rules`, `integration_credentials`) |
+| 4 | Seguridad y confiabilidad de backend | 🔲 Propuesto | §"Mejoras técnicas pendientes" → Backend |
+| 5 | Modernización frontend | 🔲 Propuesto | §"Mejoras técnicas pendientes" → Frontend |
+| 6 | Nivel 3: Open Finance en sandbox | 🔲 Propuesto | §"Nivel 3" |
+| 7 | Planes, suscripciones y billing | 🔲 Propuesto | §"SaaS multi-tenant y modelo de negocio", §"Módulos backend" (`plans`, `subscriptions`) |
+| Futuro | App móvil React Native | 🔲 Propuesto, al final | §"App móvil" |
+| Sin sprint | Dominio de GitHub Students (administrativo) | 🔲 Pendiente | Operativo, en paralelo |
 
 ---
 
@@ -583,9 +516,10 @@ esté maduro con datos reales de correo (Sprint 3).
 
 ### Pendiente
 
-Ver la sección **"Roadmap por Sprints"** más arriba — es el checklist único y autoritativo
-de qué falta y en qué orden. Los ítems operativos ya cerrados (Resend, secrets, PR a main
-de esa fase) quedan documentados en "Hecho y mergeado" arriba, no se repiten acá.
+Ver la sección **"Índice por sprint"** más arriba: cada tema pendiente vive etiquetado con
+checkboxes en su propia sección del documento (Nivel 2/3, automatización de correo,
+mejoras técnicas, modelo de negocio, app móvil). Los ítems operativos ya cerrados (Resend,
+secrets, PR a main de esa fase) quedan documentados en "Hecho y mergeado" arriba.
 
 ### Backlog técnico (sin urgencia)
 
