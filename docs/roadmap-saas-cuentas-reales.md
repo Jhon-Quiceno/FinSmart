@@ -433,47 +433,124 @@ puntual — es una limitación de plataforma real, no un compromiso técnico evi
 
 ---
 
-## Orden recomendado de todo el roadmap
+## Roadmap por Sprints
 
-Fusiona el orden de 6 pasos de la investigación SaaS con los 3 niveles de cuentas reales
-en una sola secuencia priorizada:
+Fuente única de verdad del progreso del proyecto. Cada sprint acá listado, cuando se
+prioriza, se expande en su propio archivo `docs/sprints/sprintN.md` (mismo nivel de detalle
+que `docs/sprints/sprint1.md`: objetivo, decisiones de arquitectura, alcance backend/BD/
+frontend, DoD, referencia de endpoints). Esta sección es el checklist de progreso; el
+archivo de sprint es el plan de ejecución. Marcar acá con `[x]` cuando el sprint correspondiente
+esté mergeado a `develop`.
 
-1. **`docs/sprints/sprint1.md`, bajo esfuerzo y alto impacto — ✅ HECHO (2026-07-17,
-   PR #82 mergeada a `develop`):**
-   - [x] Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de hoy.
-   - [x] Quick-add + parser de texto conectado a `categorize()`/`useCategorize()`, y cerrada
-     la brecha de que `income-modal.tsx` no tenía la sugerencia de categoría que
-     `expense-modal.tsx` ya tenía.
-   - [x] Tracking de uso de IA (`ai_usage_events`, consultable vía `GET /api/ai/usage`) y
-     rate limiting — necesarios antes de abrir el producto a más usuarios.
-2. **Corto plazo, en paralelo (ítems operativos):**
-   - [ ] Dominio de GitHub Students
-   - [x] Activación de Resend (DKIM/SPF sobre `korofin.jhonqui.dev`, `MAIL_FROM`)
-   - [x] Subir secrets a GitHub Actions
-   - [x] PR `develop` → `main`
-   - [ ] Primer flujo real de n8n (bot de Telegram para registrar gastos, sobre la
-     infraestructura Docker ya levantada; cuenta de n8n ya creada)
-3. **Mediano plazo:**
-   - [ ] Nivel 2: importar extractos bancarios (CSV/Excel) — datos reales sin terceros ni
-     regulación, complementa el Nivel 1.
-   - [ ] Integración de correo (Gmail API + Pub/Sub) con bandeja de revisión — el corazón de
-     la visión de automatización por IA, no depende de nada más.
-4. **Mediano-largo plazo:**
-   - [ ] Nivel 3: Open Finance (Belvo/Prometeo) en sandbox, sin prometer a usuarios todavía.
-   - [ ] Planes/suscripciones + Stripe/Metronome, una vez que el consumo de IA esté medido y
-     la automatización de correo esté validada con usuarios reales.
-5. **Largo plazo, en paralelo (no bloquean nada de lo anterior):**
-   - [ ] Row-Level Security
-   - [ ] Migración de cache a react-query
-   - [ ] Tests de componentes
-   - [ ] Resto del backlog técnico de las tablas de mejoras pendientes
-6. **Al final:**
-   - [x] Fase B del dominio de tarjetas (`CreditCard` + ledger + ciclos) — diseñada con SDD
-     y completa (2026-07-17, 7 PRs encadenadas #83-#89). Se adelantó respecto al orden
-     original (estaba planeada para "el final") porque se priorizó cerrarla junto con
-     Fase A en la misma sesión de trabajo.
-   - [ ] App móvil React Native, empezando por paridad (v1) y recién en v2 la automatización
-     por notificaciones en Android.
+No confundir "sprint" con "fase": las fases (A/B del rediseño de deudas) fueron un caso
+puntual con reglas de negocio propias, diseñadas con SDD fuera de la numeración secuencial
+de sprints — no cuentan como un sprint numerado.
+
+### ✅ Sprint 1 — Deudas Fase A + quick-add IA + tracking/rate limiting (HECHO, 2026-07-17)
+
+- [x] Fase A del rediseño de deudas (`DebtCharge`) — resuelve el dolor real de "la deuda de
+  mi tarjeta solo puede bajar".
+- [x] Quick-add global + parser de texto conectado a `categorize()`/`useCategorize()`, y
+  cerrada la brecha de que `income-modal.tsx` no tenía la sugerencia de categoría que
+  `expense-modal.tsx` ya tenía.
+- [x] Tracking de uso de IA (`ai_usage_events`, consultable vía `GET /api/ai/usage`) y rate
+  limiting en login/register/ai-chat.
+
+PR #82 mergeada a `develop`. Detalle completo: `docs/sprints/sprint1.md`.
+
+### ✅ Fase B — Dominio de tarjetas de crédito completo (HECHA, 2026-07-17, fuera de la numeración de sprints)
+
+- [x] `CreditCard` + `CardMovement` (ledger) + `InstallmentPlan`/`Installment` (amortización
+  capital fijo, interés decreciente por compra) + `CardCycleCloseJob` (cierre de ciclo
+  idempotente con catch-up) + integración con `debtRatio` + UI completa.
+
+Diseñada con SDD completo (proposal→spec→design→tasks, revisión con contexto fresco antes
+de tasks). 7 PRs encadenadas stacked-to-main (#83-#89), 0 hallazgos de seguridad de alta
+confianza. Ver "Hecho y mergeado" más abajo para el detalle.
+
+### 🔜 Sprint 2 — Nivel 2 (extractos bancarios) + primer flujo n8n (PROPUESTO)
+
+Siguiente en la cola: ambos ítems ya están desbloqueados (sin dependencias pendientes) y
+comparten el mismo objetivo de fondo — más datos reales entrando a la app con menos carga
+manual del usuario.
+
+- [ ] Nivel 2: importar extractos bancarios (CSV/Excel) — parser por banco (empezar con 1-2
+  bancos) detrás de una interfaz común, deduplicar contra lo ya registrado (fecha + monto +
+  descripción), categorización automática de lo importado vía la IA existente.
+- [ ] Primer flujo real de n8n: bot de Telegram para registrar gastos — infraestructura
+  Docker y cuenta de n8n ya listas, patrón `backend → webhook → n8n` ya decidido, falta
+  construir el flujo.
+- [ ] Limpieza chica: eliminar el test manual `EmailSmokeManualTest.java` (sin trackear, a
+  propósito) si ya no hace falta para verificar entrega de Resend.
+
+Ver `docs/sprints/sprint2.md` para el detalle completo.
+
+### 🔲 Sprint 3 — Integración de correo (Gmail API + Pub/Sub) (PROPUESTO)
+
+El corazón de la visión de automatización por IA — no depende de nada más que no esté ya
+resuelto. Ver sección "Automatización con IA de correo/SMS/notificaciones" más abajo para
+el diseño de arquitectura completo (OAuth2, Pub/Sub, pipeline de extracción, bandeja de
+revisión obligatoria).
+
+- [ ] OAuth2 Gmail (scope `gmail.readonly`) + registro de `watch()` + renovación cron.
+- [ ] Webhook de Pub/Sub + IMAP genérico con IDLE para proveedores no-Gmail.
+- [ ] Extracción con LLM (monto, comercio, fecha, tipo) + score de confianza.
+- [ ] Bandeja de revisión pendiente (obligatoria, no opcional) antes de crear el movimiento
+  real.
+- [ ] Tabla `ingested_messages` con cifrado at-rest y purga del payload crudo tras procesar.
+
+Probablemente demasiado grande para un sprint solo — evaluar partir en 2 al momento de
+detallarlo (ej. Sprint 3: ingesta + extracción; Sprint 4: bandeja de revisión + UI).
+
+### 🔲 Sprint 4 — Seguridad y confiabilidad de backend (PROPUESTO)
+
+Backlog técnico de la auditoría de arquitectura backend, priorizado alto que todavía no se
+atacó (rate limiting de sprint1 ya cerró uno de estos ítems).
+
+- [ ] Row-Level Security de Postgres (defensa en profundidad).
+- [ ] `user_id` desnormalizado (o test de contrato) en `debt_payments` contra IDOR futuro.
+- [ ] Configurar HikariCP (`maximum-pool-size`, `connection-timeout`).
+- [ ] Testcontainers/Postgres real en CI.
+- [ ] Logging estructurado (JSON) + correlación de request-id.
+- [ ] `@Scheduled` in-process: resolver duplicación si hay 2+ instancias del backend.
+
+### 🔲 Sprint 5 — Modernización frontend (PROPUESTO)
+
+- [ ] Migrar a TanStack Query (react-query) — puede convivir incrementalmente con los hooks
+  legacy.
+- [ ] Tests de componentes (`@testing-library/react`), empezando por `IncomeModal`/
+  `ExpenseModal`.
+- [ ] Inputs custom en `asistente-ia/page.tsx` → primitivos de `components/ui/`.
+- [ ] Botones "Google"/"GitHub" en login: implementar o quitar.
+
+### 🔲 Sprint 6 — Nivel 3: Open Finance en sandbox (PROPUESTO)
+
+- [ ] Exploración de Belvo/Prometeo en sandbox — cuentas, saldos, movimientos.
+- [ ] Verificar precios vigentes antes de comprometerse con usuarios reales.
+- [ ] Sin promesas a usuarios todavía (explorar, no lanzar).
+
+### 🔲 Sprint 7 — Planes, suscripciones y billing (PROPUESTO)
+
+Una vez que el consumo de IA esté medido (ya lo está, `ai_usage_events` de sprint1) y la
+automatización de correo esté validada con usuarios reales (Sprint 3).
+
+- [ ] Modelo freemium: plan gratis + plan pago con overage medido.
+- [ ] Stripe Billing + Metronome (metered billing de IA).
+- [ ] Tablas `plans`/`subscriptions`, `plan_id`/`stripe_customer_id` en `users`.
+- [ ] Soft-cap que degrada a plan free al agotar cuota.
+
+### 🔲 Futuro — App móvil React Native (PROPUESTO, al final)
+
+Fase más cara en esfuerzo relativo; v2 depende de que el motor de categorización por IA ya
+esté maduro con datos reales de correo (Sprint 3).
+
+- [ ] v1 — Paridad con la web: dashboard, carga manual, push del backend.
+- [ ] v2 — Android only: `NotificationListenerService` + módulo nativo Kotlin.
+- [ ] v3 — Widgets, biometría, modo offline.
+
+### Operativo, sin sprint asignado (en paralelo, no bloquea nada)
+
+- [ ] Dominio de GitHub Students (administrativo, no requiere código).
 
 ---
 
@@ -504,26 +581,11 @@ en una sola secuencia priorizada:
   feature con trabajo de infraestructura/documentación en la misma PR.
 - Rama de trabajo activa: `chore/inicio-fase-saas`.
 
-### Pendiente (en orden)
+### Pendiente
 
-- [x] Dominio `korofin.jhonqui.dev` en Resend — ver "Hecho y mergeado" arriba.
-- [ ] Eliminar el test manual `EmailSmokeManualTest.java` (sin trackear, a propósito) si ya
-  no hace falta para verificar entrega.
-- [x] Subir secrets a GitHub Actions (`RESEND_API_KEY`, `MAIL_FROM` confirmados con
-  `gh secret list`).
-- [x] PR `develop` → `main` (PR #81).
-- [x] **`docs/sprints/sprint1.md`** — Fase A del rediseño de deudas, quick-add conectado a
-  la IA existente, y tracking de uso de IA/rate limiting. PR #82 mergeada a `develop`.
-- [ ] **Primer flujo real de n8n** (bot de Telegram para registrar gastos) — la
-  infraestructura Docker local ya está lista y la cuenta de n8n ya se creó
-  (2026-07-16/17), falta construir el flujo.
-- [x] **Nivel 1 completo de este documento**: dominio de cuentas/tarjetas — Fase A (sprint1,
-  PR #82) y Fase B (tarjeta rotativa con SDD, PRs #83-#89) ambas hechas y en `develop`.
-- [ ] **Integración de correo (Gmail API + Pub/Sub)** — todavía no arrancó. Es el paso
-  "mediano plazo" del orden recomendado, después del Nivel 2 (extractos bancarios); no es
-  parte de sprint1. Ver sección "Automatización con IA de correo/SMS/notificaciones" más
-  abajo para el diseño completo (arquitectura, bandeja de revisión, por qué correo es
-  viable hoy y SMS/notificaciones de otras apps no lo son sin app móvil).
+Ver la sección **"Roadmap por Sprints"** más arriba — es el checklist único y autoritativo
+de qué falta y en qué orden. Los ítems operativos ya cerrados (Resend, secrets, PR a main
+de esa fase) quedan documentados en "Hecho y mergeado" arriba, no se repiten acá.
 
 ### Backlog técnico (sin urgencia)
 
