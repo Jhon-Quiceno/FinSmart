@@ -42,10 +42,16 @@ public class AiProviderProperties {
     private int monthlyMessageLimit = 5;
 
     /**
-     * @param apiKey the provider's raw API key, or blank/{@code null} if not configured
-     * @param model  the model identifier to use, or blank/{@code null} to fall back to
-     *               {@link SupportedAiProvider#defaultModel()}
+     * @param apiKey      the provider's raw API key, or blank/{@code null} if not configured
+     * @param model       the model identifier to use, or blank/{@code null} to fall back to
+     *                    {@link SupportedAiProvider#defaultModel()}
+     * @param visionModel the model identifier to use for image-input calls (see
+     *                    {@code AiChatOrchestrator#completeVision}), or blank/{@code null} to fall
+     *                    back to {@link SupportedAiProvider#defaultVisionModel()}. Only meaningful
+     *                    for providers that actually support vision (today, only NVIDIA) — a
+     *                    provider's regular {@code model} is frequently NOT vision-capable, so
+     *                    vision calls must never reuse it.
      */
-    public record ProviderCredentials(String apiKey, String model) {
+    public record ProviderCredentials(String apiKey, String model, String visionModel) {
     }
 }

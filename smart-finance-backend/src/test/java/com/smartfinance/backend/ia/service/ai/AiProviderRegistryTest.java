@@ -13,9 +13,9 @@ class AiProviderRegistryTest {
     void enabledInPriorityOrderShouldExcludeProvidersWithBlankOrMissingApiKey() {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setProviders(Map.of(
-                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct"),
-                "opencode", new AiProviderProperties.ProviderCredentials("", "big-pickle"),
-                "openrouter", new AiProviderProperties.ProviderCredentials(null, "deepseek/deepseek-r1:free")
+                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct", null),
+                "opencode", new AiProviderProperties.ProviderCredentials("", "big-pickle", null),
+                "openrouter", new AiProviderProperties.ProviderCredentials(null, "deepseek/deepseek-r1:free", null)
                 // no entry left entirely absent from the map (already covered by nvidia/opencode/openrouter above)
         ));
         AiProviderRegistry registry = new AiProviderRegistry(properties);
@@ -30,8 +30,8 @@ class AiProviderRegistryTest {
     void enabledInPriorityOrderShouldFallBackToCatalogDefaultModelWhenModelIsBlank() {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setProviders(Map.of(
-                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", null),
-                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "")
+                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", null, null),
+                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "", null)
         ));
         AiProviderRegistry registry = new AiProviderRegistry(properties);
 
@@ -48,8 +48,8 @@ class AiProviderRegistryTest {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setPriority(List.of("openrouter", "nvidia"));
         properties.setProviders(Map.of(
-                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct"),
-                "openrouter", new AiProviderProperties.ProviderCredentials("sk-openrouter", "deepseek/deepseek-r1:free")
+                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct", null),
+                "openrouter", new AiProviderProperties.ProviderCredentials("sk-openrouter", "deepseek/deepseek-r1:free", null)
         ));
         AiProviderRegistry registry = new AiProviderRegistry(properties);
 
@@ -67,9 +67,9 @@ class AiProviderRegistryTest {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setPriority(List.of("nvidia"));
         properties.setProviders(Map.of(
-                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct"),
-                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle"),
-                "openrouter", new AiProviderProperties.ProviderCredentials("sk-openrouter", "deepseek/deepseek-r1:free")
+                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct", null),
+                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle", null),
+                "openrouter", new AiProviderProperties.ProviderCredentials("sk-openrouter", "deepseek/deepseek-r1:free", null)
         ));
         AiProviderRegistry registry = new AiProviderRegistry(properties);
 
@@ -85,8 +85,8 @@ class AiProviderRegistryTest {
     void enabledInPriorityOrderShouldDropUnknownBlankAndDuplicateEntriesFromConfiguredPriority() {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setPriority(Arrays.asList("nvidia", "unknown-provider", "", null, "NVIDIA", "opencode"));
-        AiProviderProperties.ProviderCredentials nvidiaCredentials = new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct");
-        AiProviderProperties.ProviderCredentials opencodeCredentials = new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle");
+        AiProviderProperties.ProviderCredentials nvidiaCredentials = new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct", null);
+        AiProviderProperties.ProviderCredentials opencodeCredentials = new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle", null);
         properties.setProviders(Map.of("nvidia", nvidiaCredentials, "opencode", opencodeCredentials));
         AiProviderRegistry registry = new AiProviderRegistry(properties);
 
@@ -101,9 +101,9 @@ class AiProviderRegistryTest {
     void enabledInPriorityOrderShouldFallBackToDefaultOrderWhenPriorityIsUnset() {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setProviders(Map.of(
-                "openrouter", new AiProviderProperties.ProviderCredentials("sk-openrouter", "deepseek/deepseek-r1:free"),
-                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct"),
-                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle")
+                "openrouter", new AiProviderProperties.ProviderCredentials("sk-openrouter", "deepseek/deepseek-r1:free", null),
+                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct", null),
+                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle", null)
         ));
         AiProviderRegistry registry = new AiProviderRegistry(properties);
 
@@ -120,8 +120,8 @@ class AiProviderRegistryTest {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setPriority(Arrays.asList("unknown-1", "", null, "unknown-2"));
         properties.setProviders(Map.of(
-                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct"),
-                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle")
+                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct", null),
+                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle", null)
         ));
         AiProviderRegistry registry = new AiProviderRegistry(properties);
 
@@ -138,8 +138,8 @@ class AiProviderRegistryTest {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setPriority(List.of("opencode", "nvidia"));
         properties.setProviders(Map.of(
-                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct"),
-                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle")
+                "nvidia", new AiProviderProperties.ProviderCredentials("sk-nvidia", "meta/llama-3.1-70b-instruct", null),
+                "opencode", new AiProviderProperties.ProviderCredentials("sk-opencode", "big-pickle", null)
                 // openrouter left unconfigured
         ));
         AiProviderRegistry registry = new AiProviderRegistry(properties);

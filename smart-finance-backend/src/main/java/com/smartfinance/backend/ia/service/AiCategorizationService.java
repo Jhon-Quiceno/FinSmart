@@ -82,15 +82,18 @@ public class AiCategorizationService {
      * categorizes several movements for the same user in one request and would otherwise
      * re-read the security context on every row).
      *
-     * <p>No puede marcarse {@code readOnly = true}: cuando la IA responde, {@code
-     * aiUsageEventService.record(...)} hace un INSERT dentro de esta misma transacción
-     * (propagación REQUIRED). Con {@code readOnly = true} Postgres rechaza ese INSERT; aunque
-     * {@code record} atrapa la excepción y no la relanza, Hibernate ya marcó la transacción como
-     * rollback-only, y el commit final revienta con {@code UnexpectedRollbackException} (bug
-     * preexistente, nunca detectado porque los tests mockean el repositorio y no ejercitan una
-     * base de datos real — ver el mismo problema y fix en {@code StatementImportService.preview}).
+     * <p>Sin {@code @Transactional} propio a propósito: todos los llamadores actuales (por ahora,
+     * {@code TelegramExpenseService}) ya están dentro de su propia transacción y envuelven esta
+     * llamada en un try/catch para degradar con gracia si la IA falla. Si este método tuviera su
+     * propia anotación, cualquier excepción que escape de él marcaría la transacción compartida
+     * como rollback-only en el interceptor de Spring — incluso atrapada por el llamador, el commit
+     * final revienta con {@code UnexpectedRollbackException} (mismo problema de fondo que el bug
+     * de {@code readOnly = true} encontrado antes hoy — ver {@code StatementImportService.preview}
+     * — pero disparado por cruzar el límite de un proxy @Transactional anidado en vez de por un
+     * INSERT en modo lectura; ver el mismo fix en {@code ReceiptExtractionService.extractFromImage}).
+     * Si en el futuro este método gana un llamador que lo invoca SIN una transacción ya abierta,
+     * hay que revisar si necesita su propia anotación en ESE punto de entrada, no acá.
      */
-    @Transactional
     public CategorizeResponse categorize(Long userId, CategorizeRequest request) {
         List<Category> categories = categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(userId, request.type());
         if (categories.isEmpty()) {
@@ -128,8 +131,9 @@ public class AiCategorizationService {
      * @param description free-text description of the movement
      * @param amount      the movement's amount
      * @return the decided type and, if matched, the category id/name
+     *
+     * <p>Sin {@code @Transactional} propio, mismo motivo que {@link #categorize(Long, CategorizeRequest)}.
      */
-    @Transactional
     public MovementClassification classifyMovement(Long userId, String description, BigDecimal amount) {
         List<Category> incomeCategories = categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(userId, CategoryType.INCOME);
         List<Category> expenseCategories = categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(userId, CategoryType.EXPENSE);

@@ -15,10 +15,10 @@ import java.time.Instant;
 import java.util.Set;
 
 /**
- * Autentica las dos rutas server-to-server llamadas por n8n en nombre del bot de Telegram
- * ({@code /api/integrations/telegram/confirm-link} y {@code /api/integrations/telegram/expenses})
- * mediante un secreto compartido en el header {@code X-Telegram-Webhook-Secret}, en lugar de JWT
- * (n8n no tiene una sesión de usuario).
+ * Autentica las tres rutas server-to-server llamadas por n8n en nombre del bot de Telegram
+ * ({@code /api/integrations/telegram/confirm-link}, {@code /api/integrations/telegram/expenses} y
+ * {@code /api/integrations/telegram/receipts}) mediante un secreto compartido en el header
+ * {@code X-Telegram-Webhook-Secret}, en lugar de JWT (n8n no tiene una sesión de usuario).
  *
  * <p>Modelado sobre {@link RateLimitFilter}: {@code @Component} con dependencias limitadas a
  * primitivos inyectados por {@code @Value}, para seguir siendo trivialmente construible en los
@@ -36,7 +36,8 @@ public class TelegramWebhookFilter extends OncePerRequestFilter {
 
     private static final String CONFIRM_LINK_PATH = "/api/integrations/telegram/confirm-link";
     private static final String EXPENSES_PATH = "/api/integrations/telegram/expenses";
-    private static final Set<String> PROTECTED_PATHS = Set.of(CONFIRM_LINK_PATH, EXPENSES_PATH);
+    private static final String RECEIPTS_PATH = "/api/integrations/telegram/receipts";
+    private static final Set<String> PROTECTED_PATHS = Set.of(CONFIRM_LINK_PATH, EXPENSES_PATH, RECEIPTS_PATH);
     private static final String SECRET_HEADER = "X-Telegram-Webhook-Secret";
 
     private final String webhookSecret;

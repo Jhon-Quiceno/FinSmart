@@ -5,10 +5,18 @@ import com.smartfinance.backend.gastos.model.dto.ExpenseResponse;
 import com.smartfinance.backend.gastos.model.entity.CategoryType;
 import com.smartfinance.backend.gastos.model.entity.Expense;
 import com.smartfinance.backend.gastos.model.entity.PaymentMethodType;
+import com.smartfinance.backend.gastos.repository.CategoryTotalProjection;
 import com.smartfinance.backend.gastos.repository.ExpenseRepository;
 import com.smartfinance.backend.gastos.service.ExpenseService;
+import com.smartfinance.backend.ia.exception.AiProviderNotConfiguredException;
 import com.smartfinance.backend.ia.model.dto.MovementClassification;
+import com.smartfinance.backend.ia.model.dto.ReceiptExtraction;
+import com.smartfinance.backend.ia.model.dto.SummaryPeriod;
+import com.smartfinance.backend.ia.model.dto.SummaryQueryIntent;
 import com.smartfinance.backend.ia.service.AiCategorizationService;
+import com.smartfinance.backend.ia.service.FinancialSummaryQueryService;
+import com.smartfinance.backend.ia.service.ReceiptExtractionService;
+import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ingresos.model.dto.IncomeRequest;
 import com.smartfinance.backend.ingresos.model.dto.IncomeResponse;
 import com.smartfinance.backend.ingresos.model.entity.Income;
@@ -38,6 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,6 +59,12 @@ class TelegramExpenseServiceTest {
 
     @Mock
     private AiCategorizationService aiCategorizationService;
+
+    @Mock
+    private ReceiptExtractionService receiptExtractionService;
+
+    @Mock
+    private FinancialSummaryQueryService financialSummaryQueryService;
 
     @Mock
     private ExpenseService expenseService;
@@ -81,8 +96,8 @@ class TelegramExpenseServiceTest {
 
     private TelegramExpenseService service() {
         return new TelegramExpenseService(
-                telegramLinkRepository, messageParser, aiCategorizationService, expenseService, incomeService,
-                expenseRepository, incomeRepository
+                telegramLinkRepository, messageParser, aiCategorizationService, receiptExtractionService,
+                financialSummaryQueryService, expenseService, incomeService, expenseRepository, incomeRepository
         );
     }
 
@@ -258,5 +273,266 @@ class TelegramExpenseServiceTest {
         String reply = telegramExpenseService.registerFromMessage("chat-1", "Uber 15000");
 
         assertThat(reply).doesNotContain("⚠️");
+    }
+
+    @Test
+    void registerFromPhotoThrowsWhenChatIsNotLinked() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.empty());
+        telegramExpenseService = service();
+
+        Assertions.assertThrows(
+                TelegramChatNotLinkedException.class,
+                () -> telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,abc")
+        );
+    }
+
+    @Test
+    void registerFromPhotoReturnsFriendlyMessageAndCreatesNothingWhenImageIsNotAReceipt() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(receiptExtractionService.extractFromImage(7L, "data:image/jpeg;base64,cat"))
+                .thenReturn(ReceiptExtraction.notAReceipt());
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,cat");
+
+        assertThat(reply).contains("No pude leer un recibo en esa imagen");
+        verify(expenseService, never()).createExpense(any(), any());
+        verify(incomeService, never()).createIncome(any(), any());
+    }
+
+    @Test
+    void registerFromPhotoCreatesExpenseWithTheDataExtractedFromTheReceipt() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(receiptExtractionService.extractFromImage(7L, "data:image/jpeg;base64,tesco"))
+                .thenReturn(new ReceiptExtraction(true, "TESCO", BigDecimal.valueOf(6710), CategoryType.EXPENSE, 4L, "Supermercado"));
+        ExpenseResponse createdExpense = new ExpenseResponse(
+                1L, BigDecimal.valueOf(6710), "TESCO", LocalDate.now(), PaymentMethodType.OTHER, 4L, "Supermercado", null
+        );
+        when(expenseService.createExpense(eq(7L), any(ExpenseRequest.class))).thenReturn(createdExpense);
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,tesco");
+
+        ArgumentCaptor<ExpenseRequest> captor = ArgumentCaptor.forClass(ExpenseRequest.class);
+        verify(expenseService).createExpense(eq(7L), captor.capture());
+        verify(incomeService, never()).createIncome(any(), any());
+        assertThat(captor.getValue().amount()).isEqualByComparingTo(BigDecimal.valueOf(6710));
+        assertThat(captor.getValue().description()).isEqualTo("TESCO");
+        assertThat(captor.getValue().paymentMethod()).isEqualTo(PaymentMethodType.OTHER);
+        assertThat(captor.getValue().categoryId()).isEqualTo(4L);
+        assertThat(reply).isEqualTo("✅ Gasto registrado desde la foto: TESCO — $6.710 (Supermercado)");
+    }
+
+    @Test
+    void registerFromPhotoCreatesIncomeWhenExtractionDecidesItIsAnIncome() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(receiptExtractionService.extractFromImage(7L, "data:image/jpeg;base64,refund"))
+                .thenReturn(new ReceiptExtraction(true, "Nota de crédito", BigDecimal.valueOf(20000), CategoryType.INCOME, 9L, "Reembolso"));
+        IncomeResponse createdIncome = new IncomeResponse(1L, BigDecimal.valueOf(20000), "Nota de crédito", LocalDate.now(), 9L, "Reembolso");
+        when(incomeService.createIncome(eq(7L), any(IncomeRequest.class))).thenReturn(createdIncome);
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,refund");
+
+        ArgumentCaptor<IncomeRequest> captor = ArgumentCaptor.forClass(IncomeRequest.class);
+        verify(incomeService).createIncome(eq(7L), captor.capture());
+        verify(expenseService, never()).createExpense(any(), any());
+        assertThat(captor.getValue().categoryId()).isEqualTo(9L);
+        assertThat(reply).isEqualTo("✅ Ingreso registrado desde la foto: Nota de crédito — $20.000 (Reembolso)");
+    }
+
+    @Test
+    void registerFromPhotoRejectsAnImplausiblyLowAmountWithoutCreatingAnything() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(receiptExtractionService.extractFromImage(7L, "data:image/jpeg;base64,abc"))
+                .thenReturn(new ReceiptExtraction(true, "Kiosco", BigDecimal.valueOf(1), CategoryType.EXPENSE, null, null));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,abc");
+
+        assertThat(reply).contains("parece muy bajo");
+        verify(expenseService, never()).createExpense(any(), any());
+        verify(incomeService, never()).createIncome(any(), any());
+    }
+
+    @Test
+    void registerFromPhotoRejectsAnImplausiblyHighAmountWithoutCreatingAnything() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(receiptExtractionService.extractFromImage(7L, "data:image/jpeg;base64,abc"))
+                .thenReturn(new ReceiptExtraction(true, "Casa", BigDecimal.valueOf(999_999_999_999L), CategoryType.EXPENSE, null, null));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,abc");
+
+        assertThat(reply).contains("parece demasiado alto");
+        verify(expenseService, never()).createExpense(any(), any());
+        verify(incomeService, never()).createIncome(any(), any());
+    }
+
+    @Test
+    void registerFromPhotoDegradesToTheNotAReceiptReplyWithoutCreatingAnythingWhenExtractionThrows() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(receiptExtractionService.extractFromImage(7L, "data:image/jpeg;base64,abc"))
+                .thenThrow(new AiProviderNotConfiguredException(AiChatOrchestrator.GENERIC_MESSAGE));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,abc");
+
+        assertThat(reply).contains("No pude leer un recibo en esa imagen");
+        verify(expenseService, never()).createExpense(any(), any());
+        verify(incomeService, never()).createIncome(any(), any());
+    }
+
+    @Test
+    void registerFromPhotoWarnsAboutAPossibleDuplicateExpenseFromTheSameDay() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(receiptExtractionService.extractFromImage(7L, "data:image/jpeg;base64,abc"))
+                .thenReturn(new ReceiptExtraction(true, "Uber", BigDecimal.valueOf(15000), CategoryType.EXPENSE, null, null));
+        when(expenseService.createExpense(eq(7L), any(ExpenseRequest.class))).thenReturn(
+                new ExpenseResponse(1L, BigDecimal.valueOf(15000), "Uber", LocalDate.now(), PaymentMethodType.OTHER, null, null, null)
+        );
+        Expense existing = new Expense();
+        existing.setAmount(BigDecimal.valueOf(15000));
+        existing.setDescription("Uber");
+        when(expenseRepository.findByUserAndPeriod(eq(7L), any(), any())).thenReturn(List.of(existing));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,abc");
+
+        assertThat(reply).contains("⚠️ Parece similar a un gasto que ya registraste hoy");
+    }
+
+    @Test
+    void rateLimitBudgetIsSharedBetweenTextMessagesAndPhotosFromTheSameChat() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(aiCategorizationService.classifyMovement(anyLong(), any(), any(BigDecimal.class)))
+                .thenReturn(new MovementClassification(CategoryType.EXPENSE, null, null));
+        when(expenseService.createExpense(eq(7L), any(ExpenseRequest.class))).thenReturn(
+                new ExpenseResponse(1L, BigDecimal.valueOf(15000), "Uber", LocalDate.now(), PaymentMethodType.OTHER, null, null, null)
+        );
+        telegramExpenseService = service();
+
+        for (int i = 0; i < 10; i++) {
+            telegramExpenseService.registerFromMessage("chat-1", "Uber 15000");
+        }
+
+        Assertions.assertThrows(
+                TelegramRateLimitExceededException.class,
+                () -> telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,abc")
+        );
+        verify(receiptExtractionService, never()).extractFromImage(any(), any());
+    }
+
+    @Test
+    void registerFromMessageRoutesQueryLookingTextToTheSummaryPathWithoutRegisteringAnything() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(financialSummaryQueryService.parseQuery(eq(7L), eq("¿Cuánto gasté en comida?")))
+                .thenReturn(new SummaryQueryIntent(SummaryPeriod.MONTH, CategoryType.EXPENSE, "Comida"));
+        CategoryTotalProjection comida = mock(CategoryTotalProjection.class);
+        when(comida.getCategoryName()).thenReturn("Comida");
+        when(comida.getTotal()).thenReturn(BigDecimal.valueOf(180500));
+        when(expenseRepository.findTopCategoriesByUserAndPeriod(eq(7L), any(), any())).thenReturn(List.of(comida));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromMessage("chat-1", "¿Cuánto gasté en comida?");
+
+        assertThat(reply).isEqualTo("📊 Gastaste $180.500 en Comida este mes.");
+        verify(aiCategorizationService, never()).classifyMovement(any(), any(), any());
+        verify(expenseService, never()).createExpense(any(), any());
+        verify(incomeService, never()).createIncome(any(), any());
+    }
+
+    @Test
+    void registerFromMessageRepliesWithoutErrorWhenTheAskedCategoryHasNoExpensesInThePeriod() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(financialSummaryQueryService.parseQuery(eq(7L), eq("cuanto gaste en mascotas")))
+                .thenReturn(new SummaryQueryIntent(SummaryPeriod.MONTH, CategoryType.EXPENSE, "Mascotas"));
+        when(expenseRepository.findTopCategoriesByUserAndPeriod(eq(7L), any(), any())).thenReturn(List.of());
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromMessage("chat-1", "cuanto gaste en mascotas");
+
+        assertThat(reply).isEqualTo("📊 No encontré gastos en \"Mascotas\" este mes.");
+        verify(expenseService, never()).createExpense(any(), any());
+    }
+
+    @Test
+    void registerFromMessageBuildsAnOverallExpenseTotalReplyWhenNoCategoryIsMentioned() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(financialSummaryQueryService.parseQuery(eq(7L), eq("cuanto gaste en total esta semana")))
+                .thenReturn(new SummaryQueryIntent(SummaryPeriod.WEEK, CategoryType.EXPENSE, null));
+        when(expenseRepository.sumAmountByUserAndPeriod(eq(7L), any(), any())).thenReturn(BigDecimal.valueOf(1250000));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromMessage("chat-1", "cuanto gaste en total esta semana");
+
+        assertThat(reply).isEqualTo("📊 Gastaste $1.250.000 en total esta semana.");
+    }
+
+    @Test
+    void registerFromMessageDegradesIncomeCategoryQueryToTheOverallTotalWithANote() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(financialSummaryQueryService.parseQuery(eq(7L), eq("cuanto ingrese por freelance")))
+                .thenReturn(new SummaryQueryIntent(SummaryPeriod.MONTH, CategoryType.INCOME, "Freelance"));
+        when(incomeRepository.sumAmountByUserAndPeriod(eq(7L), any(), any())).thenReturn(BigDecimal.valueOf(2850000));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromMessage("chat-1", "cuanto ingrese por freelance");
+
+        assertThat(reply)
+                .contains("$2.850.000")
+                .contains("todavía no tengo el desglose de ingresos por categoría");
+        verify(incomeService, never()).createIncome(any(), any());
+    }
+
+    @Test
+    void registerFromMessageBuildsABalanceReplyForAGeneralSummaryQuestion() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(financialSummaryQueryService.parseQuery(eq(7L), eq("resumen")))
+                .thenReturn(new SummaryQueryIntent(SummaryPeriod.MONTH, null, null));
+        when(incomeRepository.sumAmountByUserAndPeriod(eq(7L), any(), any())).thenReturn(BigDecimal.valueOf(2850000));
+        when(expenseRepository.sumAmountByUserAndPeriod(eq(7L), any(), any())).thenReturn(BigDecimal.valueOf(1400000));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromMessage("chat-1", "resumen");
+
+        assertThat(reply).isEqualTo("📊 Balance de este mes: ingresos $2.850.000, gastos $1.400.000 (neto: +$1.450.000).");
+        verify(expenseService, never()).createExpense(any(), any());
+        verify(incomeService, never()).createIncome(any(), any());
+    }
+
+    @Test
+    void registerFromMessageBuildsABalanceReplyWithANegativeNetWhenExpensesExceedIncome() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(financialSummaryQueryService.parseQuery(eq(7L), eq("balance")))
+                .thenReturn(new SummaryQueryIntent(SummaryPeriod.MONTH, null, null));
+        when(incomeRepository.sumAmountByUserAndPeriod(eq(7L), any(), any())).thenReturn(BigDecimal.valueOf(500000));
+        when(expenseRepository.sumAmountByUserAndPeriod(eq(7L), any(), any())).thenReturn(BigDecimal.valueOf(800000));
+        telegramExpenseService = service();
+
+        String reply = telegramExpenseService.registerFromMessage("chat-1", "balance");
+
+        assertThat(reply).isEqualTo("📊 Balance de este mes: ingresos $500.000, gastos $800.000 (neto: -$300.000).");
+    }
+
+    @Test
+    void rateLimitBudgetIsSharedBetweenRegistrationMessagesAndSummaryQueriesFromTheSameChat() {
+        when(telegramLinkRepository.findByTelegramChatId("chat-1")).thenReturn(Optional.of(linkFor(7L, "chat-1")));
+        when(aiCategorizationService.classifyMovement(anyLong(), any(), any(BigDecimal.class)))
+                .thenReturn(new MovementClassification(CategoryType.EXPENSE, null, null));
+        when(expenseService.createExpense(eq(7L), any(ExpenseRequest.class))).thenReturn(
+                new ExpenseResponse(1L, BigDecimal.valueOf(15000), "Uber", LocalDate.now(), PaymentMethodType.OTHER, null, null, null)
+        );
+        telegramExpenseService = service();
+
+        for (int i = 0; i < 10; i++) {
+            telegramExpenseService.registerFromMessage("chat-1", "Uber 15000");
+        }
+
+        Assertions.assertThrows(
+                TelegramRateLimitExceededException.class,
+                () -> telegramExpenseService.registerFromMessage("chat-1", "resumen")
+        );
+        verify(financialSummaryQueryService, never()).parseQuery(any(), any());
     }
 }

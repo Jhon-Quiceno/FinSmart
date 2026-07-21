@@ -24,6 +24,7 @@ class TelegramWebhookFilterTest {
 
     private static final String CONFIRM_LINK_PATH = "/api/integrations/telegram/confirm-link";
     private static final String EXPENSES_PATH = "/api/integrations/telegram/expenses";
+    private static final String RECEIPTS_PATH = "/api/integrations/telegram/receipts";
     private static final String SECRET_HEADER = "X-Telegram-Webhook-Secret";
 
     @Mock
@@ -64,6 +65,38 @@ class TelegramWebhookFilterTest {
 
         verify(filterChain, never()).doFilter(request, response);
         assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    /**
+     * Regresión directa de agregar {@code /receipts} (foto de recibo) al conjunto de rutas
+     * protegidas: sin este test, un descuido al sumar la nueva ruta a {@code PROTECTED_PATHS} (sin
+     * tocar {@code SecurityConfig}, que sí la declara {@code permitAll}) dejaría el endpoint
+     * completamente público en runtime sin que ningún test lo detectara — ver el mismo escenario
+     * documentado para {@code /expenses} en el Javadoc de
+     * {@code TelegramIntegrationControllerTest#expensesWithTrailingSlashIsNeverAuthorizedByEitherMechanism}.
+     */
+    @Test
+    void receiptsPathWithoutHeaderIsRejectedWith401() throws Exception {
+        TelegramWebhookFilter filter = new TelegramWebhookFilter("configured-secret");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", RECEIPTS_PATH);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verifyNoInteractions(filterChain);
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void receiptsPathWithCorrectSecretContinuesTheChain() throws Exception {
+        TelegramWebhookFilter filter = new TelegramWebhookFilter("configured-secret");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", RECEIPTS_PATH);
+        request.addHeader(SECRET_HEADER, "configured-secret");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
     }
 
     @Test

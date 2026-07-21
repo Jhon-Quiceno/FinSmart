@@ -72,7 +72,8 @@ public class SecurityConfig {
                     // Server-to-server (n8n), sin sesión de usuario ni cookie CSRF: protegidas por
                     // TelegramWebhookFilter (secreto compartido) en lugar de CSRF.
                     "/api/integrations/telegram/confirm-link",
-                    "/api/integrations/telegram/expenses"
+                    "/api/integrations/telegram/expenses",
+                    "/api/integrations/telegram/receipts"
                 )
             )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -93,7 +94,8 @@ public class SecurityConfig {
                     // Server-to-server (n8n): la autenticación la hace TelegramWebhookFilter con
                     // un secreto compartido, no Spring Security/JWT.
                     "/api/integrations/telegram/confirm-link",
-                    "/api/integrations/telegram/expenses"
+                    "/api/integrations/telegram/expenses",
+                    "/api/integrations/telegram/receipts"
                 ).permitAll()
                 .anyRequest().authenticated()
             )

@@ -70,4 +70,45 @@ public class AiChatOrchestrator {
 
         throw new AiProvidersExhaustedException(GENERIC_MESSAGE);
     }
+
+    /**
+     * Sends a vision turn ({@code messages} built with {@link ChatMessage#userWithImage}) directly
+     * to NVIDIA, bypassing the multi-provider failover that {@link #complete(List)} performs.
+     *
+     * <p>Vision is a capability only this project's NVIDIA-configured model provides: NVIDIA is the
+     * only configured provider whose model was validated to actually read an image (see
+     * {@code ReceiptExtractionService}'s Javadoc for the benchmark). The other catalog providers
+     * (OpenCode's {@code big-pickle}, OpenRouter's {@code deepseek/deepseek-r1:free}) are text-only
+     * models — if a vision call silently failed over to either the way {@link #complete(List)}
+     * does, the provider would either error on the unexpected {@code image_url} content part or,
+     * worse, ignore it and hallucinate an answer instead of actually reading the receipt. So this
+     * method never loops over {@link AiProviderRegistry#enabledInPriorityOrder()}: it resolves NVIDIA
+     * specifically and, if it is not configured/enabled at all, fails immediately with a clean
+     * "vision unavailable" error rather than trying a model that cannot honor the request.
+     *
+     * @param messages the full conversation to send, in order (system prompt first), including
+     *                 exactly one vision turn built with {@link ChatMessage#userWithImage}
+     * @return NVIDIA's reply
+     * @throws AiProviderNotConfiguredException if NVIDIA is not configured/enabled
+     * @throws AiProviderException              if NVIDIA rejects the request or cannot be reached
+     *                                           (see {@link AiChatClient#complete}) — propagated
+     *                                           as-is since there is no fallback provider to try
+     */
+    public ChatCompletionResult completeVision(List<ChatMessage> messages) {
+        ResolvedAiProvider nvidia = registry.enabledInPriorityOrder().stream()
+                .filter(provider -> SupportedAiProvider.NVIDIA.key().equals(provider.name()))
+                .findFirst()
+                .orElseThrow(() -> new AiProviderNotConfiguredException(GENERIC_MESSAGE));
+        if (nvidia.visionModel() == null || nvidia.visionModel().isBlank()) {
+            throw new AiProviderNotConfiguredException(GENERIC_MESSAGE);
+        }
+
+        // NVIDIA's regular text model (nvidia.model()) is frequently NOT vision-capable — swap in
+        // the vision-specific model before calling, never reuse the text one for an image turn.
+        ResolvedAiProvider nvidiaVision = new ResolvedAiProvider(
+                nvidia.name(), nvidia.baseUrl(), nvidia.apiKey(), nvidia.visionModel(), nvidia.visionModel()
+        );
+        ChatCompletionResult result = aiChatClient.complete(nvidiaVision, messages);
+        return result.withProvider(nvidiaVision.name(), nvidiaVision.model());
+    }
 }

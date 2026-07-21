@@ -63,7 +63,7 @@ public class AiChatClient {
         RestClient client = buildClient(provider.baseUrl());
         ChatCompletionRequest requestBody = new ChatCompletionRequest(
                 provider.model(),
-                messages.stream().map(message -> new OpenAiMessage(message.role(), message.content())).toList(),
+                messages.stream().map(AiChatClient::toOpenAiMessage).toList(),
                 false,
                 buildChatTemplateKwargs(provider)
         );
@@ -98,6 +98,24 @@ public class AiChatClient {
         return SupportedAiProvider.NVIDIA.key().equals(provider.name())
                 ? new ChatCompletionRequest.ChatTemplateKwargs(false)
                 : null;
+    }
+
+    /**
+     * Converts a {@link ChatMessage} into the wire-level {@link OpenAiMessage}, choosing between
+     * the two content shapes the OpenAI chat-completions contract accepts: a plain string for a
+     * normal text turn (unchanged from before vision support was added, so every existing
+     * plain-text caller serializes exactly as it always did), or an array of content parts
+     * ({@code [{"type":"text",...},{"type":"image_url",...}]}) when {@link ChatMessage#imageUrl()}
+     * is set.
+     */
+    private static OpenAiMessage toOpenAiMessage(ChatMessage message) {
+        if (message.imageUrl() == null) {
+            return new OpenAiMessage(message.role(), message.content());
+        }
+        return new OpenAiMessage(message.role(), List.of(
+                ContentPart.text(message.content()),
+                ContentPart.imageUrl(message.imageUrl())
+        ));
     }
 
     private RestClient buildClient(String baseUrl) {
@@ -183,12 +201,52 @@ public class AiChatClient {
         }
     }
 
-    private record OpenAiMessage(String role, String content) {
+    /**
+     * Wire-level outgoing message. {@code content} is intentionally typed {@link Object} rather
+     * than {@code String}: it holds either a plain {@link String} (a normal text turn) or a
+     * {@code List<ContentPart>} (a vision turn), and Jackson serializes each shape as-is — a JSON
+     * string in the first case, a JSON array of {@code {"type":...}} objects in the second. See
+     * {@link #toOpenAiMessage(ChatMessage)}.
+     */
+    private record OpenAiMessage(String role, Object content) {
+    }
+
+    /**
+     * One element of the OpenAI vision {@code content} array. Only one of {@code text}/{@code imageUrl}
+     * is ever set per instance (see {@link #text(String)}/{@link #imageUrl(String)}); the other is
+     * omitted from the JSON via {@code @JsonInclude(NON_NULL)} so each part serializes with only the
+     * field its {@code type} expects.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record ContentPart(String type, String text, @JsonProperty("image_url") ImageUrlPart imageUrl) {
+
+        private static final String TYPE_TEXT = "text";
+        private static final String TYPE_IMAGE_URL = "image_url";
+
+        private static ContentPart text(String text) {
+            return new ContentPart(TYPE_TEXT, text, null);
+        }
+
+        private static ContentPart imageUrl(String url) {
+            return new ContentPart(TYPE_IMAGE_URL, null, new ImageUrlPart(url));
+        }
+
+        private record ImageUrlPart(String url) {
+        }
     }
 
     private record ChatCompletionResponse(List<Choice> choices, Usage usage) {
 
-        private record Choice(OpenAiMessage message) {
+        /**
+         * The provider's reply message is always plain text in this project (no provider we call
+         * ever answers with a multimodal {@code content} array), so this response-side type keeps
+         * {@code content} as a plain {@link String} — distinct from the request-side
+         * {@link OpenAiMessage}, whose {@code content} must be polymorphic to support vision turns.
+         */
+        private record Choice(ResponseMessage message) {
+        }
+
+        private record ResponseMessage(String role, String content) {
         }
 
         private record Usage(

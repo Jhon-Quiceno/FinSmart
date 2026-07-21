@@ -7,6 +7,7 @@ import com.smartfinance.backend.integraciones.exception.TelegramChatNotLinkedExc
 import com.smartfinance.backend.integraciones.model.dto.TelegramConfirmLinkRequest;
 import com.smartfinance.backend.integraciones.model.dto.TelegramExpenseRequest;
 import com.smartfinance.backend.integraciones.model.dto.TelegramLinkCodeResponse;
+import com.smartfinance.backend.integraciones.model.dto.TelegramReceiptRequest;
 import com.smartfinance.backend.integraciones.service.TelegramExpenseService;
 import com.smartfinance.backend.integraciones.service.TelegramLinkService;
 import com.smartfinance.backend.usuario.repository.UserRepository;
@@ -169,6 +170,54 @@ class TelegramIntegrationControllerTest {
                 .when(telegramExpenseService).registerFromMessage("chat-1", "Uber 15000");
 
         mockMvc.perform(post("/api/integrations/telegram/expenses")
+                        .header(WEBHOOK_SECRET_HEADER, WEBHOOK_SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void receiptsDoesNotRequireCsrfTokenBecauseItIsServerToServer() throws Exception {
+        TelegramReceiptRequest request = new TelegramReceiptRequest("chat-1", "data:image/jpeg;base64,abc");
+        when(telegramExpenseService.registerFromPhoto("chat-1", "data:image/jpeg;base64,abc"))
+                .thenReturn("✅ Gasto registrado desde la foto: TESCO — $7 (Supermercado)");
+
+        mockMvc.perform(post("/api/integrations/telegram/receipts")
+                        .header(WEBHOOK_SECRET_HEADER, WEBHOOK_SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reply").value("✅ Gasto registrado desde la foto: TESCO — $7 (Supermercado)"));
+    }
+
+    @Test
+    void receiptsReturns401WithoutTheWebhookSecretHeader() throws Exception {
+        TelegramReceiptRequest request = new TelegramReceiptRequest("chat-1", "data:image/jpeg;base64,abc");
+
+        mockMvc.perform(post("/api/integrations/telegram/receipts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void receiptsReturns400WhenImageUrlIsMissing() throws Exception {
+        TelegramReceiptRequest request = new TelegramReceiptRequest("chat-1", "  ");
+
+        mockMvc.perform(post("/api/integrations/telegram/receipts")
+                        .header(WEBHOOK_SECRET_HEADER, WEBHOOK_SECRET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void receiptsReturns404WhenChatIsNotLinked() throws Exception {
+        TelegramReceiptRequest request = new TelegramReceiptRequest("chat-1", "data:image/jpeg;base64,abc");
+        doThrow(new TelegramChatNotLinkedException("Todavía no vinculaste tu cuenta."))
+                .when(telegramExpenseService).registerFromPhoto("chat-1", "data:image/jpeg;base64,abc");
+
+        mockMvc.perform(post("/api/integrations/telegram/receipts")
                         .header(WEBHOOK_SECRET_HEADER, WEBHOOK_SECRET)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

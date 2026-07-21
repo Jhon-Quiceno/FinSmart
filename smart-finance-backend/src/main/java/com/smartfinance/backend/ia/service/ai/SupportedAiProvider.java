@@ -14,16 +14,18 @@ import java.util.Optional;
  */
 public enum SupportedAiProvider {
 
-    NVIDIA("https://integrate.api.nvidia.com/v1", "meta/llama-3.1-70b-instruct"),
-    OPENCODE("https://opencode.ai/zen/v1", "big-pickle"),
-    OPENROUTER("https://openrouter.ai/api/v1", "deepseek/deepseek-r1:free");
+    NVIDIA("https://integrate.api.nvidia.com/v1", "meta/llama-3.1-70b-instruct", "nvidia/nemotron-nano-12b-v2-vl"),
+    OPENCODE("https://opencode.ai/zen/v1", "big-pickle", null),
+    OPENROUTER("https://openrouter.ai/api/v1", "deepseek/deepseek-r1:free", null);
 
     private final String baseUrl;
     private final String defaultModel;
+    private final String defaultVisionModel;
 
-    SupportedAiProvider(String baseUrl, String defaultModel) {
+    SupportedAiProvider(String baseUrl, String defaultModel, String defaultVisionModel) {
         this.baseUrl = baseUrl;
         this.defaultModel = defaultModel;
+        this.defaultVisionModel = defaultVisionModel;
     }
 
     /**
@@ -38,6 +40,17 @@ public enum SupportedAiProvider {
      */
     public String defaultModel() {
         return defaultModel;
+    }
+
+    /**
+     * @return the model used for image-input calls (see {@code AiChatOrchestrator#completeVision})
+     *         when the operator doesn't set an explicit {@code vision-model}, or {@code null} if
+     *         this provider has no known vision-capable model in this project's catalog (today,
+     *         only NVIDIA does — {@code AiChatOrchestrator#completeVision} only ever resolves the
+     *         NVIDIA provider, so a {@code null} here for the others is never actually dereferenced)
+     */
+    public String defaultVisionModel() {
+        return defaultVisionModel;
     }
 
     /**

@@ -54,7 +54,10 @@ public class AiProviderRegistry {
             String model = credentials.model() != null && !credentials.model().isBlank()
                     ? credentials.model()
                     : provider.defaultModel();
-            resolved.add(new ResolvedAiProvider(provider.key(), provider.baseUrl(), credentials.apiKey(), model));
+            String visionModel = credentials.visionModel() != null && !credentials.visionModel().isBlank()
+                    ? credentials.visionModel()
+                    : provider.defaultVisionModel();
+            resolved.add(new ResolvedAiProvider(provider.key(), provider.baseUrl(), credentials.apiKey(), model, visionModel));
         }
         return resolved;
     }
