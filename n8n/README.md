@@ -7,7 +7,11 @@ Registrá gastos desde Telegram escribiendo texto libre (por ejemplo "Uber 15000
 ## Qué hace el bot
 
 - **Vincular cuenta**: enviás `/start <código>` (el código lo generás desde KoroFin → Configuración → Integraciones) y el bot confirma la vinculación de tu chat de Telegram con tu usuario.
-- **Registrar gastos**: una vez vinculado, cualquier otro mensaje de texto (ej. `Uber 15000`) se interpreta como un gasto y se guarda en tu cuenta.
+- **Registrar gastos o ingresos por texto**: un mensaje libre (ej. `Uber 15000`, `Me pagaron 50000`) se interpreta y se guarda como gasto o ingreso según corresponda.
+- **Registrar gastos o ingresos por foto**: mandás una foto de un recibo/factura y el bot lee el monto y el comercio con IA. Si la foto no parece un recibo real, o el monto no es interpretable, no crea nada y te lo avisa.
+- **Preguntar por un resumen**: "cuánto gasté en comida", "resumen", "balance" — el bot calcula el total real de tus movimientos (por defecto, del mes en curso) y te responde, sin crear ningún gasto/ingreso nuevo.
+
+> ⚠️ **La rama de fotos (`Descargar foto` → `Armar data URI` → `Registrar recibo`) se validó a nivel backend** (el endpoint `/api/integrations/telegram/receipts` fue probado con imágenes reales) **pero no se pudo probar mandándole una foto real al bot por Telegram** durante el desarrollo — no había un bot creado todavía en esa sesión. Al activar el workflow por primera vez, probá mandarle una foto de un recibo real y confirmá que responde bien antes de confiar en el flujo completo.
 
 ## Quick path
 
@@ -116,11 +120,15 @@ Telegram solo acepta URLs de webhook con HTTPS. En local, la forma más simple s
 | El bot no responde nada | El workflow no está activo, o la credencial de Telegram no es válida | Revisar que el switch **Active** esté encendido y que el token en la credencial sea el correcto |
 | Ante un error (ej. monto no interpretable) el bot responde el genérico "No se pudo procesar el mensaje" en vez del motivo real | Los nodos **HTTP Request** necesitan `options.response.response.neverError: true` para que un 4xx/5xx del backend llegue como el cuerpo real (`{message: "..."}`) en vez de envolverse en un error de Axios | Ya viene seteado en el workflow exportado; si lo armaste a mano o falta, agregalo en **Confirmar vinculo** y **Registrar gasto** |
 | Las respuestas del bot traen agregado "This message was sent automatically with n8n" | Es la firma por defecto del nodo Telegram de n8n. Ojo: `appendAttribution: false` solo no alcanza en algunas versiones de n8n — hay un bug conocido ([n8n-io/n8n#18407](https://github.com/n8n-io/n8n/issues/18407)) donde la desactivación no toma efecto a menos que además se fije `parse_mode` | Ya vienen ambos seteados (`appendAttribution: false` + `parse_mode: "HTML"`) en el nodo **Responder** del workflow exportado |
+| Al mandar una foto, el bot responde "No pude leer un recibo en esa imagen" incluso con un recibo real y bien iluminado | El monto leído está fuera del rango plausible configurado en el backend (entre $100 y $500.000.000 COP) — por ejemplo, un recibo en otra moneda con montos nominales chicos | Confirmar que el recibo es en pesos colombianos; si el monto es legítimo y cae fuera de rango, ajustar los límites en `TelegramMessageParser` (backend) |
+| Al mandar una foto, el bot no responde nada o tarda mucho | El nodo **Descargar foto** necesita la credencial de Telegram asignada (igual que Telegram Trigger y Responder) para poder descargar el archivo | Verificar que la credencial esté asignada en los 3 nodos que la usan |
 
 ## Nota sobre el secreto compartido
 
-Si preferís no depender de `{{ $env.TELEGRAM_WEBHOOK_SECRET }}`, podés reemplazar el valor del header `X-Telegram-Webhook-Secret` por el secreto literal en los dos nodos **HTTP Request** (`Confirmar vinculo` y `Registrar gasto`). No es lo recomendado (el secreto queda embebido en el workflow exportado), pero es una alternativa válida si tu instancia de n8n no expone variables de entorno a las expresiones.
+Si preferís no depender de `{{ $env.TELEGRAM_WEBHOOK_SECRET }}`, podés reemplazar el valor del header `X-Telegram-Webhook-Secret` por el secreto literal en los nodos **HTTP Request** (`Confirmar vinculo`, `Registrar gasto`, `Registrar recibo`). No es lo recomendado (el secreto queda embebido en el workflow exportado), pero es una alternativa válida si tu instancia de n8n no expone variables de entorno a las expresiones.
 
 ## Sobre el archivo del workflow
 
-`telegram-expense-bot.json` fue armado para importarse en n8n 1.x. Al importarlo puede aparecer un aviso menor de "actualizar versión de nodo" en alguno de los nodos — es esperable y no impide que el workflow funcione; simplemente indica que existe una versión de nodo más nueva que la usada en este export.
+`telegram-expense-bot.json` fue armado para importarse en n8n 1.x/2.x. Al importarlo puede aparecer un aviso menor de "actualizar versión de nodo" en alguno de los nodos — es esperable y no impide que el workflow funcione; simplemente indica que existe una versión de nodo más nueva que la usada en este export.
+
+El flujo tiene 3 ramas después del Telegram Trigger: **¿es una foto?** (sí → descarga el archivo, lo pasa a base64 y lo manda a `/receipts`; no → sigue al siguiente chequeo), **¿es `/start <código>`?** (sí → vincula la cuenta; no → lo manda como texto libre a `/expenses`, que ahora también responde preguntas de resumen sin crear nada). Las tres ramas convergen en **Componer respuesta** → **Responder**.

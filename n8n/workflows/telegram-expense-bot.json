@@ -20,10 +20,39 @@
     },
     {
       "id": "a1b2c3d4-0002-4000-8000-000000000002",
-      "name": "Es /start con codigo?",
+      "name": "Es una foto?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [460, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-is-photo",
+              "leftValue": "={{ $json.message.photo ? $json.message.photo.length : 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b2c3d4e5-0008-4000-8000-000000000008",
+      "name": "Es /start con codigo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 480],
       "parameters": {
         "conditions": {
           "options": {
@@ -52,7 +81,7 @@
       "name": "Extraer codigo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 180],
+      "position": [680, 480],
       "parameters": {
         "jsCode": "// El mensaje llega como \"/start <codigo>\". Se extrae el codigo de vinculacion\n// y el chatId de Telegram, que se envian al backend como texto.\nconst text = $json.message.text.trim();\nconst code = text.split(/\\s+/)[1];\nconst chatId = String($json.message.chat.id);\n\nreturn [\n  {\n    json: {\n      code,\n      chatId,\n    },\n  },\n];\n"
       }
@@ -62,7 +91,7 @@
       "name": "Confirmar vinculo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 180],
+      "position": [900, 480],
       "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
@@ -94,7 +123,7 @@
       "name": "Registrar gasto",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 420],
+      "position": [680, 640],
       "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
@@ -122,11 +151,71 @@
       }
     },
     {
+      "id": "b2c3d4e5-0009-4000-8000-000000000009",
+      "name": "Descargar foto",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 120],
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[$json.message.photo.length - 1].file_id }}",
+        "download": true
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "KoroFin Telegram Bot"
+        }
+      }
+    },
+    {
+      "id": "b2c3d4e5-0010-4000-8000-000000000010",
+      "name": "Armar data URI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 120],
+      "parameters": {
+        "jsCode": "// La foto llega como dato binario (descargado por el nodo 'Descargar foto'). Se arma un\n// data URI base64 para mandarselo al backend como 'imageUrl' (el mismo campo acepta URL\n// https:// o data URI, ver TelegramReceiptRequest).\nconst chatId = String($('Telegram Trigger').first().json.message.chat.id);\nconst binaryData = $binary.data;\nconst base64 = binaryData.data;\nconst mimeType = binaryData.mimeType || 'image/jpeg';\n\nreturn [\n  {\n    json: {\n      chatId,\n      imageUrl: `data:${mimeType};base64,${base64}`,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "b2c3d4e5-0011-4000-8000-000000000011",
+      "name": "Registrar recibo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 120],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8080/api/integrations/telegram/receipts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Telegram-Webhook-Secret",
+              "value": "={{ $env.TELEGRAM_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"chatId\": $json.chatId, \"imageUrl\": $json.imageUrl } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "a1b2c3d4-0006-4000-8000-000000000006",
       "name": "Componer respuesta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300],
+      "position": [1340, 300],
       "parameters": {
         "jsCode": "// Elige el texto de respuesta segun lo que devolvio el backend.\n// - Exito: el backend responde { reply: \"...\" }\n// - Error controlado: el backend responde { message: \"...\" } (ver GlobalExceptionHandler)\n// - Cualquier otro caso: mensaje generico en espanol.\n// El chatId se toma del nodo Telegram Trigger para garantizar que siempre este disponible,\n// incluso si la rama de error no lo propago en su salida.\nconst chatId = $('Telegram Trigger').first().json.message.chat.id;\n\nlet replyText;\nif ($json.reply) {\n  replyText = $json.reply;\n} else if ($json.message) {\n  replyText = $json.message;\n} else {\n  replyText = 'No se pudo procesar el mensaje. Intente de nuevo.';\n}\n\nreturn [\n  {\n    json: {\n      chatId: String(chatId),\n      replyText,\n    },\n  },\n];\n"
       }
@@ -136,7 +225,7 @@
       "name": "Responder",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1340, 300],
+      "position": [1560, 300],
       "parameters": {
         "resource": "message",
         "operation": "sendMessage",
@@ -160,7 +249,58 @@
       "main": [
         [
           {
+            "node": "Es una foto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es una foto?": {
+      "main": [
+        [
+          {
+            "node": "Descargar foto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Es /start con codigo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar foto": {
+      "main": [
+        [
+          {
+            "node": "Armar data URI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar data URI": {
+      "main": [
+        [
+          {
+            "node": "Registrar recibo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar recibo": {
+      "main": [
+        [
+          {
+            "node": "Componer respuesta",
             "type": "main",
             "index": 0
           }

@@ -37,7 +37,9 @@ export function IntegrationsCard() {
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-foreground">Telegram</h3>
         <p className="text-sm text-muted-foreground">
-          Registra gastos mandando un mensaje al bot, ej. &quot;Uber 15000&quot;.
+          Registra gastos e ingresos mandandole un mensaje al bot (ej. &quot;Uber 15000&quot;) o una
+          foto del recibo. Tambien podes preguntarle cosas como &quot;cuanto gaste en comida este
+          mes&quot;.
         </p>
 
         {code && (
