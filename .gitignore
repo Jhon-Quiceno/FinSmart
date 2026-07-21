@@ -17,3 +17,6 @@
 .idea/
 .atl/
 
+# Extractos bancarios reales para validacion local (datos financieros sensibles, nunca se commitean)
+/extractos-reales/
+

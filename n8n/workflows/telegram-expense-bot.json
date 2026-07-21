@@ -1,0 +1,238 @@
+{
+  "name": "KoroFin - Bot de Telegram para gastos",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "a1b2c3d4-0001-4000-8000-000000000099",
+      "parameters": {
+        "updates": ["message"]
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "KoroFin Telegram Bot"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Es /start con codigo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-start-code",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "^/start\\s+\\S+",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Extraer codigo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 180],
+      "parameters": {
+        "jsCode": "// El mensaje llega como \"/start <codigo>\". Se extrae el codigo de vinculacion\n// y el chatId de Telegram, que se envian al backend como texto.\nconst text = $json.message.text.trim();\nconst code = text.split(/\\s+/)[1];\nconst chatId = String($json.message.chat.id);\n\nreturn [\n  {\n    json: {\n      code,\n      chatId,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Confirmar vinculo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 180],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8080/api/integrations/telegram/confirm-link",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Telegram-Webhook-Secret",
+              "value": "={{ $env.TELEGRAM_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"code\": $json.code, \"chatId\": $json.chatId } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Registrar gasto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 420],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8080/api/integrations/telegram/expenses",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Telegram-Webhook-Secret",
+              "value": "={{ $env.TELEGRAM_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"chatId\": String($json.message.chat.id), \"text\": $json.message.text } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Componer respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "parameters": {
+        "jsCode": "// Elige el texto de respuesta segun lo que devolvio el backend.\n// - Exito: el backend responde { reply: \"...\" }\n// - Error controlado: el backend responde { message: \"...\" } (ver GlobalExceptionHandler)\n// - Cualquier otro caso: mensaje generico en espanol.\n// El chatId se toma del nodo Telegram Trigger para garantizar que siempre este disponible,\n// incluso si la rama de error no lo propago en su salida.\nconst chatId = $('Telegram Trigger').first().json.message.chat.id;\n\nlet replyText;\nif ($json.reply) {\n  replyText = $json.reply;\n} else if ($json.message) {\n  replyText = $json.message;\n} else {\n  replyText = 'No se pudo procesar el mensaje. Intente de nuevo.';\n}\n\nreturn [\n  {\n    json: {\n      chatId: String(chatId),\n      replyText,\n    },\n  },\n];\n"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "Responder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.replyText }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "KoroFin Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Es /start con codigo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es /start con codigo?": {
+      "main": [
+        [
+          {
+            "node": "Extraer codigo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar gasto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer codigo": {
+      "main": [
+        [
+          {
+            "node": "Confirmar vinculo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar vinculo": {
+      "main": [
+        [
+          {
+            "node": "Componer respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar gasto": {
+      "main": [
+        [
+          {
+            "node": "Componer respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Componer respuesta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
