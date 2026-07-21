@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { AppLayout } from "@/components/layout/app-layout"
+import { IntegrationsCard } from "@/components/settings/integrations-card"
 import { NotificationPreferencesCard } from "@/components/settings/notification-preferences-card"
 import { PasswordCard } from "@/components/settings/password-card"
 import { ProfileCard } from "@/components/settings/profile-card"
@@ -38,6 +39,8 @@ export default function ConfiguracionPage() {
         <NotificationPreferencesCard />
 
         <PasswordCard />
+
+        <IntegrationsCard />
 
         {/* Preferences Section */}
         <div className="rounded-xl bg-card border border-border p-6">

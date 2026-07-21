@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Plus, TrendingDown } from "lucide-react"
+import Link from "next/link"
+import { Plus, TrendingDown, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { ExpenseModal } from "@/components/expenses/expense-modal"
 import { ExpensesFilters } from "@/components/expenses/expenses-filters"
@@ -135,15 +136,23 @@ export default function GastosPage() {
             <h1 className="text-2xl font-bold text-foreground">Gastos</h1>
             <p className="text-sm text-muted-foreground">Administra y registra todos tus gastos</p>
           </div>
-          <Button
-            onClick={() => {
-              setEditingExpense(null)
-              setModalOpen(true)
-            }}
-          >
-            <Plus data-icon="inline-start" />
-            Agregar gasto
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/importar">
+                <Upload data-icon="inline-start" />
+                Importar extracto
+              </Link>
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingExpense(null)
+                setModalOpen(true)
+              }}
+            >
+              <Plus data-icon="inline-start" />
+              Agregar gasto
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">
