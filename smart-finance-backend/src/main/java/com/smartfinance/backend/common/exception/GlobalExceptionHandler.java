@@ -15,6 +15,7 @@ import com.smartfinance.backend.extractos.exception.StatementExtractionException
 import com.smartfinance.backend.extractos.exception.StatementPasswordException;
 import com.smartfinance.backend.extractos.exception.UnsupportedStatementFileException;
 import com.smartfinance.backend.integraciones.exception.InvalidLinkCodeException;
+import com.smartfinance.backend.integraciones.exception.TelegramAlreadyLinkedException;
 import com.smartfinance.backend.integraciones.exception.TelegramChatNotLinkedException;
 import com.smartfinance.backend.integraciones.exception.TelegramImplausibleMovementException;
 import com.smartfinance.backend.integraciones.exception.TelegramMessageParseException;
@@ -241,6 +242,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidLinkCodeException.class)
     public ResponseEntity<ErrorResponse> handleInvalidLinkCode(
             InvalidLinkCodeException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(TelegramAlreadyLinkedException.class)
+    public ResponseEntity<ErrorResponse> handleTelegramAlreadyLinked(
+            TelegramAlreadyLinkedException ex,
             HttpServletRequest request
     ) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());

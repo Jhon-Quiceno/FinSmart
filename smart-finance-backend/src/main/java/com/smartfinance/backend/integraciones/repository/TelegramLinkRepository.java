@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface TelegramLinkRepository extends JpaRepository<TelegramLink, Long> {
 
     Optional<TelegramLink> findByTelegramChatId(String telegramChatId);
+
+    boolean existsByUser_Id(Long userId);
 }

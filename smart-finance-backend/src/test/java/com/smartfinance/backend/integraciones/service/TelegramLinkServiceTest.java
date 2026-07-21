@@ -1,7 +1,9 @@
 package com.smartfinance.backend.integraciones.service;
 
 import com.smartfinance.backend.integraciones.exception.InvalidLinkCodeException;
+import com.smartfinance.backend.integraciones.exception.TelegramAlreadyLinkedException;
 import com.smartfinance.backend.integraciones.model.dto.TelegramLinkCodeResponse;
+import com.smartfinance.backend.integraciones.model.dto.TelegramLinkStatusResponse;
 import com.smartfinance.backend.integraciones.model.entity.TelegramLink;
 import com.smartfinance.backend.integraciones.repository.TelegramLinkRepository;
 import com.smartfinance.backend.usuario.model.entity.User;
@@ -55,6 +57,41 @@ class TelegramLinkServiceTest {
 
         assertThat(response.code()).isEqualTo("ABCD2345");
         assertThat(response.expiresInSeconds()).isEqualTo(TelegramLinkCodeStore.TTL_SECONDS);
+    }
+
+    @Test
+    void generateLinkCodeThrowsWhenTheUserAlreadyHasAChatLinkedAndNeverIssuesACode() {
+        setAuthenticatedUser(1L);
+        when(telegramLinkRepository.existsByUser_Id(1L)).thenReturn(true);
+        telegramLinkService = service();
+
+        Assertions.assertThrows(
+                TelegramAlreadyLinkedException.class,
+                () -> telegramLinkService.generateLinkCode()
+        );
+        verify(codeStore, org.mockito.Mockito.never()).issue(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void getStatusReturnsLinkedTrueWhenTheUserHasAChatLinked() {
+        setAuthenticatedUser(1L);
+        when(telegramLinkRepository.existsByUser_Id(1L)).thenReturn(true);
+        telegramLinkService = service();
+
+        TelegramLinkStatusResponse status = telegramLinkService.getStatus();
+
+        assertThat(status.linked()).isTrue();
+    }
+
+    @Test
+    void getStatusReturnsLinkedFalseWhenTheUserHasNoChatLinked() {
+        setAuthenticatedUser(1L);
+        when(telegramLinkRepository.existsByUser_Id(1L)).thenReturn(false);
+        telegramLinkService = service();
+
+        TelegramLinkStatusResponse status = telegramLinkService.getStatus();
+
+        assertThat(status.linked()).isFalse();
     }
 
     @Test

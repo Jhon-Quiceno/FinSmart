@@ -3,12 +3,14 @@ package com.smartfinance.backend.integraciones.controller;
 import com.smartfinance.backend.integraciones.model.dto.TelegramConfirmLinkRequest;
 import com.smartfinance.backend.integraciones.model.dto.TelegramExpenseRequest;
 import com.smartfinance.backend.integraciones.model.dto.TelegramLinkCodeResponse;
+import com.smartfinance.backend.integraciones.model.dto.TelegramLinkStatusResponse;
 import com.smartfinance.backend.integraciones.model.dto.TelegramReceiptRequest;
 import com.smartfinance.backend.integraciones.model.dto.TelegramReplyResponse;
 import com.smartfinance.backend.integraciones.service.TelegramExpenseService;
 import com.smartfinance.backend.integraciones.service.TelegramLinkService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,9 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Endpoints del bot de Telegram (Sprint 2, Frente 2), orquestado por n8n.
  *
- * <p>{@code POST /link-code} lo llama la app con JWT: genera un código de un solo uso. Las otras
- * tres rutas ({@code /confirm-link}, {@code /expenses} y {@code /receipts}) las llama n8n
- * server-to-server, sin JWT, autenticadas por
+ * <p>{@code POST /link-code} y {@code GET /status} los llama la app con JWT. Las otras tres rutas
+ * ({@code /confirm-link}, {@code /expenses} y {@code /receipts}) las llama n8n server-to-server,
+ * sin JWT, autenticadas por
  * {@link com.smartfinance.backend.common.security.TelegramWebhookFilter} con un secreto compartido
  * (ver {@code SecurityConfig}).
  */
@@ -44,6 +46,11 @@ public class TelegramIntegrationController {
     @PostMapping("/link-code")
     public ResponseEntity<TelegramLinkCodeResponse> generateLinkCode() {
         return ResponseEntity.ok(telegramLinkService.generateLinkCode());
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<TelegramLinkStatusResponse> getStatus() {
+        return ResponseEntity.ok(telegramLinkService.getStatus());
     }
 
     @PostMapping("/confirm-link")

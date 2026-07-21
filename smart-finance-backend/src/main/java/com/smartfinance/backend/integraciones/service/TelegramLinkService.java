@@ -2,7 +2,9 @@ package com.smartfinance.backend.integraciones.service;
 
 import com.smartfinance.backend.common.security.SecurityUtils;
 import com.smartfinance.backend.integraciones.exception.InvalidLinkCodeException;
+import com.smartfinance.backend.integraciones.exception.TelegramAlreadyLinkedException;
 import com.smartfinance.backend.integraciones.model.dto.TelegramLinkCodeResponse;
+import com.smartfinance.backend.integraciones.model.dto.TelegramLinkStatusResponse;
 import com.smartfinance.backend.integraciones.model.entity.TelegramLink;
 import com.smartfinance.backend.integraciones.repository.TelegramLinkRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
@@ -39,11 +41,24 @@ public class TelegramLinkService {
      * Telegram.
      *
      * @return el código generado y su tiempo de vida en segundos
+     * @throws TelegramAlreadyLinkedException si el usuario ya tiene un chat de Telegram vinculado
      */
     public TelegramLinkCodeResponse generateLinkCode() {
         Long userId = SecurityUtils.getCurrentUserId();
+        if (telegramLinkRepository.existsByUser_Id(userId)) {
+            throw new TelegramAlreadyLinkedException(
+                    "Tu cuenta ya tiene un chat de Telegram vinculado. No hace falta generar otro código.");
+        }
         String code = codeStore.issue(userId);
         return new TelegramLinkCodeResponse(code, TelegramLinkCodeStore.TTL_SECONDS);
+    }
+
+    /**
+     * @return si el usuario autenticado ya tiene un chat de Telegram vinculado
+     */
+    public TelegramLinkStatusResponse getStatus() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return new TelegramLinkStatusResponse(telegramLinkRepository.existsByUser_Id(userId));
     }
 
     /**

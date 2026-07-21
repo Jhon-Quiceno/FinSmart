@@ -7,6 +7,7 @@ import com.smartfinance.backend.integraciones.exception.TelegramChatNotLinkedExc
 import com.smartfinance.backend.integraciones.model.dto.TelegramConfirmLinkRequest;
 import com.smartfinance.backend.integraciones.model.dto.TelegramExpenseRequest;
 import com.smartfinance.backend.integraciones.model.dto.TelegramLinkCodeResponse;
+import com.smartfinance.backend.integraciones.model.dto.TelegramLinkStatusResponse;
 import com.smartfinance.backend.integraciones.model.dto.TelegramReceiptRequest;
 import com.smartfinance.backend.integraciones.service.TelegramExpenseService;
 import com.smartfinance.backend.integraciones.service.TelegramLinkService;
@@ -27,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -90,6 +92,22 @@ class TelegramIntegrationControllerTest {
     @Test
     void linkCodeReturns403WithoutAuthToken() throws Exception {
         mockMvc.perform(post("/api/integrations/telegram/link-code").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void statusReturns200WithLinkedTrueWhenAuthenticated() throws Exception {
+        when(telegramLinkService.getStatus()).thenReturn(new TelegramLinkStatusResponse(true));
+
+        mockMvc.perform(get("/api/integrations/telegram/status")
+                        .header("Authorization", AUTH_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.linked").value(true));
+    }
+
+    @Test
+    void statusReturns403WithoutAuthToken() throws Exception {
+        mockMvc.perform(get("/api/integrations/telegram/status"))
                 .andExpect(status().isForbidden());
     }
 
