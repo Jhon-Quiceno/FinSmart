@@ -1,5 +1,6 @@
 package com.smartfinance.backend.ia.service.ai;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smartfinance.backend.ia.exception.AiProviderAuthException;
 import com.smartfinance.backend.ia.exception.AiProviderException;
@@ -63,7 +64,8 @@ public class AiChatClient {
         ChatCompletionRequest requestBody = new ChatCompletionRequest(
                 provider.model(),
                 messages.stream().map(message -> new OpenAiMessage(message.role(), message.content())).toList(),
-                false
+                false,
+                buildChatTemplateKwargs(provider)
         );
 
         try {
@@ -80,6 +82,22 @@ public class AiChatClient {
         } catch (ResourceAccessException ex) {
             throw mapAccessException(provider.name(), ex);
         }
+    }
+
+    /**
+     * NVIDIA's newer Nemotron-family models default to a verbose hybrid "reasoning" mode: without
+     * this flag they spend the entire token budget on chain-of-thought and never emit the actual
+     * JSON answer this app's prompts demand, truncating with {@code finish_reason: "length"}. It's
+     * an NVIDIA-only vendor extension (not part of the OpenAI chat-completions spec), harmless to
+     * send even when the configured model doesn't have a "thinking" mode at all — verified against
+     * every candidate model tried for this project, including the current default. Applying it
+     * unconditionally for every NVIDIA model (not just the one currently configured) means a future
+     * {@code NVIDIA_MODEL} swap doesn't silently reintroduce this failure mode.
+     */
+    private static ChatCompletionRequest.ChatTemplateKwargs buildChatTemplateKwargs(ResolvedAiProvider provider) {
+        return SupportedAiProvider.NVIDIA.key().equals(provider.name())
+                ? new ChatCompletionRequest.ChatTemplateKwargs(false)
+                : null;
     }
 
     private RestClient buildClient(String baseUrl) {
@@ -154,7 +172,15 @@ public class AiChatClient {
         return responseBody != null && responseBody.toLowerCase(Locale.ROOT).contains("model");
     }
 
-    private record ChatCompletionRequest(String model, List<OpenAiMessage> messages, boolean stream) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record ChatCompletionRequest(
+            String model,
+            List<OpenAiMessage> messages,
+            boolean stream,
+            @JsonProperty("chat_template_kwargs") ChatTemplateKwargs chatTemplateKwargs
+    ) {
+        private record ChatTemplateKwargs(Boolean thinking) {
+        }
     }
 
     private record OpenAiMessage(String role, String content) {

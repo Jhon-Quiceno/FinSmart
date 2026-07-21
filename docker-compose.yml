@@ -22,6 +22,11 @@ services:
     ports:
       - "8080:8080"
     environment:
+      # Sin esto el contenedor (y por lo tanto LocalDate.now() del backend) corre en UTC, 5 horas
+      # adelante de Colombia. Cualquier fecha calculada por el servidor (ej. el gasto que crea el
+      # bot de Telegram con "fecha de hoy") queda un dia adelantada entre las 19:00 y la
+      # medianoche hora Colombia, y despues el frontend la rechaza como "fecha futura" al editarla.
+      TZ: ${APP_TIMEZONE:-America/Bogota}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
@@ -43,6 +48,8 @@ services:
       OPENROUTER_MODEL: ${OPENROUTER_MODEL}
       RESEND_API_KEY: ${RESEND_API_KEY}
       MAIL_FROM: ${MAIL_FROM}
+      # Secreto compartido con n8n para los endpoints de /api/integrations/telegram/*
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
     depends_on:
       db:
         condition: service_healthy
@@ -78,9 +85,20 @@ services:
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
       N8N_HOST: ${N8N_HOST:-localhost}
       N8N_PORT: 5678
-      N8N_PROTOCOL: http
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      # URL publica por la que Telegram llega a n8n para registrar el webhook (requiere HTTPS).
+      # En local se completa con un tunel (ver n8n/README.md); vacio = n8n arma la URL con
+      # N8N_PROTOCOL + N8N_HOST + N8N_PORT, que no sirve para el Telegram Trigger sin tunel.
+      # N8N_WEBHOOK_URL (no WEBHOOK_URL, deprecado desde n8n 2.x).
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-}
+      # Desde n8n 2.x las expresiones no pueden leer $env por defecto (seguridad). El workflow
+      # de Telegram referencia {{ $env.TELEGRAM_WEBHOOK_SECRET }} en los nodos HTTP Request, asi
+      # que hace falta habilitarlo explicitamente. Aceptable en un entorno local de desarrollo.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
       N8N_SECURE_COOKIE: false
       GENERIC_TIMEZONE: America/Bogota
+      # Disponible en los workflows via {{ $env.TELEGRAM_WEBHOOK_SECRET }} (header hacia el backend)
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:

@@ -58,8 +58,17 @@ public class IncomeService {
 
     @Transactional
     public IncomeResponse createIncome(IncomeRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        return createIncome(SecurityUtils.getCurrentUserId(), request);
+    }
 
+    /**
+     * Same as {@link #createIncome(IncomeRequest)} but for a caller that already resolved
+     * {@code userId} itself (e.g. {@code StatementImportService#confirm}, which creates several
+     * incomes for the same user in one request and would otherwise re-read the security context
+     * on every row).
+     */
+    @Transactional
+    public IncomeResponse createIncome(Long userId, IncomeRequest request) {
         Income income = incomeMapper.toEntity(request);
         income.setUser(userRepository.getReferenceById(userId));
         income.setCategory(resolveOwnedCategory(request.categoryId(), userId));

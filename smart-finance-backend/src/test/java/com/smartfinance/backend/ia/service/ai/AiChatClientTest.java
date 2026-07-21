@@ -66,6 +66,37 @@ class AiChatClientTest {
     }
 
     @Test
+    void completeShouldDisableThinkingModeForNvidiaProvider() {
+        ResolvedAiProvider provider = new ResolvedAiProvider(
+                "nvidia", "https://integrate.api.nvidia.com/v1", "key", "nvidia/nemotron-3-nano-30b-a3b");
+
+        mockServer.expect(requestTo("https://integrate.api.nvidia.com/v1/chat/completions"))
+                .andExpect(jsonPath("$.chat_template_kwargs.thinking").value(false))
+                .andRespond(withSuccess("""
+                        {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        aiChatClient.complete(provider, List.of(ChatMessage.user("hola")));
+
+        mockServer.verify();
+    }
+
+    @Test
+    void completeShouldNotSendChatTemplateKwargsForNonNvidiaProviders() {
+        ResolvedAiProvider provider = buildProvider("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile", "key");
+
+        mockServer.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(jsonPath("$.chat_template_kwargs").doesNotExist())
+                .andRespond(withSuccess("""
+                        {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        aiChatClient.complete(provider, List.of(ChatMessage.user("hola")));
+
+        mockServer.verify();
+    }
+
+    @Test
     void completeShouldStripTrailingSlashFromBaseUrlBeforeAppendingPath() {
         ResolvedAiProvider provider = buildProvider("https://generativelanguage.googleapis.com/v1beta/openai/", "gemini-2.5-flash", "key");
 

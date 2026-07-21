@@ -2,6 +2,7 @@ package com.smartfinance.backend.common.config;
 
 import com.smartfinance.backend.common.security.JwtAuthenticationFilter;
 import com.smartfinance.backend.common.security.RateLimitFilter;
+import com.smartfinance.backend.common.security.TelegramWebhookFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,10 +27,16 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final TelegramWebhookFilter telegramWebhookFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, RateLimitFilter rateLimitFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            RateLimitFilter rateLimitFilter,
+            TelegramWebhookFilter telegramWebhookFilter
+    ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.rateLimitFilter = rateLimitFilter;
+        this.telegramWebhookFilter = telegramWebhookFilter;
     }
 
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
@@ -61,7 +68,11 @@ public class SecurityConfig {
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
-                    "/actuator/health"
+                    "/actuator/health",
+                    // Server-to-server (n8n), sin sesión de usuario ni cookie CSRF: protegidas por
+                    // TelegramWebhookFilter (secreto compartido) en lugar de CSRF.
+                    "/api/integrations/telegram/confirm-link",
+                    "/api/integrations/telegram/expenses"
                 )
             )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -78,14 +89,19 @@ public class SecurityConfig {
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
-                    "/actuator/health"
+                    "/actuator/health",
+                    // Server-to-server (n8n): la autenticación la hace TelegramWebhookFilter con
+                    // un secreto compartido, no Spring Security/JWT.
+                    "/api/integrations/telegram/confirm-link",
+                    "/api/integrations/telegram/expenses"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             // Runs AFTER JwtAuthenticationFilter so /api/ai/chat can be rate-limited by IP+userId
             // instead of IP alone (see RateLimitFilter's class Javadoc for the full decision).
-            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class)
+            .addFilterBefore(telegramWebhookFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
