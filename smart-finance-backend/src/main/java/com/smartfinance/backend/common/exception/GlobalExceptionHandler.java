@@ -18,6 +18,7 @@ import com.smartfinance.backend.integraciones.exception.InvalidLinkCodeException
 import com.smartfinance.backend.integraciones.exception.TelegramChatNotLinkedException;
 import com.smartfinance.backend.integraciones.exception.TelegramImplausibleMovementException;
 import com.smartfinance.backend.integraciones.exception.TelegramMessageParseException;
+import com.smartfinance.backend.integraciones.exception.TelegramRateLimitExceededException;
 import com.smartfinance.backend.servicios.exception.RecurringPaymentAlreadyPaidException;
 import com.smartfinance.backend.servicios.exception.RecurringPaymentNotDueYetException;
 import com.smartfinance.backend.usuario.exception.EmailAlreadyExistsException;
@@ -267,6 +268,14 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(TelegramRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTelegramRateLimitExceeded(
+            TelegramRateLimitExceededException ex,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
