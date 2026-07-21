@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
-import { Plus, TrendingUp, Upload } from "lucide-react"
+import { Plus, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
 import { IncomeModal } from "@/components/income/income-modal"
 import { IncomeTable } from "@/components/income/income-table"
@@ -115,12 +114,6 @@ export default function IngresosPage() {
             <p className="text-sm text-muted-foreground">Registra y visualiza todos tus ingresos</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/importar">
-                <Upload data-icon="inline-start" />
-                Importar extracto
-              </Link>
-            </Button>
             <Button
               onClick={() => {
                 setEditingIncome(null)

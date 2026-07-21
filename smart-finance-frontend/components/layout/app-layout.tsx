@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { QuickAddCommand } from "@/components/quick-add/quick-add-command"
-import { QuickAddFab } from "@/components/quick-add/quick-add-fab"
 import { QuickAddProvider } from "@/contexts/quick-add-context"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "./sidebar"
@@ -42,8 +41,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
         </div>
 
-        {/* Quick-add: FAB + Ctrl+K / Cmd+K dialog, available on every authenticated page */}
-        <QuickAddFab />
+        {/* Quick-add: Ctrl+K / Cmd+K dialog, available on every authenticated page */}
         <QuickAddCommand />
       </div>
     </QuickAddProvider>
