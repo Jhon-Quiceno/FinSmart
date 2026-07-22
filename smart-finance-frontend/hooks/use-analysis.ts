@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react"
 import { getAnalysisRecommendations, getAnalysisSummary, getPrediction } from "@/lib/services/analysis.service"
 import type { AnalysisRecommendation, AnalysisSummary, Prediction } from "@/lib/types/analysis"
+import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus"
 
 export function useAnalysisSummary(year?: number, month?: number) {
   const [data, setData] = useState<AnalysisSummary | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshIndex, setRefreshIndex] = useState(0)
+
+  // The dashboard summary can go stale when a transaction is registered from an external
+  // channel (the Telegram bot), so it's reloaded whenever the tab regains focus/visibility.
+  useRefreshOnFocus(() => setRefreshIndex((value) => value + 1))
 
   useEffect(() => {
     let cancelled = false
@@ -35,7 +41,7 @@ export function useAnalysisSummary(year?: number, month?: number) {
     return () => {
       cancelled = true
     }
-  }, [year, month])
+  }, [year, month, refreshIndex])
 
   return { data, isLoading, error }
 }
@@ -44,6 +50,9 @@ export function usePrediction() {
   const [data, setData] = useState<Prediction | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshIndex, setRefreshIndex] = useState(0)
+
+  useRefreshOnFocus(() => setRefreshIndex((value) => value + 1))
 
   useEffect(() => {
     let cancelled = false
@@ -73,7 +82,7 @@ export function usePrediction() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshIndex])
 
   return { data, isLoading, error }
 }
@@ -82,6 +91,9 @@ export function useAnalysisRecommendations(year?: number, month?: number) {
   const [data, setData] = useState<AnalysisRecommendation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshIndex, setRefreshIndex] = useState(0)
+
+  useRefreshOnFocus(() => setRefreshIndex((value) => value + 1))
 
   useEffect(() => {
     let cancelled = false
@@ -111,7 +123,7 @@ export function useAnalysisRecommendations(year?: number, month?: number) {
     return () => {
       cancelled = true
     }
-  }, [year, month])
+  }, [year, month, refreshIndex])
 
   return { data, isLoading, error }
 }
