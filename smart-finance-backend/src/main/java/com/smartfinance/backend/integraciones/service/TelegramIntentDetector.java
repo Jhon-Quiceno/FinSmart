@@ -24,7 +24,8 @@ public final class TelegramIntentDetector {
      * {@link DescriptionSimilarity#normalize}). {@code "total"} alone already covers the
      * "gasté/gané/ingresé en total" phrasings, since they all contain it as a substring.
      */
-    private static final List<String> SUMMARY_KEYWORDS = List.of("cuanto", "resumen", "balance", "total");
+    private static final List<String> SUMMARY_KEYWORDS =
+            List.of("cuanto", "resumen", "balance", "total", "deuda", "debo");
 
     private TelegramIntentDetector() {
     }

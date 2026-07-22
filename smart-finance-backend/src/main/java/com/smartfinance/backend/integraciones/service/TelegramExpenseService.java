@@ -1,6 +1,7 @@
 package com.smartfinance.backend.integraciones.service;
 
 import com.smartfinance.backend.common.security.InMemoryRateLimiter;
+import com.smartfinance.backend.deudas.repository.DebtRepository;
 import com.smartfinance.backend.extractos.service.dedup.DescriptionSimilarity;
 import com.smartfinance.backend.gastos.model.dto.ExpenseRequest;
 import com.smartfinance.backend.gastos.model.dto.ExpenseResponse;
@@ -13,14 +14,17 @@ import com.smartfinance.backend.ia.model.dto.MovementClassification;
 import com.smartfinance.backend.ia.model.dto.ReceiptExtraction;
 import com.smartfinance.backend.ia.model.dto.SummaryPeriod;
 import com.smartfinance.backend.ia.model.dto.SummaryQueryIntent;
+import com.smartfinance.backend.ia.model.dto.SummaryTopic;
 import com.smartfinance.backend.ia.service.AiCategorizationService;
 import com.smartfinance.backend.ia.service.FinancialSummaryQueryService;
 import com.smartfinance.backend.ia.service.ReceiptExtractionService;
 import com.smartfinance.backend.ingresos.model.dto.IncomeRequest;
 import com.smartfinance.backend.ingresos.model.dto.IncomeResponse;
+import com.smartfinance.backend.ingresos.repository.IncomeCategoryTotalProjection;
 import com.smartfinance.backend.ingresos.repository.IncomeRepository;
 import com.smartfinance.backend.ingresos.service.IncomeService;
 import com.smartfinance.backend.integraciones.exception.TelegramChatNotLinkedException;
+import com.smartfinance.backend.integraciones.exception.TelegramMessageParseException;
 import com.smartfinance.backend.integraciones.exception.TelegramRateLimitExceededException;
 import com.smartfinance.backend.integraciones.model.entity.TelegramLink;
 import com.smartfinance.backend.integraciones.repository.TelegramLinkRepository;
@@ -82,6 +86,13 @@ public class TelegramExpenseService {
             "No pude leer un recibo en esa imagen. Si es un comprobante válido, probá con más luz o "
                     + "escribí el gasto a mano (ej. \"Uber 15000\").";
 
+    private static final String HELP_MESSAGE =
+            "🤔 No entendí ese mensaje. Puedo ayudarte con:\n"
+                    + "• Registrar un gasto o ingreso, ej. \"Uber 15000\"\n"
+                    + "• Responder preguntas sobre tus finanzas, ej. \"¿cuánto gasté este mes?\", "
+                    + "\"resumen\", \"¿cómo voy con mis deudas?\"\n"
+                    + "• Leer la foto de un recibo";
+
     // Mismos límites, y mismo criterio de "filtro barato sin llamada a IA adicional" que
     // TelegramMessageParser#MIN_PLAUSIBLE_AMOUNT/MAX_PLAUSIBLE_AMOUNT — duplicados acá en lugar de
     // extraídos a un tipo compartido porque el origen del monto es distinto (un modelo de visión,
@@ -103,6 +114,7 @@ public class TelegramExpenseService {
     private final IncomeService incomeService;
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
+    private final DebtRepository debtRepository;
     private final InMemoryRateLimiter rateLimiter = new InMemoryRateLimiter();
 
     public TelegramExpenseService(
@@ -114,7 +126,8 @@ public class TelegramExpenseService {
             ExpenseService expenseService,
             IncomeService incomeService,
             ExpenseRepository expenseRepository,
-            IncomeRepository incomeRepository
+            IncomeRepository incomeRepository,
+            DebtRepository debtRepository
     ) {
         this.telegramLinkRepository = telegramLinkRepository;
         this.messageParser = messageParser;
@@ -125,6 +138,7 @@ public class TelegramExpenseService {
         this.incomeService = incomeService;
         this.expenseRepository = expenseRepository;
         this.incomeRepository = incomeRepository;
+        this.debtRepository = debtRepository;
     }
 
     /**
@@ -133,11 +147,9 @@ public class TelegramExpenseService {
      *               {@code "Me pagaron 50000"}), o una pregunta sobre las finanzas del usuario (ej.
      *               {@code "¿Cuánto gasté en comida?"} o {@code "resumen"}) — ver
      *               {@link TelegramIntentDetector#looksLikeSummaryQuery}
-     * @return el mensaje de confirmación (registro) o la respuesta calculada (consulta) en español,
-     *         listo para reenviar al usuario por Telegram
+     * @return el mensaje de confirmación (registro), la respuesta calculada (consulta), o
+     *         {@link #HELP_MESSAGE} en español, listo para reenviar al usuario por Telegram
      * @throws TelegramChatNotLinkedException si {@code chatId} no está vinculado a ningún usuario
-     * @throws com.smartfinance.backend.integraciones.exception.TelegramMessageParseException si
-     *         {@code text} no parece una consulta y tampoco contiene un monto interpretable
      * @throws com.smartfinance.backend.integraciones.exception.TelegramImplausibleMovementException
      *         si {@code text} no parece una consulta, tiene un monto interpretable, pero resulta
      *         implausible como movimiento real (ver {@code TelegramMessageParser#parse})
@@ -153,7 +165,16 @@ public class TelegramExpenseService {
             return buildSummaryReply(userId, text);
         }
 
-        TelegramMessageParser.ParsedMessage parsed = messageParser.parse(text);
+        TelegramMessageParser.ParsedMessage parsed;
+        try {
+            parsed = messageParser.parse(text);
+        } catch (TelegramMessageParseException ex) {
+            // El heurístico de TelegramIntentDetector no atrapó esta consulta, y tampoco tiene un
+            // monto interpretable como movimiento: en lugar de propagar un 422 críptico, se responde
+            // con 200 y una ayuda amigable — a diferencia de TelegramImplausibleMovementException
+            // (dejada sin atrapar), cuyos mensajes ya son específicos sobre qué está mal.
+            return HELP_MESSAGE;
+        }
         MovementClassification classification = classifySafely(userId, parsed);
 
         return classification.type() == CategoryType.INCOME
@@ -169,20 +190,65 @@ public class TelegramExpenseService {
      */
     private String buildSummaryReply(Long userId, String text) {
         SummaryQueryIntent intent = financialSummaryQueryService.parseQuery(userId, text);
-        LocalDate today = LocalDate.now();
-        LocalDate start = switch (intent.period()) {
-            case TODAY -> today;
-            case WEEK -> today.minusDays(6);
-            case MONTH -> today.withDayOfMonth(1);
-        };
+        if (intent.topic() == SummaryTopic.DEBT) {
+            return buildDebtSummaryReply(userId);
+        }
 
+        DateRange range = resolveDateRange(intent.period());
         if (intent.movementType() == CategoryType.EXPENSE) {
-            return buildExpenseSummaryReply(userId, intent.period(), start, today, intent.categoryName());
+            return buildExpenseSummaryReply(userId, intent.period(), range.start(), range.end(), intent.categoryName());
         }
         if (intent.movementType() == CategoryType.INCOME) {
-            return buildIncomeSummaryReply(userId, intent.period(), start, today, intent.categoryName());
+            return buildIncomeSummaryReply(userId, intent.period(), range.start(), range.end(), intent.categoryName());
         }
-        return buildBalanceSummaryReply(userId, intent.period(), start, today);
+        return buildBalanceSummaryReply(userId, intent.period(), range.start(), range.end());
+    }
+
+    /**
+     * Resuelve el rango de fechas {@code [start, end]} para cada {@link SummaryPeriod}. Antes de
+     * {@link SummaryPeriod#LAST_MONTH}, {@code end} era siempre "hoy" para cualquier período — eso
+     * dejó de ser cierto acá: el mes pasado necesita un {@code end} igual al último día de ese mes,
+     * no al día de hoy, así que el rango completo (no solo {@code start}) se calcula por período.
+     */
+    private static DateRange resolveDateRange(SummaryPeriod period) {
+        LocalDate today = LocalDate.now();
+        return switch (period) {
+            case TODAY -> new DateRange(today, today);
+            case WEEK -> new DateRange(today.minusDays(6), today);
+            case MONTH -> new DateRange(today.withDayOfMonth(1), today);
+            case LAST_MONTH -> {
+                LocalDate lastDayOfLastMonth = today.withDayOfMonth(1).minusDays(1);
+                yield new DateRange(lastDayOfLastMonth.withDayOfMonth(1), lastDayOfLastMonth);
+            }
+            case YEAR -> new DateRange(today.withDayOfYear(1), today);
+        };
+    }
+
+    /** Rango de fechas inclusivo resuelto por {@link #resolveDateRange}. */
+    private record DateRange(LocalDate start, LocalDate end) {
+    }
+
+    /**
+     * Responde una pregunta sobre deudas (ej. {@code "¿cómo voy con mis deudas?"}, {@code "cuánto
+     * debo"}): a diferencia de las consultas de movimiento, no depende de ningún período — una
+     * deuda es un saldo vigente, no algo que ocurrió dentro de un rango de fechas.
+     *
+     * <p>{@link DebtRepository} no tiene un flag {@code isActive} (ver su Javadoc): una deuda con
+     * {@code remainingAmount == 0} ya está saldada, así que se filtra en memoria sobre
+     * {@link DebtRepository#findAllByUser_Id(Long)} (mismo método, sin paginar, que ya usa
+     * {@code FinancialContextBuilder}) en lugar de sumar sobre la lista completa.
+     */
+    private String buildDebtSummaryReply(Long userId) {
+        long activeDebtCount = debtRepository.findAllByUser_Id(userId).stream()
+                .filter(debt -> debt.getRemainingAmount().signum() > 0)
+                .count();
+        if (activeDebtCount == 0) {
+            return "🎉 No tenés deudas pendientes registradas.";
+        }
+
+        BigDecimal totalRemaining = debtRepository.sumRemainingAmountByUser(userId);
+        return "💳 Tenés $%s en deudas pendientes, en %d deuda(s) activa(s)."
+                .formatted(formatAmount(totalRemaining), activeDebtCount);
     }
 
     private String buildExpenseSummaryReply(Long userId, SummaryPeriod period, LocalDate start, LocalDate end, String categoryName) {
@@ -202,19 +268,22 @@ public class TelegramExpenseService {
         return "📊 Gastaste $%s en %s %s.".formatted(formatAmount(matched.get().getTotal()), matched.get().getCategoryName(), periodLabel);
     }
 
-    /**
-     * {@link IncomeRepository} no tiene un equivalente a
-     * {@link ExpenseRepository#findTopCategoriesByUserAndPeriod}: ante una categoría mencionada, se
-     * degrada al total general en lugar de inventar una cifra por categoría que no se puede
-     * calcular.
-     */
+    /** Mismo patrón que {@link #buildExpenseSummaryReply}, usando {@link IncomeRepository#findTopCategoriesByUserAndPeriod}. */
     private String buildIncomeSummaryReply(Long userId, SummaryPeriod period, LocalDate start, LocalDate end, String categoryName) {
         String periodLabel = periodLabel(period);
-        BigDecimal total = incomeRepository.sumAmountByUserAndPeriod(userId, start, end);
-        return categoryName == null
-                ? "📊 Ingresaste $%s %s.".formatted(formatAmount(total), periodLabel)
-                : "📊 Ingresaste $%s en total %s (todavía no tengo el desglose de ingresos por categoría)."
-                        .formatted(formatAmount(total), periodLabel);
+        if (categoryName == null) {
+            BigDecimal total = incomeRepository.sumAmountByUserAndPeriod(userId, start, end);
+            return "📊 Ingresaste $%s %s.".formatted(formatAmount(total), periodLabel);
+        }
+
+        Optional<IncomeCategoryTotalProjection> matched = incomeRepository.findTopCategoriesByUserAndPeriod(userId, start, end)
+                .stream()
+                .filter(row -> categoryName.equalsIgnoreCase(row.getCategoryName()))
+                .findFirst();
+        if (matched.isEmpty()) {
+            return "📊 No encontré ingresos en \"%s\" %s.".formatted(categoryName, periodLabel);
+        }
+        return "📊 Ingresaste $%s en %s %s.".formatted(formatAmount(matched.get().getTotal()), matched.get().getCategoryName(), periodLabel);
     }
 
     private String buildBalanceSummaryReply(Long userId, SummaryPeriod period, LocalDate start, LocalDate end) {
@@ -234,6 +303,8 @@ public class TelegramExpenseService {
             case TODAY -> "hoy";
             case WEEK -> "esta semana";
             case MONTH -> "este mes";
+            case LAST_MONTH -> "el mes pasado";
+            case YEAR -> "este año";
         };
     }
 

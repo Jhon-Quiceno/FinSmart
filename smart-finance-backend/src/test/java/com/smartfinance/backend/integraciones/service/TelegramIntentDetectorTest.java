@@ -50,4 +50,14 @@ class TelegramIntentDetectorTest {
     void looksLikeSummaryQueryReturnsFalseForNullText() {
         assertThat(TelegramIntentDetector.looksLikeSummaryQuery(null)).isFalse();
     }
+
+    @Test
+    void looksLikeSummaryQueryReturnsTrueForMisDeudasWithoutAQuestionMark() {
+        assertThat(TelegramIntentDetector.looksLikeSummaryQuery("mis deudas")).isTrue();
+    }
+
+    @Test
+    void looksLikeSummaryQueryReturnsTrueForCuantoDebo() {
+        assertThat(TelegramIntentDetector.looksLikeSummaryQuery("cuanto debo")).isTrue();
+    }
 }

@@ -13,10 +13,16 @@ import com.smartfinance.backend.gastos.model.entity.CategoryType;
  *                      covers both
  * @param categoryName free-text name of the category mentioned in the question (e.g. {@code "comida"}),
  *                      or {@code null} when no specific category was named
+ * @param topic        whether the question is about debts or about movements; defaults to
+ *                      {@link SummaryTopic#MOVEMENT} when the topic could not be decided. When
+ *                      {@code topic} is {@link SummaryTopic#DEBT}, {@code period}/{@code movementType}/
+ *                      {@code categoryName} are irrelevant — a debt query answers with the current
+ *                      outstanding balance, not a movement over a date range.
  */
 public record SummaryQueryIntent(
         SummaryPeriod period,
         CategoryType movementType,
-        String categoryName
+        String categoryName,
+        SummaryTopic topic
 ) {
 }

@@ -11,5 +11,9 @@ public enum SummaryPeriod {
     /** Rolling 7-day window ending today ({@code [today - 6 days, today]}). */
     WEEK,
     /** Month-to-date ({@code [first day of the current month, today]}). */
-    MONTH
+    MONTH,
+    /** The full previous calendar month ({@code [first day of last month, last day of last month]}). */
+    LAST_MONTH,
+    /** Year-to-date ({@code [January 1st of the current year, today]}). */
+    YEAR
 }
