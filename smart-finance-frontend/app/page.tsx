@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useMemo } from "react"
-import { Sparkles } from "lucide-react"
+import Link from "next/link"
+import { Sparkles, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { AppLayout } from "@/components/layout/app-layout"
+import { Button } from "@/components/ui/button"
 import { BalanceCard } from "@/components/dashboard/balance-card"
 import { StatsCards } from "@/components/dashboard/stats-cards"
 import { IncomeExpensesChart } from "@/components/dashboard/income-expenses-chart"
@@ -83,9 +85,17 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Bienvenido de vuelta. Aqui esta tu resumen financiero.</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Bienvenido de vuelta. Aqui esta tu resumen financiero.</p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link href="/importar">
+              <Upload data-icon="inline-start" />
+              Importar extracto
+            </Link>
+          </Button>
         </div>
 
         {hasNoActivity ? (

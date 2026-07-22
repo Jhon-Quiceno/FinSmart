@@ -80,8 +80,17 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse createExpense(ExpenseRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        return createExpense(SecurityUtils.getCurrentUserId(), request);
+    }
 
+    /**
+     * Same as {@link #createExpense(ExpenseRequest)} but for a caller that already resolved
+     * {@code userId} itself (e.g. {@code StatementImportService#confirm}, which creates several
+     * expenses for the same user in one request and would otherwise re-read the security context
+     * on every row).
+     */
+    @Transactional
+    public ExpenseResponse createExpense(Long userId, ExpenseRequest request) {
         Expense expense = expenseMapper.toEntity(request);
         expense.setUser(userRepository.getReferenceById(userId));
         expense.setCategory(resolveOwnedCategory(request.categoryId(), userId));

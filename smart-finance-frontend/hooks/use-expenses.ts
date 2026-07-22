@@ -8,6 +8,7 @@ import {
 import type { ExpenseFilters } from "@/lib/services/expense.service"
 import type { Expense, ExpenseRequest } from "@/lib/types/expense"
 import type { PaginatedResponse } from "@/lib/types/pagination"
+import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus"
 
 const expensesCache = new Map<string, PaginatedResponse<Expense>>()
 const expenseListeners = new Set<() => void>()
@@ -43,6 +44,10 @@ export function useExpenses(filters: ExpenseFilters) {
       expenseListeners.delete(listener)
     }
   }, [])
+
+  // Expenses can be registered from an external channel (the Telegram bot), so the cache is
+  // invalidated whenever the tab regains focus/visibility to pick up those changes.
+  useRefreshOnFocus(invalidateExpensesCache)
 
   const refetch = useCallback(async () => {
     const cached = expensesCache.get(cacheKey)

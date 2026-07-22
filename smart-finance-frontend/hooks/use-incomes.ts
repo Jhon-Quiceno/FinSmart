@@ -8,6 +8,7 @@ import {
 import type { IncomeFilters } from "@/lib/services/income.service"
 import type { Income, IncomeRequest } from "@/lib/types/income"
 import type { PaginatedResponse } from "@/lib/types/pagination"
+import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus"
 
 const incomesCache = new Map<string, PaginatedResponse<Income>>()
 const incomeListeners = new Set<() => void>()
@@ -43,6 +44,10 @@ export function useIncomes(filters: IncomeFilters) {
       incomeListeners.delete(listener)
     }
   }, [])
+
+  // Incomes can be registered from an external channel (the Telegram bot), so the cache is
+  // invalidated whenever the tab regains focus/visibility to pick up those changes.
+  useRefreshOnFocus(invalidateIncomesCache)
 
   const refetch = useCallback(async () => {
     const cached = incomesCache.get(cacheKey)

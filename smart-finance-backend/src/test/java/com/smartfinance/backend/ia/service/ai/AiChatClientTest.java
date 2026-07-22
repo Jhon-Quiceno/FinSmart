@@ -47,6 +47,10 @@ class AiChatClientTest {
                 .andExpect(jsonPath("$.stream").value(false))
                 .andExpect(jsonPath("$.messages[0].role").value("system"))
                 .andExpect(jsonPath("$.messages[1].role").value("user"))
+                // Un mensaje sin imageUrl sigue serializando content como un string plano, no
+                // como el arreglo de partes que usa un turno de visión (ver
+                // completeShouldSendVisionArrayOfPartsContentWhenMessageCarriesAnImageUrl).
+                .andExpect(jsonPath("$.messages[1].content").value("hola"))
                 .andRespond(withSuccess("""
                         {
                           "choices": [{"message": {"role": "assistant", "content": "Hola, ¿en qué te ayudo?"}}],
@@ -62,6 +66,62 @@ class AiChatClientTest {
         Assertions.assertEquals("Hola, ¿en qué te ayudo?", result.content());
         Assertions.assertEquals(120, result.promptTokens());
         Assertions.assertEquals(15, result.completionTokens());
+        mockServer.verify();
+    }
+
+    @Test
+    void completeShouldSendVisionArrayOfPartsContentWhenMessageCarriesAnImageUrl() {
+        ResolvedAiProvider provider = buildProvider("https://integrate.api.nvidia.com/v1", "nvidia/nemotron-nano-12b-v2-vl", "key");
+
+        mockServer.expect(requestTo("https://integrate.api.nvidia.com/v1/chat/completions"))
+                .andExpect(jsonPath("$.messages[0].content").value("contexto"))
+                .andExpect(jsonPath("$.messages[1].content[0].type").value("text"))
+                .andExpect(jsonPath("$.messages[1].content[0].text").value("Extraé los datos de este recibo."))
+                .andExpect(jsonPath("$.messages[1].content[1].type").value("image_url"))
+                .andExpect(jsonPath("$.messages[1].content[1].image_url.url").value("data:image/jpeg;base64,abc123"))
+                .andRespond(withSuccess("""
+                        {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        aiChatClient.complete(
+                provider,
+                List.of(
+                        ChatMessage.system("contexto"),
+                        ChatMessage.userWithImage("Extraé los datos de este recibo.", "data:image/jpeg;base64,abc123")
+                )
+        );
+
+        mockServer.verify();
+    }
+
+    @Test
+    void completeShouldDisableThinkingModeForNvidiaProvider() {
+        ResolvedAiProvider provider = new ResolvedAiProvider(
+                "nvidia", "https://integrate.api.nvidia.com/v1", "key", "nvidia/nemotron-3-nano-30b-a3b", null);
+
+        mockServer.expect(requestTo("https://integrate.api.nvidia.com/v1/chat/completions"))
+                .andExpect(jsonPath("$.chat_template_kwargs.thinking").value(false))
+                .andRespond(withSuccess("""
+                        {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        aiChatClient.complete(provider, List.of(ChatMessage.user("hola")));
+
+        mockServer.verify();
+    }
+
+    @Test
+    void completeShouldNotSendChatTemplateKwargsForNonNvidiaProviders() {
+        ResolvedAiProvider provider = buildProvider("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile", "key");
+
+        mockServer.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(jsonPath("$.chat_template_kwargs").doesNotExist())
+                .andRespond(withSuccess("""
+                        {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        aiChatClient.complete(provider, List.of(ChatMessage.user("hola")));
+
         mockServer.verify();
     }
 
@@ -186,6 +246,6 @@ class AiChatClientTest {
     }
 
     private static ResolvedAiProvider buildProvider(String baseUrl, String model, String apiKey) {
-        return new ResolvedAiProvider("groq", baseUrl, apiKey, model);
+        return new ResolvedAiProvider("groq", baseUrl, apiKey, model, null);
     }
 }

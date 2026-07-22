@@ -113,15 +113,17 @@ export default function IngresosPage() {
             <h1 className="text-2xl font-bold text-foreground">Ingresos</h1>
             <p className="text-sm text-muted-foreground">Registra y visualiza todos tus ingresos</p>
           </div>
-          <Button
-            onClick={() => {
-              setEditingIncome(null)
-              setModalOpen(true)
-            }}
-          >
-            <Plus data-icon="inline-start" />
-            Agregar ingreso
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                setEditingIncome(null)
+                setModalOpen(true)
+              }}
+            >
+              <Plus data-icon="inline-start" />
+              Agregar ingreso
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

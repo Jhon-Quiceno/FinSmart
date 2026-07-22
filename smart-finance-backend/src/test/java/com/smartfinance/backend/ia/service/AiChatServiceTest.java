@@ -14,6 +14,7 @@ import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.AiProviderProperties;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
@@ -41,7 +42,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -70,9 +70,6 @@ class AiChatServiceTest {
     @Mock
     private AiMessageMapper aiMessageMapper;
 
-    @Mock
-    private AiUsageEventService aiUsageEventService;
-
     private AiChatService aiChatService;
 
     @BeforeEach
@@ -81,7 +78,7 @@ class AiChatServiceTest {
         aiProviderProperties.setMonthlyMessageLimit(5);
         aiChatService = new AiChatService(
                 messageRepository, userRepository, aiChatOrchestrator, contextBuilder, aiMessageMapper,
-                aiProviderProperties, aiUsageEventService, FIXED_CLOCK
+                aiProviderProperties, FIXED_CLOCK
         );
     }
 
@@ -97,7 +94,7 @@ class AiChatServiceTest {
         when(contextBuilder.buildSystemPrompt()).thenReturn("contexto");
         when(messageRepository.findByUser_IdAndKindOrderByCreatedAtDesc(eq(1L), eq(AiMessageKind.CHAT), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenThrow(new AiProviderNotConfiguredException(AiChatOrchestrator.GENERIC_MESSAGE));
 
         ChatRequest request = new ChatRequest("¿cómo voy este mes?");
@@ -111,7 +108,6 @@ class AiChatServiceTest {
         // only assert that no compensating call is made here — the rollback itself is exercised by
         // Spring at runtime, not by this test.
         verify(userRepository, never()).releaseAiChatQuota(any(), any());
-        verify(aiUsageEventService, never()).record(any(), any(), any(), anyInt(), any());
     }
 
     @Test
@@ -122,7 +118,7 @@ class AiChatServiceTest {
         when(messageRepository.findByUser_IdAndKindOrderByCreatedAtDesc(eq(2L), eq(AiMessageKind.CHAT), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(userRepository.getReferenceById(2L)).thenReturn(buildUser(2L));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("Vas bien este mes", "groq", "llama-3.3", 100, 20));
         when(messageRepository.save(any(AiMessage.class))).thenAnswer(invocation -> {
             AiMessage message = invocation.getArgument(0);
@@ -153,7 +149,11 @@ class AiChatServiceTest {
         Assertions.assertEquals("groq", response.providerName());
         Assertions.assertEquals("llama-3.3", response.model());
 
-        verify(aiUsageEventService).record(2L, "groq", AiUsageEventType.CHAT, 120, null);
+        // Telemetry (record/recordAttempt) is now AiChatOrchestrator's own responsibility (see its
+        // class Javadoc) — this test only asserts AiChatService hands it the right attribution.
+        ArgumentCaptor<AiCallContext> ctxCaptor = ArgumentCaptor.forClass(AiCallContext.class);
+        verify(aiChatOrchestrator).complete(anyList(), ctxCaptor.capture());
+        Assertions.assertEquals(new AiCallContext(2L, AiUsageEventType.CHAT), ctxCaptor.getValue());
     }
 
     @Test
@@ -175,7 +175,7 @@ class AiChatServiceTest {
         when(messageRepository.save(any(AiMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ArgumentCaptor<List<ChatMessage>> conversationCaptor = ArgumentCaptor.forClass(List.class);
-        when(aiChatOrchestrator.complete(conversationCaptor.capture()))
+        when(aiChatOrchestrator.complete(conversationCaptor.capture(), any()))
                 .thenReturn(new ChatCompletionResult("ok", "groq", "llama-3.3", null, null));
 
         aiChatService.chat(new ChatRequest("pregunta nueva"));
@@ -222,7 +222,7 @@ class AiChatServiceTest {
                 "Alcanzaste el límite de 5 mensajes de IA este mes. Tu límite se reinicia el 1 de agosto de 2026.",
                 ex.getMessage()
         );
-        verify(aiChatOrchestrator, never()).complete(anyList());
+        verify(aiChatOrchestrator, never()).complete(anyList(), any());
         verify(messageRepository, never()).save(any(AiMessage.class));
     }
 
@@ -234,12 +234,12 @@ class AiChatServiceTest {
         when(messageRepository.findByUser_IdAndKindOrderByCreatedAtDesc(eq(6L), eq(AiMessageKind.CHAT), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(userRepository.getReferenceById(6L)).thenReturn(buildUser(6L));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("ok", "groq", "llama-3.3", null, null));
         when(messageRepository.save(any(AiMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Assertions.assertDoesNotThrow(() -> aiChatService.chat(new ChatRequest("hola")));
-        verify(aiChatOrchestrator).complete(anyList());
+        verify(aiChatOrchestrator).complete(anyList(), any());
     }
 
     @Test

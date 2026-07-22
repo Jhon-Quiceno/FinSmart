@@ -15,6 +15,7 @@ import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import com.smartfinance.backend.common.security.SecurityUtils;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.AiProviderProperties;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
@@ -79,7 +80,6 @@ public class AiChatService {
     private final FinancialContextBuilder contextBuilder;
     private final AiMessageMapper aiMessageMapper;
     private final AiProviderProperties aiProviderProperties;
-    private final AiUsageEventService aiUsageEventService;
     private final Clock clock;
 
     public AiChatService(
@@ -89,7 +89,6 @@ public class AiChatService {
             FinancialContextBuilder contextBuilder,
             AiMessageMapper aiMessageMapper,
             AiProviderProperties aiProviderProperties,
-            AiUsageEventService aiUsageEventService,
             Clock clock
     ) {
         this.messageRepository = messageRepository;
@@ -98,7 +97,6 @@ public class AiChatService {
         this.contextBuilder = contextBuilder;
         this.aiMessageMapper = aiMessageMapper;
         this.aiProviderProperties = aiProviderProperties;
-        this.aiUsageEventService = aiUsageEventService;
         this.clock = clock;
     }
 
@@ -128,9 +126,8 @@ public class AiChatService {
         reserveMonthlyQuota(userId);
 
         List<ChatMessage> conversation = buildConversation(userId, request.message());
-        ChatCompletionResult result = aiChatOrchestrator.complete(conversation);
-        aiUsageEventService.record(
-                userId, result.providerName(), AiUsageEventType.CHAT, totalTokens(result), null
+        ChatCompletionResult result = aiChatOrchestrator.complete(
+                conversation, new AiCallContext(userId, AiUsageEventType.CHAT)
         );
 
         persistTurn(userId, AiMessageRole.USER, request.message(), null, null);
@@ -229,13 +226,6 @@ public class AiChatService {
         }
         conversation.add(ChatMessage.user(newUserMessage));
         return conversation;
-    }
-
-    /** Sums {@code promptTokens + completionTokens}, treating either as {@code 0} when the provider did not report it. */
-    private static int totalTokens(ChatCompletionResult result) {
-        int prompt = result.promptTokens() != null ? result.promptTokens() : 0;
-        int completion = result.completionTokens() != null ? result.completionTokens() : 0;
-        return prompt + completion;
     }
 
     private AiMessage persistTurn(Long userId, AiMessageRole role, String content, String providerName, String model) {

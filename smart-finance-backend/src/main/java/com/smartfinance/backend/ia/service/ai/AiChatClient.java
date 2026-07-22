@@ -1,5 +1,6 @@
 package com.smartfinance.backend.ia.service.ai;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smartfinance.backend.ia.exception.AiProviderAuthException;
 import com.smartfinance.backend.ia.exception.AiProviderException;
@@ -7,6 +8,8 @@ import com.smartfinance.backend.ia.exception.AiProviderModelNotFoundException;
 import com.smartfinance.backend.ia.exception.AiProviderRateLimitException;
 import com.smartfinance.backend.ia.exception.AiProviderTimeoutException;
 import com.smartfinance.backend.ia.exception.AiProviderUnavailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -41,6 +44,7 @@ import java.util.Locale;
 @Service
 public class AiChatClient {
 
+    private static final Logger log = LoggerFactory.getLogger(AiChatClient.class);
     private static final String CHAT_COMPLETIONS_PATH = "/chat/completions";
 
     private final RestClient.Builder restClientBuilder;
@@ -62,8 +66,9 @@ public class AiChatClient {
         RestClient client = buildClient(provider.baseUrl());
         ChatCompletionRequest requestBody = new ChatCompletionRequest(
                 provider.model(),
-                messages.stream().map(message -> new OpenAiMessage(message.role(), message.content())).toList(),
-                false
+                messages.stream().map(AiChatClient::toOpenAiMessage).toList(),
+                false,
+                buildChatTemplateKwargs(provider)
         );
 
         try {
@@ -76,10 +81,57 @@ public class AiChatClient {
                     .body(ChatCompletionResponse.class);
             return toResult(provider.name(), response);
         } catch (RestClientResponseException ex) {
+            // Temporary diagnostic logging (2026-07-22): AiProviderException subclasses intentionally
+            // carry only a generic user-facing message (see their Javadoc), discarding the real cause -
+            // this is the only place that detail is still available before it's lost.
+            log.warn("ai_provider_http_error provider={} status={} body={}",
+                    provider.name(), ex.getStatusCode(), truncate(ex.getResponseBodyAsString()));
             throw mapResponseException(provider.name(), ex);
         } catch (ResourceAccessException ex) {
+            log.warn("ai_provider_connection_error provider={} message={}", provider.name(), ex.getMessage());
             throw mapAccessException(provider.name(), ex);
         }
+    }
+
+    private static String truncate(String body) {
+        if (body == null) {
+            return null;
+        }
+        return body.length() > 500 ? body.substring(0, 500) + "..." : body;
+    }
+
+    /**
+     * NVIDIA's newer Nemotron-family models default to a verbose hybrid "reasoning" mode: without
+     * this flag they spend the entire token budget on chain-of-thought and never emit the actual
+     * JSON answer this app's prompts demand, truncating with {@code finish_reason: "length"}. It's
+     * an NVIDIA-only vendor extension (not part of the OpenAI chat-completions spec), harmless to
+     * send even when the configured model doesn't have a "thinking" mode at all — verified against
+     * every candidate model tried for this project, including the current default. Applying it
+     * unconditionally for every NVIDIA model (not just the one currently configured) means a future
+     * {@code NVIDIA_MODEL} swap doesn't silently reintroduce this failure mode.
+     */
+    private static ChatCompletionRequest.ChatTemplateKwargs buildChatTemplateKwargs(ResolvedAiProvider provider) {
+        return SupportedAiProvider.NVIDIA.key().equals(provider.name())
+                ? new ChatCompletionRequest.ChatTemplateKwargs(false)
+                : null;
+    }
+
+    /**
+     * Converts a {@link ChatMessage} into the wire-level {@link OpenAiMessage}, choosing between
+     * the two content shapes the OpenAI chat-completions contract accepts: a plain string for a
+     * normal text turn (unchanged from before vision support was added, so every existing
+     * plain-text caller serializes exactly as it always did), or an array of content parts
+     * ({@code [{"type":"text",...},{"type":"image_url",...}]}) when {@link ChatMessage#imageUrl()}
+     * is set.
+     */
+    private static OpenAiMessage toOpenAiMessage(ChatMessage message) {
+        if (message.imageUrl() == null) {
+            return new OpenAiMessage(message.role(), message.content());
+        }
+        return new OpenAiMessage(message.role(), List.of(
+                ContentPart.text(message.content()),
+                ContentPart.imageUrl(message.imageUrl())
+        ));
     }
 
     private RestClient buildClient(String baseUrl) {
@@ -154,15 +206,63 @@ public class AiChatClient {
         return responseBody != null && responseBody.toLowerCase(Locale.ROOT).contains("model");
     }
 
-    private record ChatCompletionRequest(String model, List<OpenAiMessage> messages, boolean stream) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record ChatCompletionRequest(
+            String model,
+            List<OpenAiMessage> messages,
+            boolean stream,
+            @JsonProperty("chat_template_kwargs") ChatTemplateKwargs chatTemplateKwargs
+    ) {
+        private record ChatTemplateKwargs(Boolean thinking) {
+        }
     }
 
-    private record OpenAiMessage(String role, String content) {
+    /**
+     * Wire-level outgoing message. {@code content} is intentionally typed {@link Object} rather
+     * than {@code String}: it holds either a plain {@link String} (a normal text turn) or a
+     * {@code List<ContentPart>} (a vision turn), and Jackson serializes each shape as-is — a JSON
+     * string in the first case, a JSON array of {@code {"type":...}} objects in the second. See
+     * {@link #toOpenAiMessage(ChatMessage)}.
+     */
+    private record OpenAiMessage(String role, Object content) {
+    }
+
+    /**
+     * One element of the OpenAI vision {@code content} array. Only one of {@code text}/{@code imageUrl}
+     * is ever set per instance (see {@link #text(String)}/{@link #imageUrl(String)}); the other is
+     * omitted from the JSON via {@code @JsonInclude(NON_NULL)} so each part serializes with only the
+     * field its {@code type} expects.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private record ContentPart(String type, String text, @JsonProperty("image_url") ImageUrlPart imageUrl) {
+
+        private static final String TYPE_TEXT = "text";
+        private static final String TYPE_IMAGE_URL = "image_url";
+
+        private static ContentPart text(String text) {
+            return new ContentPart(TYPE_TEXT, text, null);
+        }
+
+        private static ContentPart imageUrl(String url) {
+            return new ContentPart(TYPE_IMAGE_URL, null, new ImageUrlPart(url));
+        }
+
+        private record ImageUrlPart(String url) {
+        }
     }
 
     private record ChatCompletionResponse(List<Choice> choices, Usage usage) {
 
-        private record Choice(OpenAiMessage message) {
+        /**
+         * The provider's reply message is always plain text in this project (no provider we call
+         * ever answers with a multimodal {@code content} array), so this response-side type keeps
+         * {@code content} as a plain {@link String} — distinct from the request-side
+         * {@link OpenAiMessage}, whose {@code content} must be polymorphic to support vision turns.
+         */
+        private record Choice(ResponseMessage message) {
+        }
+
+        private record ResponseMessage(String role, String content) {
         }
 
         private record Usage(

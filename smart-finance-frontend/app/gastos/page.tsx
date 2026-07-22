@@ -135,15 +135,17 @@ export default function GastosPage() {
             <h1 className="text-2xl font-bold text-foreground">Gastos</h1>
             <p className="text-sm text-muted-foreground">Administra y registra todos tus gastos</p>
           </div>
-          <Button
-            onClick={() => {
-              setEditingExpense(null)
-              setModalOpen(true)
-            }}
-          >
-            <Plus data-icon="inline-start" />
-            Agregar gasto
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                setEditingExpense(null)
+                setModalOpen(true)
+              }}
+            >
+              <Plus data-icon="inline-start" />
+              Agregar gasto
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">

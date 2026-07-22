@@ -38,6 +38,19 @@ public interface IncomeRepository extends JpaRepository<Income, Long>, JpaSpecif
     );
 
     /**
+     * Totals grouped by category across {@code [start, end]}, ordered by total descending. Mirrors
+     * {@code ExpenseRepository#findTopCategoriesByUserAndPeriod}; backs the income-category breakdown
+     * in {@code TelegramExpenseService#buildIncomeSummaryReply}.
+     */
+    @Query("SELECT i.category.id AS categoryId, i.category.name AS categoryName, SUM(i.amount) AS total "
+            + "FROM Income i WHERE i.user.id = :userId AND i.date >= :start AND i.date <= :end "
+            + "GROUP BY i.category.id, i.category.name "
+            + "ORDER BY SUM(i.amount) DESC")
+    List<IncomeCategoryTotalProjection> findTopCategoriesByUserAndPeriod(
+            @Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end
+    );
+
+    /**
      * Totals grouped by calendar month across {@code [start, end]}, one row per month that has
      * at least one income row. Backs {@code FinancialAnalysisService#buildMonthlySeries} (a
      * single query for the whole 6-month window instead of one {@link #sumAmountByUserAndPeriod}

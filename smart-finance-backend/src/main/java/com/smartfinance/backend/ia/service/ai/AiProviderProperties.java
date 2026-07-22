@@ -36,16 +36,39 @@ public class AiProviderProperties {
     private Map<String, ProviderCredentials> providers = Map.of();
 
     /**
+     * Per-task provider priority overrides, keyed by the lowercase name of an
+     * {@code AiUsageEventType} constant (e.g. {@code "chat"}, {@code "categorize"},
+     * {@code "insight"}, {@code "statement_extract"}). Same format as {@link #priority}: a list of
+     * provider keys (see {@link SupportedAiProvider#key()}), read as a preferred try-first order,
+     * never an allow-list.
+     *
+     * <p>An absent key, or one mapped to an empty list (after {@link AiProviderRegistry} drops
+     * unknown/blank entries), means that task simply falls back to the global {@link #priority}
+     * order — this map only lets an operator single out one specific task (e.g. financial insights)
+     * to try a different provider order without changing the order every other task uses.
+     *
+     * @see AiProviderRegistry#enabledInPriorityOrder(com.smartfinance.backend.ia.model.entity.AiUsageEventType)
+     */
+    private Map<String, List<String>> taskPriority = Map.of();
+
+    /**
      * Maximum number of {@code USER}-role AI chat messages a single user may send per UTC
      * calendar month, enforced by {@code AiChatService#chat} before any provider is contacted.
      */
     private int monthlyMessageLimit = 5;
 
     /**
-     * @param apiKey the provider's raw API key, or blank/{@code null} if not configured
-     * @param model  the model identifier to use, or blank/{@code null} to fall back to
-     *               {@link SupportedAiProvider#defaultModel()}
+     * @param apiKey      the provider's raw API key, or blank/{@code null} if not configured
+     * @param model       the model identifier to use, or blank/{@code null} to fall back to
+     *                    {@link SupportedAiProvider#defaultModel()}
+     * @param visionModel the model identifier to use for image-input calls (see
+     *                    {@code AiChatOrchestrator#completeVision}), or blank/{@code null} to fall
+     *                    back to {@link SupportedAiProvider#defaultVisionModel()}. Only meaningful
+     *                    for providers that actually support vision (today: NVIDIA, Gemini, and
+     *                    OpenRouter's Nemotron fallback — see {@code AiChatOrchestrator#completeVision})
+     *                    — a provider's regular {@code model} is frequently NOT vision-capable, so
+     *                    vision calls must never reuse it blindly.
      */
-    public record ProviderCredentials(String apiKey, String model) {
+    public record ProviderCredentials(String apiKey, String model, String visionModel) {
     }
 }

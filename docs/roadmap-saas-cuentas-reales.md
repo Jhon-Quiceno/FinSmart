@@ -103,25 +103,39 @@ y el modelo completo de crédito rotativo con cuotas e intereses reales (Fase B)
 
 ---
 
-## Nivel 2 — Importar extractos bancarios (datos reales sin credenciales) — 🔜 Sprint 2 (propuesto)
+## Nivel 2 — Importar extractos bancarios (datos reales sin credenciales) — ✅ Sprint 2 (bot de Telegram validado; extractos pendiente de validar)
 
-> Detalle completo de implementación en `docs/sprints/sprint2.md` cuando se prioriza.
+> Detalle completo de implementación en `docs/sprints/sprint2.md`.
 
-**Qué es:** el usuario descarga el extracto de su banco (CSV/Excel, todos los bancos
-colombianos lo ofrecen) y lo sube a KoroFin. El backend lo parsea y crea las
-transacciones, categorizadas por la IA que ya existe en la app.
+**Qué es:** el usuario sube el extracto de su banco (PDF con contraseña, CSV o XLSX, de
+cualquier banco) y lo sube a KoroFin. El backend extrae el texto y llama a la IA que ya
+existe en la app para identificar y categorizar los movimientos en una sola llamada. En
+paralelo, un bot de Telegram permite registrar gastos/ingresos por texto o por foto de
+recibo.
 
 **Por qué es valioso:** datos reales sin pedirle credenciales bancarias a nadie, sin
 costos de terceros y sin carga regulatoria. Complementa el Nivel 1 (los movimientos
 importados se asocian a la cuenta/tarjeta correspondiente).
 
-**Alcance propuesto para Sprint 2:**
+**Alcance implementado en Sprint 2:**
 
-- [ ] Parser por banco detrás de una interfaz común, empezando con 1-2 bancos (Bancolombia
-  y Davivienda propuestos en `sprint2.md` — validar formato contra un extracto real antes de
-  darlo por cerrado).
-- [ ] Deduplicar contra lo ya registrado (fecha + monto + descripción).
-- [ ] Flujo preview→confirm: nada se persiste hasta que el usuario confirma.
+- [x] Extractor genérico con IA (PDF con contraseña/CSV/XLSX, cualquier banco) —
+  implementado, **sin validar contra un extracto real todavía**.
+- [x] Deduplicar contra lo ya registrado (fecha + monto + descripción) — implementado.
+- [x] Flujo preview→confirm: nada se persiste hasta que el usuario confirma — implementado.
+- [x] Bot de Telegram (texto e imagen) — **validado end-to-end con datos reales
+  (2026-07-22)**: mensajes de texto y fotos de recibos reales crean gastos/ingresos
+  correctos. La validación real encontró y cerró varios bugs de infraestructura de n8n (no
+  visibles en tests unitarios mockeados) y motivó ampliar el catálogo de proveedores de IA
+  (se sumó Gemini) y su failover de visión — ver `docs/sprints/sprint2.md`, sección
+  "Validación end-to-end y hallazgos".
+
+El diseño original de este sprint proponía parsers por banco (Bancolombia/Davivienda); el
+pivot a extracción genérica con IA, y su justificación, están documentados en
+`docs/sprints/sprint2.md` (sección "Decisiones de arquitectura"). **Pendiente:** validar la
+extracción de extractos bancarios contra un extracto real del usuario (⏳ a cargo del
+usuario) — a diferencia del bot de Telegram, este flujo no se probó en la sesión de
+validación del 2026-07-22.
 
 ---
 
@@ -174,8 +188,9 @@ importado sin usar, es ahora la base del quick-add global.
 
 ## Automatización con IA de correo/SMS/notificaciones — arquitectura y honestidad de plataforma — 🔲 Sprint 3 (propuesto, correo únicamente; SMS descartado, notificaciones requieren app móvil)
 
-> Detalle completo de implementación en `docs/sprints/sprint3.md` cuando se prioriza.
-> Probablemente demasiado grande para un solo sprint — evaluar partir en 2 al detallarlo.
+> Detalle completo de implementación en `docs/sprints/sprint3.md` (creado 2026-07-22, listo
+> para planificar el kickoff). Probablemente demasiado grande para un solo sprint — el
+> documento ya propone la partición en 3a/3b.
 
 Esta es la pieza central de la visión de largo plazo. La investigación deja hechos de
 plataforma muy concretos que deberían moldear las expectativas del producto.
@@ -476,7 +491,7 @@ de sprints.
 |---|---|---|---|
 | 1 | Deudas Fase A + quick-add IA + tracking/rate limiting | ✅ Hecho (PR #82) | §"Nivel 1" 1.1 (Fase A), §"Automatizaciones rápidas", §"Módulos backend" (`ai_usage_events`), §"Mejoras técnicas backend" (rate limiting) |
 | — | Fase B — Dominio de tarjetas completo | ✅ Hecho (#83-#89) | §"Nivel 1" 1.1 (Fase B) — no es un sprint numerado |
-| 2 | Extractos bancarios + primer flujo n8n | 🔜 Propuesto, `docs/sprints/sprint2.md` ya escrito | §"Nivel 2" |
+| 2 | Extractos bancarios + primer flujo n8n | ✅ Bot de Telegram validado (2026-07-22); extractos pendiente de validar — rama `feature/sprint-2-extractos-bancarios-telegram-bot`, PR pendiente de abrir | §"Nivel 2" |
 | 3 | Integración de correo (Gmail API + Pub/Sub) | 🔲 Propuesto | §"Automatización con IA de correo/SMS/notificaciones", §"Módulos backend" (`ingested_messages`, `automation_rules`, `integration_credentials`) |
 | 4 | Seguridad y confiabilidad de backend | 🔲 Propuesto | §"Mejoras técnicas pendientes" → Backend |
 | 5 | Modernización frontend | 🔲 Propuesto | §"Mejoras técnicas pendientes" → Frontend |
@@ -506,6 +521,17 @@ de sprints.
 | Decisión: mantener módulo de IA custom, no migrar a Spring AI (revisar si llega streaming/tools/RAG) | Documentada |
 | Decisión: n8n solo para canales e integraciones (patrón backend→webhook→n8n); la lógica de negocio queda en el backend | Documentada |
 | **n8n integrado en Docker local (hoy, 2026-07-14)**: servicio `n8n-db` (Postgres dedicado, separado del `db` del backend, sin puerto publicado al host — solo accesible dentro de la red de `docker-compose`) para persistencia propia de n8n. n8n corriendo en `http://localhost:5678`. | `chore/inicio-fase-saas` |
+
+### En curso (sin mergear)
+
+- **Sprint 2 (extractos bancarios + bot de Telegram)**: en la rama
+  `feature/sprint-2-extractos-bancarios-telegram-bot`. Backend (623 tests en verde tras la
+  validación) y frontend completos. El bot de Telegram quedó **validado end-to-end con
+  datos reales el 2026-07-22** (texto e imagen de recibo real) — la validación encontró y
+  cerró bugs reales de infraestructura de n8n y de confiabilidad de proveedores de IA de
+  visión, documentados en `docs/sprints/sprint2.md`. **Pendiente**: validar la importación
+  de extractos bancarios contra un extracto real (no se probó en esta sesión) y abrir la
+  PR a `develop`.
 
 ### Decisiones tomadas hoy (2026-07-14)
 

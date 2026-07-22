@@ -10,6 +10,7 @@ import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
 import com.smartfinance.backend.ia.service.ai.FinancialContextBuilder;
@@ -27,7 +28,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,9 +50,6 @@ class AiInsightServiceTest {
 
     @Mock
     private AiMessageMapper aiMessageMapper;
-
-    @Mock
-    private AiUsageEventService aiUsageEventService;
 
     @InjectMocks
     private AiInsightService aiInsightService;
@@ -94,12 +91,11 @@ class AiInsightServiceTest {
     void generateInsightShouldThrowWhenNoProviderIsConfigured() {
         setAuthenticatedUser(3L);
         when(contextBuilder.buildSystemPrompt()).thenReturn("contexto");
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenThrow(new AiProviderNotConfiguredException(AiChatOrchestrator.GENERIC_MESSAGE));
 
         Assertions.assertThrows(AiProviderNotConfiguredException.class, () -> aiInsightService.generateInsight());
         verify(messageRepository, never()).save(any(AiMessage.class));
-        verify(aiUsageEventService, never()).record(any(), any(), any(), anyInt(), any());
     }
 
     @Test
@@ -107,7 +103,7 @@ class AiInsightServiceTest {
         setAuthenticatedUser(4L);
         when(contextBuilder.buildSystemPrompt()).thenReturn("contexto financiero");
         when(userRepository.getReferenceById(4L)).thenReturn(buildUser(4L));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("- Reduce gastos en comida\n- Aumenta tu ahorro", "groq", "llama-3.3", null, null));
         when(messageRepository.save(any(AiMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(aiMessageMapper.toInsightResponse(any(AiMessage.class))).thenAnswer(invocation -> {
@@ -125,7 +121,11 @@ class AiInsightServiceTest {
         Assertions.assertEquals("groq", saved.getProviderName());
         Assertions.assertEquals("llama-3.3", saved.getModel());
         Assertions.assertEquals("- Reduce gastos en comida\n- Aumenta tu ahorro", response.content());
-        verify(aiUsageEventService).record(4L, "groq", AiUsageEventType.INSIGHT, 0, null);
+        // Telemetry (record/recordAttempt) is now AiChatOrchestrator's own responsibility (see its
+        // class Javadoc) — this test only asserts the right attribution is handed to it.
+        ArgumentCaptor<AiCallContext> ctxCaptor = ArgumentCaptor.forClass(AiCallContext.class);
+        verify(aiChatOrchestrator).complete(anyList(), ctxCaptor.capture());
+        Assertions.assertEquals(new AiCallContext(4L, AiUsageEventType.INSIGHT), ctxCaptor.getValue());
     }
 
     private void setAuthenticatedUser(Long userId) {

@@ -9,6 +9,7 @@ import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import com.smartfinance.backend.common.security.SecurityUtils;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
 import com.smartfinance.backend.ia.service.ai.ChatMessage;
@@ -39,22 +40,19 @@ public class AiInsightService {
     private final AiChatOrchestrator aiChatOrchestrator;
     private final FinancialContextBuilder contextBuilder;
     private final AiMessageMapper aiMessageMapper;
-    private final AiUsageEventService aiUsageEventService;
 
     public AiInsightService(
             AiMessageRepository messageRepository,
             UserRepository userRepository,
             AiChatOrchestrator aiChatOrchestrator,
             FinancialContextBuilder contextBuilder,
-            AiMessageMapper aiMessageMapper,
-            AiUsageEventService aiUsageEventService
+            AiMessageMapper aiMessageMapper
     ) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.aiChatOrchestrator = aiChatOrchestrator;
         this.contextBuilder = contextBuilder;
         this.aiMessageMapper = aiMessageMapper;
-        this.aiUsageEventService = aiUsageEventService;
     }
 
     /**
@@ -78,8 +76,9 @@ public class AiInsightService {
                 ChatMessage.system(systemPrompt),
                 ChatMessage.user(INSIGHT_INSTRUCTION)
         );
-        ChatCompletionResult result = aiChatOrchestrator.complete(messages);
-        aiUsageEventService.record(userId, result.providerName(), AiUsageEventType.INSIGHT, totalTokens(result), null);
+        ChatCompletionResult result = aiChatOrchestrator.complete(
+                messages, new AiCallContext(userId, AiUsageEventType.INSIGHT)
+        );
 
         AiMessage insight = new AiMessage();
         insight.setUser(userRepository.getReferenceById(userId));
@@ -90,12 +89,5 @@ public class AiInsightService {
         insight.setModel(result.model());
 
         return aiMessageMapper.toInsightResponse(messageRepository.save(insight));
-    }
-
-    /** Sums {@code promptTokens + completionTokens}, treating either as {@code 0} when the provider did not report it. */
-    private static int totalTokens(ChatCompletionResult result) {
-        int prompt = result.promptTokens() != null ? result.promptTokens() : 0;
-        int completion = result.completionTokens() != null ? result.completionTokens() : 0;
-        return prompt + completion;
     }
 }
