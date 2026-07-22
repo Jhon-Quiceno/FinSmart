@@ -8,6 +8,8 @@ import com.smartfinance.backend.ia.exception.AiProviderModelNotFoundException;
 import com.smartfinance.backend.ia.exception.AiProviderRateLimitException;
 import com.smartfinance.backend.ia.exception.AiProviderTimeoutException;
 import com.smartfinance.backend.ia.exception.AiProviderUnavailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -42,6 +44,7 @@ import java.util.Locale;
 @Service
 public class AiChatClient {
 
+    private static final Logger log = LoggerFactory.getLogger(AiChatClient.class);
     private static final String CHAT_COMPLETIONS_PATH = "/chat/completions";
 
     private final RestClient.Builder restClientBuilder;
@@ -78,10 +81,23 @@ public class AiChatClient {
                     .body(ChatCompletionResponse.class);
             return toResult(provider.name(), response);
         } catch (RestClientResponseException ex) {
+            // Temporary diagnostic logging (2026-07-22): AiProviderException subclasses intentionally
+            // carry only a generic user-facing message (see their Javadoc), discarding the real cause -
+            // this is the only place that detail is still available before it's lost.
+            log.warn("ai_provider_http_error provider={} status={} body={}",
+                    provider.name(), ex.getStatusCode(), truncate(ex.getResponseBodyAsString()));
             throw mapResponseException(provider.name(), ex);
         } catch (ResourceAccessException ex) {
+            log.warn("ai_provider_connection_error provider={} message={}", provider.name(), ex.getMessage());
             throw mapAccessException(provider.name(), ex);
         }
+    }
+
+    private static String truncate(String body) {
+        if (body == null) {
+            return null;
+        }
+        return body.length() > 500 ? body.substring(0, 500) + "..." : body;
     }
 
     /**

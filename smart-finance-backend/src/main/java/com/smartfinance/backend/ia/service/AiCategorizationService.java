@@ -8,6 +8,7 @@ import com.smartfinance.backend.gastos.model.entity.CategoryType;
 import com.smartfinance.backend.gastos.repository.CategoryRepository;
 import com.smartfinance.backend.common.security.SecurityUtils;
 import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
 import com.smartfinance.backend.ia.service.ai.ChatMessage;
@@ -50,18 +51,15 @@ public class AiCategorizationService {
 
     private final CategoryRepository categoryRepository;
     private final AiChatOrchestrator aiChatOrchestrator;
-    private final AiUsageEventService aiUsageEventService;
     private final ObjectMapper objectMapper;
 
     public AiCategorizationService(
             CategoryRepository categoryRepository,
             AiChatOrchestrator aiChatOrchestrator,
-            AiUsageEventService aiUsageEventService,
             ObjectMapper objectMapper
     ) {
         this.categoryRepository = categoryRepository;
         this.aiChatOrchestrator = aiChatOrchestrator;
-        this.aiUsageEventService = aiUsageEventService;
         this.objectMapper = objectMapper;
     }
 
@@ -104,8 +102,9 @@ public class AiCategorizationService {
                 ChatMessage.system(buildInstruction(categories, request.type())),
                 ChatMessage.user(buildUserPrompt(request))
         );
-        ChatCompletionResult result = aiChatOrchestrator.complete(messages);
-        aiUsageEventService.record(userId, result.providerName(), AiUsageEventType.CATEGORIZE, totalTokens(result), null);
+        ChatCompletionResult result = aiChatOrchestrator.complete(
+                messages, new AiCallContext(userId, AiUsageEventType.CATEGORIZE)
+        );
 
         return matchCategory(result.content(), categories)
                 .map(category -> new CategorizeResponse(category.getId(), category.getName()))
@@ -142,8 +141,9 @@ public class AiCategorizationService {
                 ChatMessage.system(buildClassificationInstruction(incomeCategories, expenseCategories)),
                 ChatMessage.user(buildClassificationUserPrompt(description, amount))
         );
-        ChatCompletionResult result = aiChatOrchestrator.complete(messages);
-        aiUsageEventService.record(userId, result.providerName(), AiUsageEventType.CATEGORIZE, totalTokens(result), null);
+        ChatCompletionResult result = aiChatOrchestrator.complete(
+                messages, new AiCallContext(userId, AiUsageEventType.CATEGORIZE)
+        );
 
         return parseClassification(result.content(), userId, incomeCategories, expenseCategories);
     }
@@ -326,12 +326,5 @@ public class AiCategorizationService {
 
     private static String stripQuotesAndPunctuation(String value) {
         return value.replaceAll("^[\"'.\\s]+|[\"'.\\s]+$", "");
-    }
-
-    /** Sums {@code promptTokens + completionTokens}, treating either as {@code 0} when the provider did not report it. */
-    private static int totalTokens(ChatCompletionResult result) {
-        int prompt = result.promptTokens() != null ? result.promptTokens() : 0;
-        int completion = result.completionTokens() != null ? result.completionTokens() : 0;
-        return prompt + completion;
     }
 }

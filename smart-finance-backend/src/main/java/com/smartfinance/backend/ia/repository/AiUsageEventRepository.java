@@ -24,11 +24,17 @@ public interface AiUsageEventRepository extends JpaRepository<AiUsageEvent, Long
      * Aggregated token usage per {@link AiUsageEventType} for a user within {@code [start, end)},
      * used by {@code AiUsageEventService#getUsageSummary} instead of summing
      * {@link #findAllByUser_IdAndCreatedAtBetween} in memory.
+     *
+     * <p>Filters to {@code success = true} rows only: since {@code AiUsageEventService#recordAttempt}
+     * also persists a row for every provider attempt that failed over (see {@link AiUsageEvent}'s
+     * class Javadoc), counting those here would inflate the user-facing "AI calls this month"
+     * summary with attempts the user never actually saw fail — only the attempt that ultimately
+     * answered (or a plain {@code record()} row, always {@code success = true}) should count.
      */
     @Query("""
             SELECT e.eventType AS eventType, COUNT(e) AS eventCount, COALESCE(SUM(e.tokensUsed), 0) AS totalTokens
             FROM AiUsageEvent e
-            WHERE e.user.id = :userId AND e.createdAt >= :start AND e.createdAt < :end
+            WHERE e.user.id = :userId AND e.createdAt >= :start AND e.createdAt < :end AND e.success = true
             GROUP BY e.eventType
             """)
     List<AiUsageEventTypeAggregate> aggregateByEventType(

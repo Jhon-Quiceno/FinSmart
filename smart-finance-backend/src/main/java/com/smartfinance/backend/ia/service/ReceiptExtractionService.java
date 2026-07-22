@@ -5,6 +5,7 @@ import com.smartfinance.backend.gastos.model.entity.CategoryType;
 import com.smartfinance.backend.gastos.repository.CategoryRepository;
 import com.smartfinance.backend.ia.model.dto.ReceiptExtraction;
 import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
 import com.smartfinance.backend.ia.service.ai.ChatMessage;
@@ -55,18 +56,15 @@ public class ReceiptExtractionService {
 
     private final CategoryRepository categoryRepository;
     private final AiChatOrchestrator aiChatOrchestrator;
-    private final AiUsageEventService aiUsageEventService;
     private final ObjectMapper objectMapper;
 
     public ReceiptExtractionService(
             CategoryRepository categoryRepository,
             AiChatOrchestrator aiChatOrchestrator,
-            AiUsageEventService aiUsageEventService,
             ObjectMapper objectMapper
     ) {
         this.categoryRepository = categoryRepository;
         this.aiChatOrchestrator = aiChatOrchestrator;
-        this.aiUsageEventService = aiUsageEventService;
         this.objectMapper = objectMapper;
     }
 
@@ -101,8 +99,9 @@ public class ReceiptExtractionService {
                 ChatMessage.system(buildInstruction(incomeCategories, expenseCategories)),
                 ChatMessage.userWithImage(INSTRUCTION_TEXT, imageUrl)
         );
-        ChatCompletionResult result = aiChatOrchestrator.completeVision(messages);
-        aiUsageEventService.record(userId, result.providerName(), AiUsageEventType.CATEGORIZE, totalTokens(result), null);
+        ChatCompletionResult result = aiChatOrchestrator.completeVision(
+                messages, new AiCallContext(userId, AiUsageEventType.CATEGORIZE)
+        );
 
         return parseExtraction(result.content(), userId, incomeCategories, expenseCategories);
     }
@@ -112,8 +111,16 @@ public class ReceiptExtractionService {
         String expenseNames = joinNames(expenseCategories);
         return "Sos un extractor de datos de recibos y facturas de compra. A partir de una imagen, identificá "
                 + "si se trata de un recibo o comprobante de compra real y legible. Si lo es, extraé el nombre "
-                + "del comercio o una descripción breve, el monto TOTAL de la operación (no una línea individual "
-                + "del detalle), y decidí si el movimiento es un INGRESO (poco común: solo para notas de crédito "
+                + "del comercio: normalmente aparece en la parte SUPERIOR del recibo, en texto grande, en el "
+                + "logo, o como el encabezado del ticket (ej. \"D1\", \"Éxito\", \"Ara\", \"Uber\"). NUNCA uses "
+                + "como nombre del comercio texto legal o tributario que suele aparecer en el pie del recibo, "
+                + "como \"Gran Contribuyente\", números de Resolución DIAN, NIT, régimen de IVA, teléfonos de "
+                + "atención, o avisos de facturación electrónica — eso es texto reglamentario, no el nombre del "
+                + "negocio, y aunque esté en la imagen no corresponde usarlo como descripción. Si el nombre del "
+                + "comercio no es legible con certeza, usá una descripción breve y genérica del tipo de compra "
+                + "(ej. \"Compra en supermercado\") en vez de copiar texto legal. Extraé también el monto TOTAL "
+                + "de la operación (no una línea individual del detalle), y decidí si el movimiento es un "
+                + "INGRESO (poco común: solo para notas de crédito "
                 + "o reembolsos) o un GASTO (lo habitual para un recibo de compra). También elegí la categoría "
                 + "que mejor corresponda de la lista del tipo de movimiento que decidiste, o null si ninguna "
                 + "corresponde. Si la imagen no parece un recibo o comprobante real (por ejemplo, una foto sin "
@@ -236,13 +243,6 @@ public class ReceiptExtractionService {
             throw new IllegalArgumentException("No se encontró un objeto JSON en la respuesta del modelo");
         }
         return trimmed.substring(start, end + 1);
-    }
-
-    /** Sums {@code promptTokens + completionTokens}, treating either as {@code 0} when the provider did not report it. */
-    private static int totalTokens(ChatCompletionResult result) {
-        int prompt = result.promptTokens() != null ? result.promptTokens() : 0;
-        int completion = result.completionTokens() != null ? result.completionTokens() : 0;
-        return prompt + completion;
     }
 
     /**

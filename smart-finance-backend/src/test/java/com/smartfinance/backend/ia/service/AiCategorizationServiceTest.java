@@ -8,6 +8,7 @@ import com.smartfinance.backend.gastos.model.entity.Category;
 import com.smartfinance.backend.gastos.model.entity.CategoryType;
 import com.smartfinance.backend.gastos.repository.CategoryRepository;
 import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,7 +27,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,9 +41,6 @@ class AiCategorizationServiceTest {
     @Mock
     private AiChatOrchestrator aiChatOrchestrator;
 
-    @Mock
-    private AiUsageEventService aiUsageEventService;
-
     private AiCategorizationService service;
 
     @BeforeEach
@@ -50,7 +48,7 @@ class AiCategorizationServiceTest {
         // JsonMapper es la implementación concreta de ObjectMapper en Jackson 3 (tools.jackson),
         // el mismo tipo que Spring Boot 4 auto-configura e inyecta en el servicio real (ver
         // StatementAiExtractionServiceTest, mismo patrón para servicios que parsean JSON de IA).
-        service = new AiCategorizationService(categoryRepository, aiChatOrchestrator, aiUsageEventService, JsonMapper.builder().build());
+        service = new AiCategorizationService(categoryRepository, aiChatOrchestrator, JsonMapper.builder().build());
     }
 
     @AfterEach
@@ -67,7 +65,7 @@ class AiCategorizationServiceTest {
 
         Assertions.assertNull(response.categoryId());
         Assertions.assertNull(response.categoryName());
-        verify(aiChatOrchestrator, never()).complete(anyList());
+        verify(aiChatOrchestrator, never()).complete(anyList(), any());
     }
 
     @Test
@@ -75,13 +73,12 @@ class AiCategorizationServiceTest {
         setAuthenticatedUser(2L);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(2L, CategoryType.EXPENSE))
                 .thenReturn(List.of(buildCategory(1L, "Comida", CategoryType.EXPENSE)));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenThrow(new AiProviderNotConfiguredException(AiChatOrchestrator.GENERIC_MESSAGE));
 
         Assertions.assertThrows(AiProviderNotConfiguredException.class, () ->
                 service.categorize(new CategorizeRequest("Almuerzo", null, CategoryType.EXPENSE))
         );
-        verify(aiUsageEventService, never()).record(any(), any(), any(), anyInt(), any());
     }
 
     @Test
@@ -91,14 +88,19 @@ class AiCategorizationServiceTest {
         Category transporte = buildCategory(2L, "Transporte", CategoryType.EXPENSE);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(3L, CategoryType.EXPENSE))
                 .thenReturn(List.of(comida, transporte));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("Comida", "groq", "llama-3.3", null, null));
 
         CategorizeResponse response = service.categorize(new CategorizeRequest("Almuerzo en restaurante", BigDecimal.valueOf(25000), CategoryType.EXPENSE));
 
         Assertions.assertEquals(1L, response.categoryId());
         Assertions.assertEquals("Comida", response.categoryName());
-        verify(aiUsageEventService).record(3L, "groq", AiUsageEventType.CATEGORIZE, 0, null);
+        // Telemetry (record/recordAttempt) is now AiChatOrchestrator's own responsibility (see its
+        // class Javadoc) — this test only asserts AiCategorizationService hands it the right
+        // attribution.
+        ArgumentCaptor<AiCallContext> ctxCaptor = ArgumentCaptor.forClass(AiCallContext.class);
+        verify(aiChatOrchestrator).complete(anyList(), ctxCaptor.capture());
+        Assertions.assertEquals(new AiCallContext(3L, AiUsageEventType.CATEGORIZE), ctxCaptor.getValue());
     }
 
     @Test
@@ -107,7 +109,7 @@ class AiCategorizationServiceTest {
         Category transporte = buildCategory(2L, "Transporte", CategoryType.EXPENSE);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(4L, CategoryType.EXPENSE))
                 .thenReturn(List.of(transporte));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("La categoría es Transporte.", "groq", "llama-3.3", null, null));
 
         CategorizeResponse response = service.categorize(new CategorizeRequest("Uber al trabajo", null, CategoryType.EXPENSE));
@@ -122,7 +124,7 @@ class AiCategorizationServiceTest {
         Category comida = buildCategory(1L, "Comida", CategoryType.EXPENSE);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(5L, CategoryType.EXPENSE))
                 .thenReturn(List.of(comida));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("NINGUNA", "groq", "llama-3.3", null, null));
 
         CategorizeResponse response = service.categorize(new CategorizeRequest("Pago de arriendo", null, CategoryType.EXPENSE));
@@ -137,7 +139,7 @@ class AiCategorizationServiceTest {
         Category comida = buildCategory(1L, "Comida", CategoryType.EXPENSE);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(6L, CategoryType.EXPENSE))
                 .thenReturn(List.of(comida));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("comida", "groq", "llama-3.3", null, null));
 
         CategorizeResponse response = service.categorize(new CategorizeRequest("Mercado", null, CategoryType.EXPENSE));
@@ -151,7 +153,7 @@ class AiCategorizationServiceTest {
         Category comida = buildCategory(1L, "Comida", CategoryType.EXPENSE);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(7L, CategoryType.EXPENSE))
                 .thenReturn(List.of(comida));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("Comida", "groq", "llama-3.3", null, null));
 
         CategorizeResponse response = service.categorize(new CategorizeRequest("Almuerzo", null, null));
@@ -167,7 +169,7 @@ class AiCategorizationServiceTest {
         Category freelance = buildCategory(4L, "Freelance", CategoryType.INCOME);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(8L, CategoryType.INCOME))
                 .thenReturn(List.of(salario, freelance));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("Salario", "groq", "llama-3.3", null, null));
 
         CategorizeResponse response = service.categorize(new CategorizeRequest("Pago mensual de nomina", BigDecimal.valueOf(2500000), CategoryType.INCOME));
@@ -186,7 +188,7 @@ class AiCategorizationServiceTest {
 
         Assertions.assertNull(response.categoryId());
         Assertions.assertNull(response.categoryName());
-        verify(aiChatOrchestrator, never()).complete(anyList());
+        verify(aiChatOrchestrator, never()).complete(anyList(), any());
     }
 
     @Test
@@ -196,7 +198,7 @@ class AiCategorizationServiceTest {
                 .thenReturn(List.of(salario));
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(10L, CategoryType.EXPENSE))
                 .thenReturn(List.of());
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult(
                         "{\"movementType\":\"INCOME\",\"categoryName\":\"Salario\"}", "groq", "llama-3.3", 12, 4));
 
@@ -205,7 +207,9 @@ class AiCategorizationServiceTest {
         Assertions.assertEquals(CategoryType.INCOME, classification.type());
         Assertions.assertEquals(3L, classification.categoryId());
         Assertions.assertEquals("Salario", classification.categoryName());
-        verify(aiUsageEventService).record(10L, "groq", AiUsageEventType.CATEGORIZE, 16, null);
+        ArgumentCaptor<AiCallContext> ctxCaptor = ArgumentCaptor.forClass(AiCallContext.class);
+        verify(aiChatOrchestrator).complete(anyList(), ctxCaptor.capture());
+        Assertions.assertEquals(new AiCallContext(10L, AiUsageEventType.CATEGORIZE), ctxCaptor.getValue());
     }
 
     @Test
@@ -215,7 +219,7 @@ class AiCategorizationServiceTest {
                 .thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(11L, CategoryType.EXPENSE))
                 .thenReturn(List.of(transporte));
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult(
                         "{\"movementType\":\"EXPENSE\",\"categoryName\":\"Transporte\"}", "groq", "llama-3.3", null, null));
 
@@ -230,7 +234,7 @@ class AiCategorizationServiceTest {
     void classifyMovementShouldFallBackToExpenseWithNullCategoryWhenJsonIsMalformed() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(12L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(12L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("esto no es JSON", "groq", "llama-3.3", 5, 3));
 
         MovementClassification classification = service.classifyMovement(12L, "Algo raro", BigDecimal.valueOf(1000));
@@ -238,14 +242,16 @@ class AiCategorizationServiceTest {
         Assertions.assertEquals(CategoryType.EXPENSE, classification.type());
         Assertions.assertNull(classification.categoryId());
         Assertions.assertNull(classification.categoryName());
-        verify(aiUsageEventService).record(12L, "groq", AiUsageEventType.CATEGORIZE, 8, null);
+        ArgumentCaptor<AiCallContext> ctxCaptor = ArgumentCaptor.forClass(AiCallContext.class);
+        verify(aiChatOrchestrator).complete(anyList(), ctxCaptor.capture());
+        Assertions.assertEquals(new AiCallContext(12L, AiUsageEventType.CATEGORIZE), ctxCaptor.getValue());
     }
 
     @Test
     void classifyMovementShouldFallBackToExpenseWhenMovementTypeIsUnrecognized() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(13L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(13L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult(
                         "{\"movementType\":\"NOSEQUE\",\"categoryName\":null}", "groq", "llama-3.3", null, null));
 
@@ -259,20 +265,19 @@ class AiCategorizationServiceTest {
     void classifyMovementShouldNotRecordUsageWhenOrchestratorThrows() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(14L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(14L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenThrow(new AiProviderNotConfiguredException(AiChatOrchestrator.GENERIC_MESSAGE));
 
         Assertions.assertThrows(AiProviderNotConfiguredException.class, () ->
                 service.classifyMovement(14L, "Algo", BigDecimal.valueOf(1000))
         );
-        verify(aiUsageEventService, never()).record(any(), any(), any(), anyInt(), any());
     }
 
     @Test
     void classifyMovementShouldHandleEmptyCategoryListsOnBothSides() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(15L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(15L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult(
                         "{\"movementType\":\"INCOME\",\"categoryName\":null}", "groq", "llama-3.3", null, null));
 
@@ -292,7 +297,7 @@ class AiCategorizationServiceTest {
                 {"movementType":"EXPENSE","categoryName":null}
                 ```
                 """;
-        when(aiChatOrchestrator.complete(anyList()))
+        when(aiChatOrchestrator.complete(anyList(), any()))
                 .thenReturn(new ChatCompletionResult(fenced, "groq", "llama-3.3", null, null));
 
         MovementClassification classification = service.classifyMovement(16L, "Compra en el super", BigDecimal.valueOf(30000));

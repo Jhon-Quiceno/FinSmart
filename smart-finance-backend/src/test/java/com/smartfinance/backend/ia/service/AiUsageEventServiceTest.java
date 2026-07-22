@@ -61,6 +61,11 @@ class AiUsageEventServiceTest {
         Assertions.assertEquals(AiUsageEventType.CHAT, saved.getEventType());
         Assertions.assertEquals(120, saved.getTokensUsed());
         Assertions.assertEquals(BigDecimal.valueOf(0.002), saved.getCostEstimate());
+        // AiUsageEvent#success defaults to true via its Java field initializer (not just the DB
+        // column default) — record() never sets it explicitly, so this pins that a plain record()
+        // row is never mistakenly excluded by AiUsageEventRepository#aggregateByEventType's
+        // "success = true" filter.
+        Assertions.assertTrue(saved.isSuccess());
     }
 
     @Test
@@ -90,6 +95,74 @@ class AiUsageEventServiceTest {
 
         Assertions.assertDoesNotThrow(() ->
                 service.record(1L, "groq", AiUsageEventType.CHAT, 50, null)
+        );
+    }
+
+    @Test
+    void recordAttemptShouldPersistASuccessfulAttemptWithLatencyAndNoErrorType() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
+
+        service.recordAttempt(1L, "opencode", AiUsageEventType.CHAT, 15, BigDecimal.ZERO, 120, true, null);
+
+        ArgumentCaptor<AiUsageEvent> captor = ArgumentCaptor.forClass(AiUsageEvent.class);
+        verify(usageEventRepository).save(captor.capture());
+        AiUsageEvent saved = captor.getValue();
+        Assertions.assertEquals("opencode", saved.getProvider());
+        Assertions.assertEquals(15, saved.getTokensUsed());
+        Assertions.assertEquals(BigDecimal.ZERO, saved.getCostEstimate());
+        Assertions.assertEquals(120, saved.getLatencyMs());
+        Assertions.assertTrue(saved.isSuccess());
+        Assertions.assertNull(saved.getErrorType());
+    }
+
+    @Test
+    void recordAttemptShouldPersistAFailedAttemptWithErrorTypeAndZeroTokens() {
+        User user = new User();
+        user.setId(1L);
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
+
+        service.recordAttempt(1L, "nvidia", AiUsageEventType.CHAT, 0, null, 250, false, "AiProviderTimeoutException");
+
+        ArgumentCaptor<AiUsageEvent> captor = ArgumentCaptor.forClass(AiUsageEvent.class);
+        verify(usageEventRepository).save(captor.capture());
+        AiUsageEvent saved = captor.getValue();
+        Assertions.assertEquals("nvidia", saved.getProvider());
+        Assertions.assertEquals(0, saved.getTokensUsed());
+        Assertions.assertNull(saved.getCostEstimate());
+        Assertions.assertEquals(250, saved.getLatencyMs());
+        Assertions.assertFalse(saved.isSuccess());
+        Assertions.assertEquals("AiProviderTimeoutException", saved.getErrorType());
+    }
+
+    @Test
+    void recordAttemptShouldClampNegativeTokensToZero() {
+        when(userRepository.getReferenceById(1L)).thenReturn(new User());
+
+        service.recordAttempt(1L, "nvidia", AiUsageEventType.CATEGORIZE, -5, null, 10, true, null);
+
+        ArgumentCaptor<AiUsageEvent> captor = ArgumentCaptor.forClass(AiUsageEvent.class);
+        verify(usageEventRepository).save(captor.capture());
+        Assertions.assertEquals(0, captor.getValue().getTokensUsed());
+    }
+
+    @Test
+    void recordAttemptShouldNotThrowWhenPersistenceFails() {
+        when(userRepository.getReferenceById(anyLong())).thenReturn(new User());
+        doThrow(new RuntimeException("db down")).when(usageEventRepository).save(any(AiUsageEvent.class));
+
+        Assertions.assertDoesNotThrow(() ->
+                service.recordAttempt(1L, "nvidia", AiUsageEventType.CHAT, 50, null, 100, true, null)
+        );
+    }
+
+    @Test
+    void recordAttemptShouldNotThrowWhenUserLookupFails() {
+        when(userRepository.getReferenceById(anyLong())).thenThrow(new RuntimeException("user not found"));
+
+        Assertions.assertDoesNotThrow(() ->
+                service.recordAttempt(1L, "nvidia", AiUsageEventType.CHAT, 50, null, 100, false, "AiProviderUnavailableException")
         );
     }
 

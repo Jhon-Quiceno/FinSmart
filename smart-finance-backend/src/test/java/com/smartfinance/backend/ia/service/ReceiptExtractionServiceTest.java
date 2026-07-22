@@ -6,12 +6,14 @@ import com.smartfinance.backend.gastos.repository.CategoryRepository;
 import com.smartfinance.backend.ia.exception.AiProviderNotConfiguredException;
 import com.smartfinance.backend.ia.model.dto.ReceiptExtraction;
 import com.smartfinance.backend.ia.model.entity.AiUsageEventType;
+import com.smartfinance.backend.ia.service.ai.AiCallContext;
 import com.smartfinance.backend.ia.service.ai.AiChatOrchestrator;
 import com.smartfinance.backend.ia.service.ai.ChatCompletionResult;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
@@ -21,9 +23,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,9 +36,6 @@ class ReceiptExtractionServiceTest {
     @Mock
     private AiChatOrchestrator aiChatOrchestrator;
 
-    @Mock
-    private AiUsageEventService aiUsageEventService;
-
     private ReceiptExtractionService service;
 
     @BeforeEach
@@ -46,7 +43,7 @@ class ReceiptExtractionServiceTest {
         // JsonMapper es la implementación concreta de ObjectMapper en Jackson 3 (tools.jackson),
         // el mismo tipo que Spring Boot 4 auto-configura e inyecta en el servicio real (ver
         // AiCategorizationServiceTest, mismo patrón para servicios que parsean JSON de IA).
-        service = new ReceiptExtractionService(categoryRepository, aiChatOrchestrator, aiUsageEventService, JsonMapper.builder().build());
+        service = new ReceiptExtractionService(categoryRepository, aiChatOrchestrator, JsonMapper.builder().build());
     }
 
     @Test
@@ -54,7 +51,7 @@ class ReceiptExtractionServiceTest {
         Category transporte = buildCategory(2L, "Transporte", CategoryType.EXPENSE);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(1L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(1L, CategoryType.EXPENSE)).thenReturn(List.of(transporte));
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":true,\"description\":\"TESCO\",\"amount\":6.71,\"movementType\":\"EXPENSE\",\"categoryName\":\"Transporte\"}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", 100, 20
         ));
@@ -67,7 +64,11 @@ class ReceiptExtractionServiceTest {
         Assertions.assertEquals(CategoryType.EXPENSE, extraction.movementType());
         Assertions.assertEquals(2L, extraction.categoryId());
         Assertions.assertEquals("Transporte", extraction.categoryName());
-        verify(aiUsageEventService).record(1L, "nvidia", AiUsageEventType.CATEGORIZE, 120, null);
+        // Telemetry (record/recordAttempt) is now AiChatOrchestrator's own responsibility (see its
+        // class Javadoc) — this test only asserts the right attribution is handed to it.
+        ArgumentCaptor<AiCallContext> ctxCaptor = ArgumentCaptor.forClass(AiCallContext.class);
+        verify(aiChatOrchestrator).completeVision(anyList(), ctxCaptor.capture());
+        Assertions.assertEquals(new AiCallContext(1L, AiUsageEventType.CATEGORIZE), ctxCaptor.getValue());
     }
 
     @Test
@@ -75,7 +76,7 @@ class ReceiptExtractionServiceTest {
         Category reembolso = buildCategory(5L, "Reembolso", CategoryType.INCOME);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(2L, CategoryType.INCOME)).thenReturn(List.of(reembolso));
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(2L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":true,\"description\":\"Nota de crédito\",\"amount\":15000,\"movementType\":\"INCOME\",\"categoryName\":\"Reembolso\"}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null
         ));
@@ -90,7 +91,7 @@ class ReceiptExtractionServiceTest {
     void extractFromImageShouldReturnNotAReceiptWhenModelReportsIsReceiptFalse() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(3L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(3L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":false,\"description\":null,\"amount\":null,\"movementType\":null,\"categoryName\":null}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null
         ));
@@ -104,20 +105,22 @@ class ReceiptExtractionServiceTest {
     void extractFromImageShouldDegradeToNotAReceiptWhenJsonIsMalformed() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(4L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(4L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList()))
+        when(aiChatOrchestrator.completeVision(anyList(), any()))
                 .thenReturn(new ChatCompletionResult("esto no es JSON", "nvidia", "nvidia/nemotron-nano-12b-v2-vl", 5, 3));
 
         ReceiptExtraction extraction = service.extractFromImage(4L, "data:image/jpeg;base64,abc");
 
         assertThat(extraction).isEqualTo(ReceiptExtraction.notAReceipt());
-        verify(aiUsageEventService).record(4L, "nvidia", AiUsageEventType.CATEGORIZE, 8, null);
+        ArgumentCaptor<AiCallContext> ctxCaptor = ArgumentCaptor.forClass(AiCallContext.class);
+        verify(aiChatOrchestrator).completeVision(anyList(), ctxCaptor.capture());
+        Assertions.assertEquals(new AiCallContext(4L, AiUsageEventType.CATEGORIZE), ctxCaptor.getValue());
     }
 
     @Test
     void extractFromImageShouldDegradeToNotAReceiptWhenAmountIsMissing() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(6L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(6L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":true,\"description\":\"Comercio\",\"amount\":null,\"movementType\":\"EXPENSE\",\"categoryName\":null}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null
         ));
@@ -131,7 +134,7 @@ class ReceiptExtractionServiceTest {
     void extractFromImageShouldDegradeToNotAReceiptWhenAmountIsZeroOrNegative() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(7L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(7L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":true,\"description\":\"Comercio\",\"amount\":0,\"movementType\":\"EXPENSE\",\"categoryName\":null}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null
         ));
@@ -145,7 +148,7 @@ class ReceiptExtractionServiceTest {
     void extractFromImageShouldDegradeToNotAReceiptWhenDescriptionIsBlank() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(8L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(8L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":true,\"description\":\"   \",\"amount\":5000,\"movementType\":\"EXPENSE\",\"categoryName\":null}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null
         ));
@@ -160,7 +163,7 @@ class ReceiptExtractionServiceTest {
         Category comida = buildCategory(1L, "Comida", CategoryType.EXPENSE);
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(9L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(9L, CategoryType.EXPENSE)).thenReturn(List.of(comida));
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":true,\"description\":\"Restaurante\",\"amount\":5000,\"movementType\":\"NOSEQUE\",\"categoryName\":\"Comida\"}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null
         ));
@@ -175,7 +178,7 @@ class ReceiptExtractionServiceTest {
     void extractFromImageShouldReturnNullCategoryWhenNoCategoryNameIsSuggested() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(10L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(10L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList())).thenReturn(new ChatCompletionResult(
+        when(aiChatOrchestrator.completeVision(anyList(), any())).thenReturn(new ChatCompletionResult(
                 "{\"isReceipt\":true,\"description\":\"Comercio\",\"amount\":5000,\"movementType\":\"EXPENSE\",\"categoryName\":null}",
                 "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null
         ));
@@ -195,7 +198,7 @@ class ReceiptExtractionServiceTest {
                 {"isReceipt":true,"description":"Comercio","amount":5000,"movementType":"EXPENSE","categoryName":null}
                 ```
                 """;
-        when(aiChatOrchestrator.completeVision(anyList()))
+        when(aiChatOrchestrator.completeVision(anyList(), any()))
                 .thenReturn(new ChatCompletionResult(fenced, "nvidia", "nvidia/nemotron-nano-12b-v2-vl", null, null));
 
         ReceiptExtraction extraction = service.extractFromImage(11L, "data:image/jpeg;base64,abc");
@@ -208,11 +211,10 @@ class ReceiptExtractionServiceTest {
     void extractFromImageShouldPropagateProviderFailureWithoutRecordingUsage() {
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(12L, CategoryType.INCOME)).thenReturn(List.of());
         when(categoryRepository.findAllByUser_IdAndTypeOrderByNameAsc(12L, CategoryType.EXPENSE)).thenReturn(List.of());
-        when(aiChatOrchestrator.completeVision(anyList()))
+        when(aiChatOrchestrator.completeVision(anyList(), any()))
                 .thenThrow(new AiProviderNotConfiguredException(AiChatOrchestrator.GENERIC_MESSAGE));
 
         Assertions.assertThrows(AiProviderNotConfiguredException.class, () -> service.extractFromImage(12L, "data:image/jpeg;base64,abc"));
-        verify(aiUsageEventService, never()).record(any(), any(), any(), anyInt(), any());
     }
 
     private static Category buildCategory(Long id, String name, CategoryType type) {
