@@ -6,12 +6,20 @@ credenciales bancarias, sin terceros ni carga regulatoria. En paralelo, construy
 flujo real de automatizacion sobre la infraestructura de n8n que ya esta corriendo en Docker
 desde la fase de inicio de SaaS: un bot de Telegram para registrar gastos por chat.
 
-**Estado: implementado en el arbol de trabajo, pendiente de PR y de validacion con datos
-reales del usuario.** El alcance original de este documento contemplaba parsers por banco
+**Estado: implementado y validado end-to-end con datos reales (2026-07-22), pendiente de
+PR.** El alcance original de este documento contemplaba parsers por banco
 (Bancolombia/Davivienda); durante la implementacion se aprobo un pivot de alcance —
 extraccion generica con IA en lugar de parsers por banco — documentado en la seccion
 "Decisiones de arquitectura" mas abajo. Este documento ya refleja el alcance final,
 no el original.
+
+La validacion end-to-end con el bot real de Telegram encontro y cerro varios bugs reales
+que no aparecian en los 623 tests unitarios (todos mockeados) — ver "Validacion end-to-end
+y hallazgos (2026-07-22)" mas abajo. El Frente 2 quedo bastante mas robusto de lo que
+describia el diseno original: se sumo un proveedor de IA (Gemini), failover real de vision
+(antes bypasseado a un solo proveedor), telemetria por intento, y prioridad de proveedores
+configurable por tipo de tarea — trabajo que excede el alcance original del Frente 2 pero
+que fue necesario para que el DoD real (bot funcionando con una foto real) se cumpliera.
 
 ## Antes de empezar
 
@@ -269,18 +277,71 @@ tests en verde, lint limpio, build de produccion exitoso.
 4. ✅ Los endpoints de `/api/integrations/telegram/*` rechazan con 401 cualquier request sin
    el secreto de webhook correcto (incluye el caso de secreto en blanco = integracion
    deshabilitada) — cubierto por `TelegramWebhookFilterTest`.
-5. ⏳ **Pendiente de validacion del usuario** — un mensaje de texto libre enviado al bot real
-   de Telegram ("Uber 15000") crea un `Expense` real en la cuenta vinculada, con
-   monto/descripcion/categoria resueltos igual que el quick-add web. Requiere: agregar
-   `TELEGRAM_WEBHOOK_SECRET` al `.env` (accion del usuario — ruta bloqueada para el agente),
-   crear el bot en BotFather e importar `n8n/workflows/telegram-expense-bot.json` en n8n
-   siguiendo `n8n/README.md`.
-6. ⏳ **Pendiente de validacion del usuario** — probado end-to-end con datos reales: importar
-   al menos un extracto real (los formatos reales del usuario son PDF protegido con
-   contrasena — Bancolombia, Nu, Rappi) desde `extractos-reales/` (carpeta local,
-   `.gitignore`d, nunca se sube al repo), y registrar al menos un gasto real por el bot de
-   Telegram, con el usuario de desarrollo Jhon Quiceno (`user_id = 2`). La calidad de la
-   extraccion por IA contra un extracto real todavia no fue verificada.
+5. ✅ **Validado por el usuario (2026-07-22)** — un mensaje de texto libre enviado al bot
+   real de Telegram crea un `Expense` real en la cuenta vinculada, con
+   monto/descripcion/categoria resueltos igual que el quick-add web. Confirmado
+   funcionando desde el primer intento (a diferencia del flujo de foto, que necesito varias
+   rondas de arreglos — ver seccion siguiente).
+6. ✅ **Validado por el usuario (2026-07-22), parcialmente** — registrar un gasto real por
+   el bot de Telegram con una foto de un recibo real (`extractos-reales/Foto-recibo.jpg`,
+   carpeta local `.gitignore`d) quedo confirmado funcionando de punta a punta, con el
+   usuario de desarrollo Jhon Quiceno: `✅ Gasto registrado desde la foto: D1 — $15.950
+   (Comida)`. Esto costo varias rondas de debugging real — ver "Validacion end-to-end y
+   hallazgos" mas abajo. **Sigue pendiente**: importar al menos un extracto bancario real
+   (PDF protegido con contrasena — Bancolombia, Nu, Rappi) desde `extractos-reales/` no se
+   probo en esta sesion de validacion; la calidad de la extraccion de `StatementAiExtractionService`
+   contra un extracto real todavia no esta verificada.
+
+## Validacion end-to-end y hallazgos (2026-07-22)
+
+Probar el flujo de foto contra un recibo real (no sintetico) encontro varios bugs reales
+que ningun test unitario (todos mockeados) podia atrapar. Quedan documentados porque son
+el tipo de problema que va a volver a aparecer si se toca este flujo de nuevo:
+
+1. **Bug de infraestructura n8n — credencial "fantasma"**: el workflow exportado
+   (`n8n/workflows/telegram-expense-bot.json`) trae un ID de credencial placeholder
+   (`REPLACE_WITH_YOUR_TELEGRAM_CREDENTIAL_ID`) en los 3 nodos que hablan con la API de
+   Telegram. Asignar la credencial real a mano en la UI de n8n no bastaba: el workflow
+   activo tenia ademas una copia **duplicada** (mismo nombre, quedo de un reimport previo) y
+   la instancia activa de n8n seguia sirviendo la version vieja en memoria para las
+   ejecuciones reales (webhook), aunque los tests manuales dentro del editor si reflejaban
+   el arreglo. Solucion definitiva: borrar el workflow duplicado y reimportar limpio,
+   asignando la credencial una sola vez en el que queda activo.
+2. **Bug de n8n — modo de binarios "filesystem" rompe la conversion a base64**: el nodo
+   Code "Armar data URI" leia `binary.data.data` esperando el base64 real, pero esta version
+   de n8n (2.30.4) usa `filesystem` como modo de almacenamiento de binarios por defecto (sin
+   que este seteado en ningun lado) combinado con el task runner — combinacion con un bug
+   conocido de la comunidad de n8n donde `.data` devuelve el marcador interno
+   `"filesystem-v2"` en vez del contenido real, y `this.helpers.getBinaryDataBuffer()`
+   tampoco funciona ahi. Los 3 proveedores de IA rechazaban la imagen con errores de
+   "base64 invalido" que parecian (por el mensaje) un problema de calidad de imagen, pero
+   eran puramente de transporte. Arreglado agregando `N8N_DEFAULT_BINARY_DATA_MODE=default`
+   (memoria) a la config de n8n en `docker-compose.yml`, evitando la combinacion rota por
+   completo.
+3. **Confiabilidad real de vision, no solo teorica**: una vez resuelto el problema de
+   transporte, la extraccion funcionaba pero era inconsistente segun que proveedor
+   respondiera — NVIDIA (`nemotron-nano-12b-v2-vl`) devuelve HTTP 200 con JSON valido aunque
+   el contenido este mal (agarra texto legal/tributario del recibo como si fuera el nombre
+   del comercio), mientras que Gemini fue mas consistente en la misma foto probada varias
+   veces. Como un JSON bien formado no es distinguible de uno correcto a nivel de
+   HTTP/parsing, el failover no detecta esto solo — se reordeno la prioridad de proveedores
+   para que Gemini vaya primero (ver `AiProviderRegistry.DEFAULT_PRIORITY`).
+4. **Mejora de prompt**: se le agrego a `ReceiptExtractionService` la instruccion explicita
+   de ignorar texto legal/tributario (Gran Contribuyente, resoluciones DIAN, NIT, telefonos)
+   al identificar el nombre del comercio, y usar una descripcion generica si no es legible
+   con certeza — antes el modelo (sobre todo el proveedor de respaldo) confundia ese texto
+   con el nombre del negocio.
+
+Trabajo adicional de robustez de IA hecho durante esta validacion (excede el Frente 2
+original pero vive en los mismos archivos): catalogo de proveedores ampliado con **Gemini**
+(`gemini-3.5-flash`, multimodal) y **Groq** (catalogado, sin key real todavia); failover de
+`AiChatOrchestrator#completeVision` reescrito para iterar todos los proveedores con modelo
+de vision configurado (antes bypasseaba a NVIDIA unicamente); telemetria por intento
+(latencia, exito/fallo, tipo de error, costo estimado) via `AiUsageEvent` + migracion
+`V25__add_ai_usage_event_telemetry.sql`; prioridad de proveedores configurable **por tipo de
+tarea** (`app.ai.task-priority.*`) ademas de la global; y ampliacion del bot conversacional
+(consultas de deudas, desglose de ingresos por categoria, periodos `LAST_MONTH`/`YEAR`,
+fallback amigable de "no entendi").
 
 ## Referencia de endpoints (Sprint 2)
 
@@ -306,15 +367,20 @@ POST   /api/integrations/telegram/expenses          # secreto de webhook
   bocetea para integraciones de terceros **no se construye en este sprint** — el vinculo de
   Telegram usa su propio mecanismo simple (decision de arquitectura 4), mas liviano que lo
   que Gmail va a necesitar en el Sprint 3.
-- **La calidad de la extraccion por IA todavia no esta validada contra un extracto real del
-  usuario** — reemplaza a la advertencia original sobre el formato de columnas de
-  Bancolombia/Davivienda, que quedo obsoleta con el pivot a extraccion generica (decision de
-  arquitectura 2). Antes de dar el Frente 1 por cerrado en la practica, hay que correr
-  `preview` contra al menos un extracto real de cada banco del usuario (Bancolombia, Nu,
-  Rappi) y revisar si la IA identifica bien fecha/monto/tipo de movimiento.
+- **El Frente 2 (bot de Telegram) esta validado end-to-end con datos reales, incluyendo
+  fotos de recibos.** El Frente 1 (extraccion de extractos) sigue con la extraccion por IA
+  **sin validar contra un extracto real** — reemplaza a la advertencia original sobre el
+  formato de columnas de Bancolombia/Davivienda, que quedo obsoleta con el pivot a
+  extraccion generica (decision de arquitectura 2). Antes de dar el Frente 1 por cerrado en
+  la practica, hay que correr `preview` contra al menos un extracto real de cada banco del
+  usuario (Bancolombia, Nu, Rappi) y revisar si la IA identifica bien fecha/monto/tipo de
+  movimiento. Dos gaps conocidos de ese flujo, documentados y sin resolver por decision
+  explicita de alcance (no forman parte de este sprint): no hay quality gate para detectar
+  texto extraido corrupto/vacio mas alla del caso binario vacio-o-no, y no hay verificacion
+  cruzada de los montos extraidos contra un total declarado en el extracto.
 - **El workflow de n8n ya esta en el repo**: `n8n/workflows/telegram-expense-bot.json`
-  (Telegram Trigger → deteccion de `/start <codigo>` vs texto libre → llamadas a
+  (Telegram Trigger → deteccion de `/start <codigo>` vs texto libre/foto → llamadas a
   `/api/integrations/telegram/*` con el header `X-Telegram-Webhook-Secret` → respuesta al
   chat). El setup del bot desde cero (BotFather, secreto, importacion, prueba) esta
-  documentado en `n8n/README.md`. Falta solo la accion manual del usuario para cerrar el
-  punto 5 del DoD.
+  documentado en `n8n/README.md` — incluye la tabla de solucion de problemas actualizada con
+  los hallazgos de la seccion "Validacion end-to-end" de arriba.
