@@ -10,8 +10,9 @@
 
 KoroFin es hoy un MVP funcional y bien probado (286 tests backend, 91 tests frontend,
 arquitectura por capas consistente, scoping por usuario correcto, refactor por dominios ya
-en `main`). El MVP (6 sprints, ver `docs/finsmart_mvp_sprints.md` en el historial de git)
-cerró formalmente el 2026-07-14 y este documento arranca la fase siguiente.
+en `main`). El MVP (6 sprints; ver el historial de git de la rama principal para el detalle
+día a día, ya que no vive en un archivo del repo) cerró formalmente el 2026-07-14 y este
+documento arranca la fase siguiente.
 
 El salto a SaaS multi-tenant con automatización de IA **no requiere reescribir nada** —
 requiere sumar capas nuevas (uso/cuotas, ingestión de mensajes, billing) sin romper lo que
@@ -508,7 +509,7 @@ de sprints.
 
 | Qué | Dónde |
 |-----|-------|
-| MVP completo: 6 sprints (`docs/finsmart_mvp_sprints.md`, tablero y `docs/sprints/` de la fase MVP eliminados del repo hoy — el detalle queda en el historial de git) | `main` (producción) |
+| MVP completo: 6 sprints (tablero y `docs/sprints/` de la fase MVP eliminados del repo hoy — el detalle día a día queda en el historial de git) | `main` (producción) |
 | Refactor por dominios: backend en 9 dominios (`common`, `usuario`, `ingresos`, `gastos`, `deudas`, `servicios`, `analisis`, `ia`, `reportes`) + frontend pulido | `main` |
 | Extracción de componentes de `asistente-ia` (310→137 líneas) y `reportes` (269→119) | `main` |
 | Optimización de queries del análisis: summary ~19→9 consultas, recommendations ~19→8, log SQL sin duplicar (verificado en runtime) | `develop` |

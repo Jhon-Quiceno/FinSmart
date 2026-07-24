@@ -15,13 +15,15 @@ docs/
 ├── roadmap-saas-cuentas-reales.md     ← Roadmap estratégico: SaaS + cuentas/tarjetas reales
 ├── ideas-adicionales-producto.md      ← Funcionalidades investigadas fuera del roadmap actual
 ├── notifications-future.md            ← Canales de notificación futuros (Web Push, Telegram, WhatsApp)
-├── sprints/                           ← Planificación detallada del sprint en curso
+├── analisis-valor-extractos-bancarios.md ← Análisis de valor: importación de extractos bancarios
+├── sprints/                           ← Historial acumulativo de sprints de la fase SaaS (no un sprint único)
 │
 │  # Referencia técnica y de proceso
 ├── convenciones.md                    ← Commits, PRs, comentarios — obligatorio (citado en CLAUDE.md)
 ├── DESIGN.md                          ← Sistema de diseño visual (tokens, motion, dark mode)
+├── diagramas.md                       ← Diagramas de arquitectura (Excalidraw/Miro/Lucid)
 ├── runbook-produccion.md              ← Diagnóstico de fallas en producción
-├── analisis-diseno/                   ← Análisis, arquitectura y diseño — ⚠️ desactualizado, ver nota abajo
+├── analisis-diseno/                   ← Análisis, arquitectura y diseño
 │   ├── README.md                      ← Índice de análisis y diseño
 │   ├── documentacion/
 │   │   ├── 01-analisis-requisitos.md  ← Requisitos funcionales y no funcionales
@@ -42,13 +44,10 @@ docs/
         └── FRONTEND_DOC.md
 ```
 
-> ⚠️ **`analisis-diseno/` describe la arquitectura pre-refactor de dominios.**
-> `02-arquitectura.md` todavía muestra paquetes planos (`config/, controller/, dto/...`); el
-> backend real está organizado en 9 dominios (`common, usuario, ingresos, gastos, deudas,
-> servicios, analisis, ia, reportes`) desde el refactor documentado en el roadmap. Sigue
-> siendo el material más completo de requisitos/API/seguridad del repo, pero el diagrama de
-> arquitectura y el modelo de datos (sin `DebtCharge`/`ai_usage_events`) necesitan una
-> actualización antes de usarse como referencia de la estructura de paquetes actual.
+> ℹ️ Actualizado 2026-07-23 al estado real del backend (12 dominios, 19 entidades, 5 proveedores
+> de IA, endpoints de Telegram/extractos/tarjetas incluidos).
+> Dominios: `common, usuario, ingresos, gastos, deudas, servicios, analisis, ia, reportes,
+> integraciones, tarjetas, extractos`.
 
 ---
 
@@ -76,7 +75,7 @@ docs/
 | **Frontend** | Next.js 16.2, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, Recharts |
 | **Backend** | Java 21, Spring Boot 4.0, Spring Security, Spring Data JPA, Flyway |
 | **Base de datos** | PostgreSQL 16 |
-| **IA** | Multi-proveedor: NVIDIA NIM, OpenCode Zen, OpenRouter (OpenAI-compatible) |
+| **IA** | Multi-proveedor con failover: Google Gemini, NVIDIA NIM, OpenCode Zen, OpenRouter, Groq |
 | **Notificaciones** | In-app + Email vía Resend SMTP |
 | **DevOps** | Docker, docker-compose |
 
@@ -86,7 +85,16 @@ docs/
 
 - 🎬 **Video demo del MVP:** [`archivo/mvp/video-evidencias/finsmart-demo/finsmart-demo.mp4`](archivo/mvp/video-evidencias/finsmart-demo/finsmart-demo.mp4) — recorrido de ~30s por login, registro, dashboard y los 8 módulos, con capturas reales de la aplicación.
 - 🖼️ **Capturas reales del MVP:** [`archivo/mvp/evidencias/capturas/`](archivo/mvp/evidencias/capturas/) — screenshots por fecha y feature, referenciados desde las evidencias de sprint.
-- 📐 **Diagramas de arquitectura:** [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) — fuente PlantUML + renders SVG (⚠️ ver nota de desactualización arriba).
+- 📐 **Diagramas de arquitectura (PlantUML):** [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) — fuente PlantUML + renders SVG.
+- 🗺️ **Diagramas de arquitectura (Excalidraw/Miro/Lucid):** [`diagramas.md`](diagramas.md) — 4 diagramas complementarios.
+
+---
+
+## Convención de documentación
+
+- **`analisis-diseno/documentacion/`** sigue (informalmente) una estructura estilo **arc42**: cada archivo cubre una sección de documentación de arquitectura de software (requisitos, arquitectura, modelo de datos, API, seguridad, componente IA).
+- **Los diagramas** siguen (informalmente) los niveles del **modelo C4**: Contexto y Contenedores en los diagramas de arquitectura general, Componentes en los diagramas más detallados (por ejemplo, el flujo de IA multi-proveedor).
+- **La organización de `docs/`** separa por propósito al estilo **Diátaxis**: referencia técnica (`analisis-diseno/`, `convenciones.md`), guías operativas/how-to (`runbook-produccion.md`, setup de n8n), explicación/estrategia (`roadmap-saas-cuentas-reales.md`, `ideas-adicionales-producto.md`) e historial (`sprints/`, `archivo/`).
 
 ---
 
@@ -99,11 +107,13 @@ docs/
 | Explorar los endpoints | [`analisis-diseno/documentacion/04-api-rest.md`](analisis-diseno/documentacion/04-api-rest.md) |
 | Entender la seguridad | [`analisis-diseno/documentacion/05-seguridad.md`](analisis-diseno/documentacion/05-seguridad.md) |
 | Ver el diseño del asistente IA | [`analisis-diseno/documentacion/06-ia-asistente.md`](analisis-diseno/documentacion/06-ia-asistente.md) |
-| Ver diagramas de arquitectura | [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) |
+| Ver diagramas de arquitectura (PlantUML) | [`analisis-diseno/diagramas/`](analisis-diseno/diagramas/) |
+| Ver diagramas de arquitectura (Excalidraw/Miro/Lucid) | [`diagramas.md`](diagramas.md) |
 | Ver un recorrido en video del MVP | [`archivo/mvp/video-evidencias/finsmart-demo/`](archivo/mvp/video-evidencias/finsmart-demo/) |
-| Consultar el plan de sprints de la fase actual | [`sprints/`](sprints/) |
+| Consultar el historial de sprints de la fase SaaS | [`sprints/`](sprints/) |
 | Consultar la estrategia de producto (SaaS + cuentas reales) | [`roadmap-saas-cuentas-reales.md`](roadmap-saas-cuentas-reales.md) |
 | Ver ideas de producto fuera del roadmap actual | [`ideas-adicionales-producto.md`](ideas-adicionales-producto.md) |
+| Evaluar el valor de importar extractos bancarios | [`analisis-valor-extractos-bancarios.md`](analisis-valor-extractos-bancarios.md) |
 | Ver convenciones de commits/PRs (obligatorio) | [`convenciones.md`](convenciones.md) |
 | Diagnosticar una falla en producción | [`runbook-produccion.md`](runbook-produccion.md) |
 | Ver evidencia de un sprint del MVP | [`archivo/mvp/evidencias/`](archivo/mvp/evidencias/) |
@@ -118,6 +128,22 @@ docs/
 - Las evidencias siguen el formato `YYYY-MM-DD_nombre-descriptivo.md` y cubren qué se hizo, por qué, y cómo se verificó.
 - Las capturas de pantalla reales van en `evidencias/capturas/YYYY-MM-DD_nombre-feature/`, nombradas `pagina-anchoxalto.png`.
 - Los documentos técnicos (código, configuraciones, endpoints) están en español neutro.
+
+---
+
+## Protocolo de mantenimiento
+
+Qué documento actualizar según el tipo de cambio que agregás al proyecto:
+
+| Tipo de cambio | Documento(s) a actualizar |
+|----------------|---------------------------|
+| Nuevo dominio/paquete backend | `02-arquitectura.md` (árbol de paquetes) + diagrama de arquitectura general |
+| Nueva entidad JPA / migración Flyway | `03-modelo-datos.md` + ERD |
+| Nuevo endpoint REST | `04-api-rest.md` |
+| Nuevo proveedor de IA o cambio de failover | `06-ia-asistente.md` + diagrama de flujo IA + `docs/README.md` (tabla de stack) |
+| Cambio de mecanismo de auth/seguridad | `05-seguridad.md` |
+| Nuevo sprint de la fase SaaS | Agregar archivo en `docs/sprints/` — no editar los sprints anteriores |
+| Cierre de una fase/sprint | Mover evidencia relevante a `docs/archivo/` si corresponde (evidencia fechada, no se reescribe después) |
 
 ---
 

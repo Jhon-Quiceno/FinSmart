@@ -42,19 +42,19 @@ KoroFin sigue una arquitectura **monolítica modular** con frontend y backend se
 │                                                       │
 │   ┌──────────────────────────────────────────────┐   │
 │   │  AI Chat Orchestrator (multi-proveedor)      │   │
-│   │  ┌─────────┐ ┌──────────┐ ┌──────────────┐  │   │
-│   │  │NVIDIA   │ │OpenCode  │ │ OpenRouter   │  │   │
-│   │  │ NIM     │ │ Zen      │ │              │  │   │
-│   │  └─────────┘ └──────────┘ └──────────────┘  │   │
+│   │  Gemini → NVIDIA → OpenCode → OpenRouter →   │   │
+│   │  Groq (sin key real, catalogado e inerte)    │   │
 │   └──────────────────────────────────────────────┘   │
 └──────────────────────┬───────────────────────────────┘
                        │
 ┌──────────────────────┴───────────────────────────────┐
 │                 BASE DE DATOS                         │
 │              PostgreSQL 16                            │
-│   Migraciones versionadas con Flyway (V1 a V12)      │
+│   Migraciones versionadas con Flyway (V1 a V25)      │
 └──────────────────────────────────────────────────────┘
 ```
+
+> El bot de Telegram (orquestado por n8n) y la importación de extractos bancarios son clientes adicionales de esta misma API — ver dominios `integraciones` y `extractos` en el árbol de paquetes (sección 2.3) y el detalle de endpoints en `04-api-rest.md`.
 
 ---
 
@@ -81,33 +81,39 @@ KoroFin sigue una arquitectura **monolítica modular** con frontend y backend se
 
 ### 2.3 Paquetes
 
+El backend **no** se organiza en paquetes técnicos planos (`config/`, `controller/`, `dto/`, ...) a nivel raíz. Se organiza **por dominio de negocio**, y cada dominio contiene sus propias capas técnicas (`controller/`, `service/`, `repository/`, `model/{dto,entity}`, `mapper/`) más lo que le haga falta:
+
 ```
 com.smartfinance.backend/
-├── config/          → Configuración (CORS, Security, OpenAPI)
-├── controller/      → Controladores REST
-├── dto/             → Records DTO por dominio
-│   ├── ai/
-│   ├── analysis/
-│   ├── auth/
-│   ├── category/
-│   ├── debt/
-│   ├── error/
-│   ├── expense/
-│   ├── income/
-│   ├── notification/
-│   ├── recurring/
-│   └── report/
-├── event/           → Eventos de dominio (ExpenseCreatedEvent)
-├── exception/       → Jerarquía de excepciones + handler global
-├── mapper/          → MapStruct mappers
-├── model/           → Entidades JPA
-├── repository/      → Repositorios + Specifications
-├── security/        → Filtro JWT, implementación de seguridad
-└── service/         → Servicios de negocio
-    ├── ai/          → Lógica de IA multi-proveedor
-    ├── jobs/        → Tareas programadas (@Scheduled)
-    └── notification/→ Notificaciones in-app + email
+├── common/          → Transversal: config (CORS, Security, OpenAPI, Clock, Async, Scheduling),
+│                       excepciones globales, filtros de seguridad compartidos
+│                       (JwtAuthenticationFilter, TelegramWebhookFilter, RateLimitFilter)
+├── usuario/         → Autenticación, registro, perfil, refresh tokens
+│                       Entidades: User, RefreshToken
+├── ingresos/        → Ingresos del usuario
+│                       Entidad: Income
+├── gastos/          → Gastos y categorías
+│                       Entidades: Expense, Category
+├── deudas/          → Deudas, abonos y cargos
+│                       Entidades: Debt, DebtPayment, DebtCharge
+├── servicios/       → Pagos recurrentes, notificaciones, preferencias, jobs (@Scheduled)
+│                       Entidades: RecurringPayment, Notification, NotificationPreference
+├── analisis/        → Motor financiero (balance, ratios, predicción, snapshots)
+│                       Entidad: FinancialAnalysis
+├── ia/              → Asistente IA multi-proveedor, orquestador, chat, insights, categorización,
+│                       cuota y telemetría de uso
+│                       Entidades: AiMessage, AiUsageEvent
+├── reportes/        → Reportes mensuales, movimientos, exportación CSV
+│                       (sin entidad propia — lee de otros dominios)
+├── integraciones/   → Vínculo e ingesta desde el bot de Telegram (orquestado por n8n)
+│                       Entidad: TelegramLink
+├── tarjetas/        → Tarjetas de crédito, ledger de movimientos, compras a cuotas
+│                       Entidades: CreditCard, CardMovement, InstallmentPlan, Installment
+└── extractos/       → Importación de extractos bancarios (PDF/Excel) con extracción por IA
+                        (sin entidad propia — crea Expense/CardMovement directamente vía servicio)
 ```
+
+Cada uno de los 12 dominios sigue internamente el mismo patrón de capas descrito en la sección 2.1 (`controller/ → service/ → repository/`, con `model/dto` y `model/entity` como frontera y `mapper/` para la transformación), en vez de compartir paquetes técnicos con el resto del proyecto.
 
 ---
 
@@ -164,20 +170,20 @@ Los eventos de dominio se publican con `ApplicationEventPublisher` y se consumen
 
 ### 4.3 Failover de IA
 
-El `AiChatOrchestrator` implementa failover automático:
+El `AiChatOrchestrator` implementa failover automático sobre 5 proveedores posibles (Gemini, NVIDIA, OpenCode, OpenRouter, Groq — ver `06-ia-asistente.md` para el detalle completo):
 
-1. Intenta con el primer proveedor configurado (según prioridad)
+1. Intenta con el primer proveedor configurado (según prioridad global o, si la operación lo define, según `app.ai.task-priority.<tarea>`)
 2. Si falla, reintenta con el siguiente (hasta agotar todos)
 3. Si todos fallan, devuelve error al usuario (el mensaje no se persiste)
 4. El usuario nunca ve el cambio de proveedor — es transparente
 
 ### 4.4 Notificaciones Degradables
 
-El sistema de email (Resend SMTP) está diseñado para fallar sin afectar la experiencia:
+El sistema de email (Resend, vía `spring-boot-starter-mail`) está diseñado para fallar sin afectar la experiencia:
 
 - Envío async con `@Async`
 - Si no hay credenciales SMTP, solo funcionan notificaciones in-app
-- El `BrevoEmailAdapter` captura excepciones y las registra sin propagarlas
+- `EmailNotificationSender` captura excepciones y las registra sin propagarlas
 
 ---
 
@@ -224,4 +230,8 @@ El sistema de email (Resend SMTP) está diseñado para fallar sin afectar la exp
 
 ---
 
-*Documento de arquitectura — KoroFin MVP*
+Ver también el diagrama visual actualizado en `../../diagramas.md` (sección 1, vista de arquitectura general estilo C4-Contenedores).
+
+---
+
+*Documento de arquitectura — KoroFin*

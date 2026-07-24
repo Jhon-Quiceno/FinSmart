@@ -8,8 +8,10 @@
 
 ```
 Entorno local:  http://localhost:8080/api
-Entorno prod:   https://api.finsmart.app/api
+Entorno prod:   https://api.korofin.app/api
 ```
+
+> Nota: la URL de producción de arriba es un ejemplo genérico. La infraestructura real desplegada (Cloud Run, Vercel) todavía usa el nombre técnico "finsmart" en sus dominios reales — ver `docs/runbook-produccion.md`.
 
 ---
 
@@ -114,6 +116,8 @@ El refresh token se envía como cookie `HttpOnly` en `/users/login` y `/users/re
 | DELETE | `/debts/{id}` | Eliminar deuda |
 | POST | `/debts/{id}/payments` | Registrar abono |
 | GET | `/debts/{id}/payments` | Historial de abonos |
+| GET | `/debts/{debtId}/charges` | Historial de cargos (compras que incrementan la deuda) |
+| POST | `/debts/{debtId}/charges` | Registrar cargo (incrementa `remaining_amount`, espejo del abono) |
 
 ```json
 // POST /debts
@@ -122,6 +126,9 @@ El refresh token se envía como cookie `HttpOnly` en `/users/login` y `/users/re
 // POST /debts/1/payments → Response 201 (crea Expense vinculado)
 { "amount": 500.00, "notes": "Abono julio", "paymentDate": "2026-07-05" }
 // Response incluye "expenseId": 42
+
+// POST /debts/1/charges
+{ "amount": 200.00, "description": "Compra con tarjeta asociada", "chargeDate": "2026-07-10" }
 ```
 
 ### 3.6 Servicios Recurrentes
@@ -173,13 +180,16 @@ El refresh token se envía como cookie `HttpOnly` en `/users/login` y `/users/re
 | POST | `/ai/insights/generate` | Generar nuevo insight |
 | POST | `/ai/categorize` | Clasificar gasto por IA |
 | GET | `/ai/providers/status` | Estado de proveedores (solo lectura) |
+| GET | `/ai/usage` | Resumen de uso/telemetría de IA del usuario (tokens, costo estimado, llamadas exitosas del mes) |
 
 ```json
 // POST /ai/chat
 { "message": "¿En qué me estoy gastando más este mes?" }
 // Response 200
-{ "reply": "Este mes tu mayor gasto ha sido en Comida con $650 (36% del total).", "provider": "nvidia-nim", "model": "llama-3-70b" }
+{ "reply": "Este mes tu mayor gasto ha sido en Comida con $650 (36% del total).", "provider": "gemini", "model": "gemini-3.5-flash" }
 ```
+
+`provider` puede devolver cualquiera de los 5 catalogados (`gemini`, `nvidia`, `opencode`, `openrouter`, `groq`), según cuál haya respondido con éxito en el failover — ver `06-ia-asistente.md`.
 
 ### 3.9 Notificaciones
 
@@ -199,6 +209,45 @@ El refresh token se envía como cookie `HttpOnly` en `/users/login` y `/users/re
 | GET | `/reports/monthly?month=7&year=2026` | Reporte mensual detallado |
 | GET | `/reports/movements?month=7&year=2026` | Movimientos del período |
 | GET | `/reports/export?month=7&year=2026&format=csv` | Exportar a CSV |
+
+### 3.11 Tarjetas de Crédito
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/cards` | Listar tarjetas del usuario (paginado) |
+| GET | `/cards/{id}` | Obtener una tarjeta |
+| POST | `/cards` | Crear tarjeta |
+| PUT | `/cards/{id}` | Actualizar tarjeta |
+| DELETE | `/cards/{id}` | Eliminar tarjeta |
+| POST | `/cards/{cardId}/purchases` | Registrar una compra (movimiento de tipo compra, con o sin cuotas) |
+| POST | `/cards/{cardId}/payments` | Registrar un pago a la tarjeta |
+| GET | `/cards/{cardId}/movements` | Listar movimientos del ledger (paginado) |
+| GET | `/cards/{cardId}/movements/{movementId}/installments` | Listar cuotas de una compra diferida |
+
+```json
+// POST /cards/1/purchases
+{ "amount": 900.00, "description": "Notebook", "date": "2026-07-10", "installmentCount": 6 }
+// Response 201 → crea el CardMovement + InstallmentPlan + Installments si installmentCount > 1
+```
+
+### 3.12 Extractos Bancarios
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/statement-imports/preview` | Subir un extracto (PDF/Excel, `multipart/form-data`, contraseña opcional) y previsualizar los movimientos detectados por IA sin persistirlos |
+| POST | `/statement-imports/confirm` | Confirmar la importación de los movimientos previsualizados (crea `Expense`/`CardMovement` según corresponda) |
+
+### 3.13 Integración con Telegram
+
+`link-code` y `status` las llama el usuario autenticado desde la app web (JWT normal). Las otras tres (`confirm-link`, `expenses`, `receipts`) son rutas server-to-server llamadas por n8n en nombre del bot de Telegram, protegidas en cambio con el header `X-Telegram-Webhook-Secret` (ver `05-seguridad.md`), sin sesión de usuario.
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/integrations/telegram/link-code` | Generar un código de un solo uso para vincular el chat de Telegram (requiere JWT, la pide el usuario desde la app web) |
+| GET | `/integrations/telegram/status` | Consultar si el usuario ya tiene un chat de Telegram vinculado (requiere JWT) |
+| POST | `/integrations/telegram/confirm-link` | Confirmar el vínculo chat↔usuario a partir del código (llamado por n8n) |
+| POST | `/integrations/telegram/expenses` | Registrar un gasto a partir de un mensaje de texto del bot (llamado por n8n) |
+| POST | `/integrations/telegram/receipts` | Registrar un gasto a partir de una foto de recibo, con extracción por IA con visión (llamado por n8n) |
 
 ---
 
@@ -232,4 +281,4 @@ Códigos de estado usados:
 
 ---
 
-*Documento de API REST — KoroFin MVP — 34 endpoints*
+*Documento de API REST — KoroFin — 69 endpoints en 20 controllers*

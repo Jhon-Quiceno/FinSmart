@@ -1,12 +1,12 @@
 # Pendientes fuera del alcance del Sprint 6 — KoroFin
 
-Fecha: 2026-07-05. El Sprint 6 cierra el tablero del MVP (`docs/finsmart_mvp_sprints.md`), pero eso no significa que el proyecto no tenga trabajo pendiente. Este documento lista, sin filtro de prioridad de negocio, todo lo que quedo fuera del alcance de este sprint y deberia decidirse conscientemente (hacerlo, posponerlo o aceptarlo como limitacion conocida del MVP).
+Fecha: 2026-07-05. El Sprint 6 cierra el tablero del MVP (ver el historial de git de la rama principal para el detalle dia a dia del MVP), pero eso no significa que el proyecto no tenga trabajo pendiente. Este documento lista, sin filtro de prioridad de negocio, todo lo que quedo fuera del alcance de este sprint y deberia decidirse conscientemente (hacerlo, posponerlo o aceptarlo como limitacion conocida del MVP).
 
 ## 1. Explicitamente diferido por decision del usuario durante la planificacion de este sprint
 
-Estos items estaban mencionados en `docs/sprints/sprint6.md` o en la exploracion previa, pero se decidio conscientemente priorizar "funcional primero" (reportes + configuracion + errores + empty states + tests + arquitectura) y dejarlos como seguimiento liviano:
+Estos items estaban mencionados en la planificacion del Sprint 6 (historico, sin archivo de sprint dedicado — ver `docs/archivo/mvp/evidencias/2026-07-05_sprint-6-reportes-launch.md` para la evidencia de cierre correspondiente) o en la exploracion previa, pero se decidio conscientemente priorizar "funcional primero" (reportes + configuracion + errores + empty states + tests + arquitectura) y dejarlos como seguimiento liviano:
 
-- **Coleccion de Postman documentada** (`docs/sprints/sprint6.md`, alcance backend punto 6, DoD punto 8). Verificado: no existe ningun archivo de coleccion Postman en el repo. El smoke testing de los endpoints se hizo via los tests automatizados (MockMvc), no con una coleccion exportable para probar manualmente contra el backend dockerizado.
+- **Coleccion de Postman documentada** (alcance backend punto 6, DoD punto 8 de la planificacion del Sprint 6). Verificado: no existe ningun archivo de coleccion Postman en el repo. El smoke testing de los endpoints se hizo via los tests automatizados (MockMvc), no con una coleccion exportable para probar manualmente contra el backend dockerizado.
 - **Dockerizar el frontend** (DoD punto 10 solo pide "build de produccion... con `NEXT_PUBLIC_API_URL`", no un `Dockerfile`, pero el `docker-compose.yml` del repo solo levanta backend + Postgres). Verificado: no existe `Dockerfile` en `smart-finance-frontend/`. Si el plan de despliegue es un solo `docker-compose up` para todo el stack, falta ese servicio.
 
 ## 2. Deuda tecnica identificada por los revisores de este sprint, no corregida por alcance

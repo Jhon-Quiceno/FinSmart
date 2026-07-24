@@ -33,6 +33,10 @@ package "Backend (Spring Boot 4)" as Backend {
     [AIChatController]
     [NotificationController]
     [ReportController]
+    [StatementImportController]
+    [TelegramIntegrationController]
+    [CreditCardController]
+    [CardMovementController]
   }
 
   package "Services" {
@@ -46,6 +50,10 @@ package "Backend (Spring Boot 4)" as Backend {
     [AiChatOrchestratorService]
     [NotificationService]
     [ReportService]
+    [StatementImportService] as StatementImport
+    [TelegramExpenseService] as TelegramExpense
+    [CreditCardService]
+    [CardMovementService]
   }
 
   package "Jobs (@Scheduled)" {
@@ -81,26 +89,34 @@ package "Backend (Spring Boot 4)" as Backend {
 
 database "PostgreSQL 16" as DB {
   [Tablas: users, categories, incomes, expenses]
-  [Tablas: debts, debt_payments, recurring_payments]
-  [Tablas: notifications, ai_messages]
+  [Tablas: debts, debt_payments, debt_charges, recurring_payments]
+  [Tablas: notifications, ai_messages, ai_usage_events]
   [Tablas: financial_analysis]
-  [Migraciones Flyway V1-V12]
+  [Tablas: telegram_links]
+  [Tablas: credit_cards, card_movements, installment_plans, installments]
+  [Migraciones Flyway V1-V24+]
 }
 
 package "Externo" as Ext {
+  [Gemini API] as Gemini
   [NVIDIA NIM API] as Nvidia
   [OpenCode Zen API] as OpenCode
   [OpenRouter API] as OpenRouter
+  [Groq API] as Groq
   [Brevo SMTP (Email)] as Brevo
+  [Telegram Bot API / n8n] as TelegramBot
 }
 
 ' Relaciones corregidas usando los alias declarados
 NextApp --> FrontendServer : "Renderiza / Carga"
 Axios --> Controllers : "HTTPS / REST API (JSON)"
 Repositories --> DB : "JDBC / JPA"
-AIClient --> Nvidia : "HTTP / OpenAI-compatible"
-AIClient --> OpenCode : "HTTP"
-AIClient --> OpenRouter : "HTTP"
+AIClient --> Gemini : "HTTP (orden de intento #1)"
+AIClient --> Nvidia : "HTTP / OpenAI-compatible (orden #2)"
+AIClient --> OpenCode : "HTTP (orden #3)"
+AIClient --> OpenRouter : "HTTP (orden #4)"
+AIClient --> Groq : "HTTP (orden #5, sin key aun)"
 NotificationService --> Brevo : "Email (async, degradable)"
+TelegramExpense --> TelegramBot : "Webhook / API (orquestado por n8n)"
 
 @enduml

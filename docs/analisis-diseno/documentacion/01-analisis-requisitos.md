@@ -70,7 +70,7 @@ KoroFin es una plataforma web inteligente de gestión financiera personal que pe
 |----|-----------|-----------|--------|
 | RF-23 | El sistema debe calcular el balance mensual (ingresos - gastos) por usuario y período | Alta | 4 |
 | RF-24 | El sistema debe calcular el porcentaje de gasto sobre ingreso, alertando si supera el 80% | Alta | 4 |
-| RF-25 | El sistema debe calcular el nivel de endeudamiento (deudas activas vs ingresos) | Ata | 4 |
+| RF-25 | El sistema debe calcular el nivel de endeudamiento (deudas activas vs ingresos) | Alta | 4 |
 | RF-26 | El sistema debe calcular el ahorro mensual real y la proyección anual | Media | 4 |
 | RF-27 | El sistema debe identificar el top de categorías de gasto por monto mensual | Alta | 4 |
 | RF-28 | El sistema debe generar recomendaciones automáticas basadas en reglas de negocio | Alta | 4 |
@@ -102,6 +102,31 @@ KoroFin es una plataforma web inteligente de gestión financiera personal que pe
 | RF-39 | El sistema debe generar reportes mensuales con breakdown completo de ingresos y gastos | Alta | 6 |
 | RF-40 | El sistema debe permitir exportar movimientos a CSV | Alta | 6 |
 | RF-41 | El sistema debe exponer la lista de movimientos del período para visualización en pantalla | Alta | 6 |
+
+### 2.11 Tarjetas de Crédito y Cuotas (Fase SaaS — Fase B)
+
+| ID | Requisito | Prioridad | Sprint |
+|----|-----------|-----------|--------|
+| RF-42 | El usuario debe poder registrar tarjetas de crédito con cupo, tasa mensual efectiva, día de corte y día de pago | Alta | Fase B (SaaS) |
+| RF-43 | El sistema debe registrar movimientos de tarjeta (compras, pagos) como asientos inmutables que actualicen el saldo de forma atómica | Alta | Fase B (SaaS) |
+| RF-44 | El usuario debe poder diferir una compra a cuotas, con la tasa congelada al momento de la compra aunque la tasa de la tarjeta cambie después | Alta | Fase B (SaaS) |
+| RF-45 | El sistema debe cerrar el ciclo de facturación de cada tarjeta automáticamente, materializando los intereses de las cuotas pendientes como un movimiento agregado | Alta | Fase B (SaaS) |
+
+### 2.12 Cargos de Deuda, Cuota y Telemetría de IA (Sprint 1 SaaS)
+
+| ID | Requisito | Prioridad | Sprint |
+|----|-----------|-----------|--------|
+| RF-46 | El sistema debe permitir registrar cargos sobre una deuda (compras) que incrementen el saldo restante, como espejo de los abonos | Media | Sprint 1 (SaaS) |
+| RF-47 | El sistema debe limitar los mensajes de chat IA por usuario a un tope mensual configurable, reiniciado por período calendario | Alta | Sprint 1 (SaaS) |
+| RF-48 | El sistema debe registrar telemetría de cada intento de llamada a un proveedor de IA (éxito/fallo, tokens, costo estimado, latencia) para reporting y futuro billing | Media | Sprint 1 (SaaS) |
+
+### 2.13 Extractos Bancarios e Integración con Telegram (Sprint 2 SaaS)
+
+| ID | Requisito | Prioridad | Sprint |
+|----|-----------|-----------|--------|
+| RF-49 | El usuario debe poder importar un extracto bancario (PDF o Excel, con contraseña opcional) y previsualizar los movimientos detectados por IA antes de confirmarlos | Alta | Sprint 2 (SaaS) |
+| RF-50 | El sistema debe permitir vincular una cuenta de Telegram al usuario mediante un código de un solo uso | Alta | Sprint 2 (SaaS) |
+| RF-51 | El usuario debe poder registrar gastos por mensaje de texto o foto de recibo desde el bot de Telegram, con clasificación y extracción automática por IA | Alta | Sprint 2 (SaaS) |
 
 ---
 
@@ -174,6 +199,10 @@ KoroFin es una plataforma web inteligente de gestión financiera personal que pe
 
 ## 6. Matriz de Trazabilidad
 
+La matriz cubre dos fases distintas del proyecto: el **MVP** (sprints 1 a 6, cerrado) y la **fase SaaS** post-MVP, que corre con su propia numeración de sprints (ver `docs/sprints/`) y su propio roadmap (`docs/roadmap-saas-cuentas-reales.md`).
+
+### MVP (cerrado)
+
 | Sprint | Requisitos Cubiertos | Entregable Principal |
 |--------|---------------------|---------------------|
 | 1 | RF-01 al RF-04 | Autenticación JWT + registro/login |
@@ -183,6 +212,15 @@ KoroFin es una plataforma web inteligente de gestión financiera personal que pe
 | 5 | RF-29 al RF-38 | Asistente IA, notificaciones y automatizaciones |
 | 6 | RF-05, RF-06, RF-39 al RF-41 | Reportes, exportación y configuración |
 
+### Fase SaaS (post-MVP)
+
+| Sprint | Requisitos Cubiertos | Entregable Principal | Estado |
+|--------|---------------------|---------------------|--------|
+| Fase B (tarjetas de crédito) | RF-42 al RF-45 | Dominio `tarjetas` completo: ledger de movimientos, cuotas con tasa congelada, cierre de ciclo | Implementado |
+| Sprint 1 SaaS | RF-46 al RF-48 | Cargos de deuda (`DebtCharge`), cuota mensual de IA por usuario, telemetría de uso de IA | Implementado |
+| Sprint 2 SaaS | RF-49 al RF-51 | Importación de extractos bancarios + bot de Telegram (n8n) para registrar gastos por chat/foto | Implementado y validado end-to-end (ver `docs/sprints/sprint2.md`) |
+| Sprint 3 SaaS | — (propuesto, sin RF asignado todavía) | Integración de correo (Gmail API + Pub/Sub) para captura automática de movimientos bancarios | Propuesto, sin empezar (ver `docs/sprints/sprint3.md`) |
+
 ---
 
-*Documento de requisitos — KoroFin MVP*
+*Documento de requisitos — KoroFin*

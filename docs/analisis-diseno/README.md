@@ -2,6 +2,8 @@
 
 > Documentación de arquitectura, modelo de datos, API, seguridad y diseño del asistente IA.
 
+> **Actualizado 2026-07-23** al estado real del backend: 12 dominios, 19 entidades JPA, 5 proveedores de IA.
+
 ---
 
 ## Estructura
@@ -33,6 +35,8 @@ analisis-diseno/
 | [04-api-rest.md](documentacion/04-api-rest.md) | Diseño de endpoints, contratos y ejemplos de uso |
 | [05-seguridad.md](documentacion/05-seguridad.md) | Autenticación JWT, autorización, CORS y manejo de sesiones |
 | [06-ia-asistente.md](documentacion/06-ia-asistente.md) | Arquitectura multi-proveedor, orquestación y failover |
+
+> Los dominios de extractos bancarios (`extractos`), integración con Telegram (`integraciones`) y tarjetas de crédito (`tarjetas`) están cubiertos dentro de los documentos anteriores (arquitectura, modelo de datos y API), no como documentos independientes.
 
 ---
 

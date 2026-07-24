@@ -7,7 +7,7 @@ Esta carpeta contiene los diagramas renderizados en formato SVG, generados a par
 | Archivo                            | Fuente PUML                       | Descripción                                    |
 | ---------------------------------- | --------------------------------- | ---------------------------------------------- |
 | `arquitectura-general.svg`         | `arquitectura-general.puml`       | Arquitectura general del sistema (capas)       |
-| `modelo-datos.svg`                 | `modelo-datos.puml`               | Modelo entidad-relación con 10 colecciones     |
+| `modelo-datos.svg`                 | `modelo-datos.puml`               | Modelo entidad-relación con 19 entidades       |
 | `flujo-autenticacion.svg`          | `flujo-autenticacion.puml`        | Flujo de autenticación JWT con refresh tokens  |
 | `flujo-ia-multiproveedor.svg`      | `flujo-ia-multiproveedor.puml`    | Flujo de IA multi-proveedor con failover       |
 
@@ -21,3 +21,5 @@ plantuml ../puml/*.puml -o .
 ```
 
 > Los SVG son escalables y editables, ideales para documentación técnica.
+
+> **Actualizado 2026-07-23**: los 4 SVG fueron regenerados a partir de los `.puml` corregidos (12 dominios, 19 entidades, 5 proveedores de IA) usando el servicio público de PlantUML.

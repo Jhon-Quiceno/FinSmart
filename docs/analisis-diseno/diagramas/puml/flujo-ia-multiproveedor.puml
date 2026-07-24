@@ -12,53 +12,82 @@ participant "AIChatController" as controller
 participant "AiChatOrchestrator" as orchestrator
 participant "AiProviderRegistry" as registry
 participant "FinancialContextBuilder" as context
-collections "Proveedores IA" as providers
+collections "Proveedores IA\n(texto/chat)" as providers
+collections "Proveedores IA\n(vision)" as visionProviders
 database "PostgreSQL\n(ai_messages)" as db
 
-== Chat con el Asistente IA ==
+== Chat con el Asistente IA (texto) ==
 
 user -> frontend: "¿En qué gasté más este mes?"
 frontend -> controller: POST /api/ai/chat { message }
-controller -> orchestrator: chat(userId, message)
+controller -> orchestrator: complete(userId, message)
 
 orchestrator -> registry: getEnabledProviders()
-registry --> orchestrator: [NVIDIA, OpenCode, OpenRouter]
+registry --> orchestrator: [Gemini, NVIDIA, OpenCode, OpenRouter, Groq]
 
 orchestrator -> context: buildContext(userId)
 context -> db: SELECT financial_analysis
 context -> db: SELECT recent transactions
 context --> orchestrator: SystemPrompt con datos reales
 
-== Intento #1: NVIDIA NIM ==
+== Intento #1: Gemini ==
 
-orchestrator -> providers: POST /chat/completions (NVIDIA)
+orchestrator -> providers: POST /chat/completions (Gemini)
 providers --> orchestrator: 200 { response }
 orchestrator -> db: INSERT ai_messages (user msg + assistant reply)
-orchestrator --> controller: { reply, provider: "nvidia-nim" }
+orchestrator --> controller: { reply, provider: "gemini" }
 controller --> frontend: 200 { reply }
 frontend --> user: Muestra respuesta
 
-== Failover: NVIDIA cae, OpenCode responde ==
+== Failover: Gemini cae, NVIDIA responde ==
 
-orchestrator -> providers: POST /chat/completions (NVIDIA)
+orchestrator -> providers: POST /chat/completions (Gemini)
 providers --> orchestrator: 503 Service Unavailable
-orchestrator -> providers: POST /chat/completions (OpenCode)
+orchestrator -> providers: POST /chat/completions (NVIDIA)
 providers --> orchestrator: 200 { response }
 orchestrator -> db: INSERT ai_messages
-orchestrator --> controller: { reply, provider: "opencode-zen" }
+orchestrator --> controller: { reply, provider: "nvidia" }
 controller --> frontend: 200 { reply }
 frontend --> user: Muestra respuesta (failover transparente)
 
-== Todos los proveedores fallan ==
+== Todos los proveedores de texto fallan ==
 
+orchestrator -> providers: POST /chat/completions (Gemini)
+providers --> orchestrator: ERROR
 orchestrator -> providers: POST /chat/completions (NVIDIA)
 providers --> orchestrator: ERROR
 orchestrator -> providers: POST /chat/completions (OpenCode)
 providers --> orchestrator: ERROR
 orchestrator -> providers: POST /chat/completions (OpenRouter)
 providers --> orchestrator: ERROR
+orchestrator -> providers: POST /chat/completions (Groq)
+providers --> orchestrator: ERROR
 orchestrator --> controller: Error: IA no disponible
 controller --> frontend: 503 { message: "El asistente no está disponible en este momento" }
 frontend --> user: Muestra error amigable
+
+== Extracción de recibo/extracto por foto (visión) ==
+
+user -> frontend: Sube foto de recibo / extracto
+frontend -> controller: POST /api/ai/vision { image }
+controller -> orchestrator: completeVision(userId, image)
+
+orchestrator -> registry: getEnabledVisionProviders()
+registry --> orchestrator: [Gemini, NVIDIA, OpenRouter]
+note right of registry
+  Failover de visión más angosto que el de texto:
+  solo Gemini, NVIDIA y OpenRouter tienen modelo
+  de visión configurado. OpenCode y Groq quedan
+  fuera de este camino.
+end note
+
+orchestrator -> visionProviders: POST /vision/completions (Gemini)
+visionProviders --> orchestrator: 503 Service Unavailable
+orchestrator -> visionProviders: POST /vision/completions (NVIDIA)
+visionProviders --> orchestrator: 200 { response }
+orchestrator -> db: INSERT ai_messages / ai_usage_events
+orchestrator --> controller: { extracted data, provider: "nvidia" }
+controller --> frontend: 200 { data }
+frontend --> user: Muestra datos extraidos
 
 @enduml

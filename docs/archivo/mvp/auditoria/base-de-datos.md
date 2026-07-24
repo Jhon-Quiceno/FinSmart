@@ -1,6 +1,8 @@
 # Auditoria de base de datos — KoroFin (post Sprint 6)
 
-Fecha: 2026-07-05 (actualizado tras el seguimiento post-Sprint-6 que agrego `V12`). Motor: PostgreSQL, migrado con Flyway. Migraciones en `smart-finance-backend/src/main/resources/db/migration/`: `V1` a `V8`, `V10` a `V12` (12 archivos; no existe `V9` en el codigo fuente — ver seccion "Gap V9" mas abajo).
+Fecha original: 2026-07-05 (auditoria de cierre del Sprint 6 / MVP, que agrego `V12`). Motor: PostgreSQL, migrado con Flyway. El detalle de `V1` a `V12` que sigue en este documento refleja ese momento y no se reescribio.
+
+**Actualizacion (estado actual, fase SaaS):** las migraciones llegan hoy hasta `V25` (`V1` a `V8`, `V10` a `V25`; sigue sin existir `V9` en el codigo fuente — ver seccion "Gap V9"). Las nuevas (`V13` a `V25`) acompanaron el modulo de tarjetas de credito (`credit_cards`, `card_movements`, `installment_plans`, `installments`), el historial de cargos de deuda (`debt_charges`), la telemetria de uso de IA (`ai_usage_events`) y la vinculacion con el bot de Telegram (`telegram_links`); el resto son columnas/enums agregados a tablas existentes (cuota de IA en `users`, "remember me" en `refresh_tokens`, nuevos tipos de notificacion/evento). Nada de esto contradice los hallazgos de `V1`-`V12` de mas abajo, que siguen vigentes tal cual se describieron.
 
 ## Migracion V12 (seguimiento post-Sprint-6)
 
@@ -27,6 +29,22 @@ El esquema esta limpio, bien nombrado y cada tabla cumple una funcion clara sin 
 | `ai_messages` | V8 | Historial de conversacion con el asistente IA | `user_id` -> `users` |
 
 Cada tabla tiene una responsabilidad unica y no se encontro redundancia de datos entre ellas (por ejemplo, `financial_analysis` es un snapshot derivado, no una copia de `incomes`/`expenses`).
+
+## Tablas agregadas despues del Sprint 6
+
+Sin re-auditar cada una en el mismo detalle que las anteriores, estas tablas se sumaron en migraciones posteriores (`V13`-`V25`) para soportar tarjetas de credito, historial de cargos de deuda, telemetria de IA e integracion con Telegram, manteniendo el mismo patron de `user_id -> users` para el aislamiento entre usuarios:
+
+| Tabla | Migracion | Proposito |
+|---|---|---|
+| `debt_charges` | V15 | Historial de cargos aplicados a una deuda (distinto de `debt_payments`, que son los abonos) |
+| `ai_usage_events` | V16 | Telemetria de uso de los proveedores de IA (evento por llamada) |
+| `credit_cards` | V17 | Tarjetas de credito del usuario |
+| `card_movements` | V18 | Compras/pagos registrados sobre una tarjeta |
+| `installment_plans` | V19 | Planes de cuotas asociados a una compra con tarjeta |
+| `installments` | V20 | Cuotas individuales de un plan |
+| `telegram_links` | V24 | Vinculo entre un usuario y su chat de Telegram (bot) |
+
+Con estas 7 tablas nuevas, el total de entidades JPA en el proyecto es 19 (antes 12 al cierre del Sprint 6: los 11 renglones del inventario de arriba, contando `notifications` y `notification_preferences` como dos entidades).
 
 ## Gap V9
 

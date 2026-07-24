@@ -2,6 +2,8 @@
 
 Fecha: 2026-07-05. Criterio aplicado (decision explicita del usuario): **borrado conservador** — solo se elimina codigo verificablemente muerto (cero referencias en toda la base de codigo), y no se poda la libreria de componentes shadcn/ui solo por tener componentes sin usar todavia, ya que forman parte de la libreria de diseno reutilizable del proyecto.
 
+**Nota de alcance (estado actual):** esta auditoria cubre unicamente el codigo existente al cierre del Sprint 6/MVP. Los dominios agregados despues (`tarjetas`, `integraciones`, `extractos`) y sus componentes de frontend asociados no pasaron por esta misma revision de codigo muerto — no se afirma nada sobre ellos aqui, ni que esten limpios ni que no lo esten.
+
 ## Removido en este sprint
 
 ### `components/ui/toast.tsx`, `components/ui/toaster.tsx`, `hooks/use-toast.ts`

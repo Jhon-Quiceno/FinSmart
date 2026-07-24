@@ -1,6 +1,8 @@
 # Auditoria de arquitectura — KoroFin (post Sprint 6)
 
-Fecha: 2026-07-05. Alcance: revision de arquitectura backend y frontend tras el cierre del Sprint 6 (ultimo sprint del MVP), realizada por agentes revisores en contexto limpio mas verificacion manual.
+Fecha original: 2026-07-05. Alcance: revision de arquitectura backend y frontend tras el cierre del Sprint 6 (ultimo sprint del MVP), realizada por agentes revisores en contexto limpio mas verificacion manual.
+
+**Actualizacion (estado actual, fase SaaS):** el backend paso de 14 a 12 dominios de nivel superior (`common, usuario, ingresos, gastos, deudas, servicios, analisis, ia, reportes, integraciones, tarjetas, extractos`; el conteo de "14 modulos" del parrafo original contaba sub-modulos de negocio, no carpetas de dominio). Los tres agregados despues de este cierre — `tarjetas` (tarjetas de credito, compras, pagos y cuotas), `integraciones` (vinculo y mensajeria del bot de Telegram) e `extractos` (importacion de extractos bancarios con IA) — se revisaron por encima y respetan el mismo patron `controller -> service -> repository` con DTOs en los bordes; `extractos` es la unica excepcion parcial esperada, ya que no persiste entidades propias (no tiene `repository`/`model/entity`): su servicio arma una previsualizacion en memoria y delega la creacion final a los servicios de `ingresos`/`gastos` ya existentes, en vez de duplicar esa logica — misma decision de reuso que ya se elogio en este documento para `ReportService`. No se hizo una auditoria de seguridad/hallazgos linea por linea de estos tres dominios; si se necesita ese nivel de detalle, amerita una pasada dedicada.
 
 ## Resumen ejecutivo
 
