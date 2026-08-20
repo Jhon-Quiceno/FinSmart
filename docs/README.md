@@ -13,6 +13,7 @@ docs/
 │
 │  # Documentos vivos — fase SaaS actual
 ├── roadmap-saas-cuentas-reales.md     ← Roadmap estratégico: SaaS + cuentas/tarjetas reales
+├── plan-app-movil-react-native.md     ← Plan de fases de la app móvil (React Native)
 ├── ideas-adicionales-producto.md      ← Funcionalidades investigadas fuera del roadmap actual
 ├── notifications-future.md            ← Canales de notificación futuros (Web Push, Telegram, WhatsApp)
 ├── analisis-valor-extractos-bancarios.md ← Análisis de valor: importación de extractos bancarios
@@ -112,6 +113,7 @@ docs/
 | Ver un recorrido en video del MVP | [`archivo/mvp/video-evidencias/finsmart-demo/`](archivo/mvp/video-evidencias/finsmart-demo/) |
 | Consultar el historial de sprints de la fase SaaS | [`sprints/`](sprints/) |
 | Consultar la estrategia de producto (SaaS + cuentas reales) | [`roadmap-saas-cuentas-reales.md`](roadmap-saas-cuentas-reales.md) |
+| Ver el plan de fases de la app móvil (React Native) | [`plan-app-movil-react-native.md`](plan-app-movil-react-native.md) |
 | Ver ideas de producto fuera del roadmap actual | [`ideas-adicionales-producto.md`](ideas-adicionales-producto.md) |
 | Evaluar el valor de importar extractos bancarios | [`analisis-valor-extractos-bancarios.md`](analisis-valor-extractos-bancarios.md) |
 | Ver convenciones de commits/PRs (obligatorio) | [`convenciones.md`](convenciones.md) |

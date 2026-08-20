@@ -498,7 +498,7 @@ de sprints.
 | 5 | Modernización frontend | 🔲 Propuesto | §"Mejoras técnicas pendientes" → Frontend |
 | 6 | Nivel 3: Open Finance en sandbox | 🔲 Propuesto | §"Nivel 3" |
 | 7 | Planes, suscripciones y billing | 🔲 Propuesto | §"SaaS multi-tenant y modelo de negocio", §"Módulos backend" (`plans`, `subscriptions`) |
-| Futuro | App móvil React Native | 🔲 Propuesto, al final | §"App móvil" |
+| Futuro | App móvil React Native | 🔲 Propuesto, al final | §"App móvil" — plan detallado de fases en [`plan-app-movil-react-native.md`](plan-app-movil-react-native.md) |
 | Sin sprint | Dominio de GitHub Students (administrativo) | 🔲 Pendiente | Operativo, en paralelo |
 
 ---

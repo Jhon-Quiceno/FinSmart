@@ -1,0 +1,6 @@
+nodeLinker: hoisted
+packageImportMethod: copy
+onlyBuiltDependencies:
+  - unrs-resolver
+allowBuilds:
+  unrs-resolver: true
