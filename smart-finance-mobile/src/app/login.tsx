@@ -16,6 +16,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { useIconColors } from '@/constants/icon-colors';
 import { CARD_SHADOW } from '@/lib/shadows';
 import { loginSchema, type LoginFormValues } from '@/lib/schemas/login.schema';
+import KorofinLogo from '@/assets/images/logo-korofin.svg';
 
 export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
@@ -47,9 +48,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="mb-8 items-center gap-2">
-          <View className="h-16 w-16 items-center justify-center rounded-2xl border border-primary/30 bg-primary/20">
-            <Text className="text-3xl font-bold text-primary">K</Text>
-          </View>
+          <KorofinLogo width={72} height={72} />
           <Text className="text-2xl font-bold text-foreground">KoroFin</Text>
           <Text className="text-sm text-muted-foreground">Gestión Financiera Inteligente</Text>
         </View>

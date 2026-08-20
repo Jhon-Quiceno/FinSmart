@@ -12,6 +12,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { useIconColors } from '@/constants/icon-colors';
 import { CARD_SHADOW } from '@/lib/shadows';
 import { registerSchema, type RegisterFormValues } from '@/lib/schemas/register.schema';
+import KorofinLogo from '@/assets/images/logo-korofin.svg';
 
 export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +44,7 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="mb-8 items-center gap-2">
+          <KorofinLogo width={64} height={64} />
           <Text className="text-2xl font-bold text-foreground">Creá tu cuenta</Text>
           <Text className="text-sm text-muted-foreground">Empezá a organizar tus finanzas hoy</Text>
         </View>
