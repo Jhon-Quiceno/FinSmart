@@ -184,7 +184,8 @@ public class UserService {
                 accessToken,
                 "Bearer",
                 jwtService.getAccessTokenExpirationSeconds(),
-                userResponse
+                userResponse,
+                null
         );
 
         return new AuthSession(response, refreshToken, rememberMe);

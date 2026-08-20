@@ -15,6 +15,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -75,6 +79,11 @@ public class SecurityConfig {
                     "/api/integrations/telegram/expenses",
                     "/api/integrations/telegram/receipts"
                 )
+                // Un cliente mobile (Bearer-only, sin cookies ambiente) no está expuesto a CSRF —
+                // exención condicional SOLO para ese header, a diferencia de las rutas de arriba
+                // que están exentas para TODOS los clientes. Un navegador sin el header sigue
+                // exigiendo CSRF en /api/users/refresh como siempre.
+                .ignoringRequestMatchers(mobileClientRefreshMatcher())
             )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .httpBasic(AbstractHttpConfigurer::disable)
@@ -129,6 +138,18 @@ public class SecurityConfig {
             .sameSite(csrfCookieSameSite)
             .secure(csrfCookieSecure));
         return repository;
+    }
+
+    /**
+     * Matches {@code POST /api/users/refresh} ONLY when it carries {@code X-Client: mobile} — a
+     * plain browser request to the same path (no header) still needs CSRF, unlike the fully
+     * exempt routes above.
+     */
+    private RequestMatcher mobileClientRefreshMatcher() {
+        return new AndRequestMatcher(
+                PathPatternRequestMatcher.pathPattern("/api/users/refresh"),
+                new RequestHeaderRequestMatcher("X-Client", "mobile")
+        );
     }
 
     @Bean
