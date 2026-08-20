@@ -45,13 +45,13 @@ export function CreditCardItem({
   return (
     <div className="rounded-xl bg-card border border-border p-5 hover:border-primary/30 transition-smooth">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
             <CreditCardIcon className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">{card.name}</h3>
-            <p className="text-xs text-muted-foreground">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-foreground truncate">{card.name}</h3>
+            <p className="text-xs text-muted-foreground truncate">
               {card.bank ? `${card.bank} · ` : ""}
               {franchiseLabels[card.franchise]}
             </p>
@@ -98,42 +98,42 @@ export function CreditCardItem({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <CreditCardIcon className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Cupo total</p>
-            <p className="text-sm font-semibold text-foreground">{formatCurrency(card.creditLimit)}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{formatCurrency(card.creditLimit)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Disponible</p>
-            <p className="text-sm font-semibold text-success">{formatCurrency(card.availableCredit)}</p>
+            <p className="text-sm font-semibold text-success truncate">{formatCurrency(card.availableCredit)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <ListPlus className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Saldo actual</p>
-            <p className="text-sm font-semibold text-destructive">{formatCurrency(card.currentBalance)}</p>
+            <p className="text-sm font-semibold text-destructive truncate">{formatCurrency(card.currentBalance)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <Percent className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Tasa mensual</p>
-            <p className="text-sm font-semibold text-foreground">{card.monthlyRate}%</p>
+            <p className="text-sm font-semibold text-foreground truncate">{card.monthlyRate}%</p>
           </div>
         </div>
       </div>

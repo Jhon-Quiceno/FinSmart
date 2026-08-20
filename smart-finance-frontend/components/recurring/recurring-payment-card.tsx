@@ -69,13 +69,13 @@ export function RecurringPaymentCard({
       )}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
             <Repeat className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">{recurringPayment.name}</h3>
-            <p className="text-xs text-muted-foreground">{frequencyLabels[recurringPayment.frequency]}</p>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-foreground truncate">{recurringPayment.name}</h3>
+            <p className="text-xs text-muted-foreground truncate">{frequencyLabels[recurringPayment.frequency]}</p>
           </div>
         </div>
         <DropdownMenu>
@@ -102,12 +102,12 @@ export function RecurringPaymentCard({
       </div>
 
       <div className="flex items-center gap-2 mb-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs text-muted-foreground">Proximo pago</p>
-          <p className="text-sm font-semibold text-foreground">{formatDate(recurringPayment.nextPaymentDate)}</p>
+          <p className="text-sm font-semibold text-foreground truncate">{formatDate(recurringPayment.nextPaymentDate)}</p>
         </div>
       </div>
 
