@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Expo: start (Expo Go)",
+      "type": "shell",
+      "command": "pnpm start",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Expo: lint",
+      "type": "shell",
+      "command": "pnpm lint",
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "Expo: typecheck",
+      "type": "shell",
+      "command": "pnpm exec tsc --noEmit",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}
