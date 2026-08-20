@@ -207,6 +207,25 @@ funciones que dependen de terceros aún no maduros (correo, Open Finance).
 extractos bancarios (Nivel 2, pendiente de validar con datos reales), Open Finance (Nivel 3,
 sandbox), billing/planes (Sprint 7).
 
+**Progreso de diseño (UI mock, sin integración de backend real)** — pantallas navegables con
+datos de ejemplo, construidas sobre `(tabs)` + rutas sueltas en Expo Router; cada submit/acción
+real queda marcado con `TODO(Fase 0 backend)` en el código:
+
+- [x] Auth — login (con acceso demo temporal a `(tabs)`) y registro; falta el endpoint mobile-friendly (§2) para que dejen de ser un stub.
+- [x] Navegación — 4 tabs (Inicio, Movimientos, Deudas, Asistente) + burbuja de perfil en el header de cada una (menú: Ver perfil / Configuraciones / Notificaciones); botón "Agregar" como FAB flotante en vez de ícono fijo en el header. Se eliminó el tab "Más" — su contenido se redistribuyó según el modelo de datos real (ver ítems siguientes).
+- [x] Dashboard — balance, categorías principales, alertas/insights, transacciones recientes (gráfico simple con barras, sin librería de charts nueva).
+- [x] Movimientos — ahora es un hub con 3 secciones (Movimientos / Categorías / Servicios) porque están acopladas en el modelo de datos real (`Expense.category`/`Income.category` son FK directas, y `RecurringPaymentService.payRecurringPayment` crea un `Expense` enlazado al pagar un servicio):
+  - Movimientos: lista con filtro ingreso/gasto y quick-add visual; sugerencia de categoría por IA queda como nota, no implementada.
+  - Categorías: listado filtrable por Ingreso/Gasto; el CRUD ya existe en el backend real, falta el cliente HTTP mobile-friendly.
+  - Servicios: listado de pagos recurrentes con próxima fecha de cobro.
+- [x] Deudas / Tarjetas — Deudas y Tarjetas separadas con toggle (mismo patrón que el filtro de Ingresos/Gastos); registrar cargo/pago son botones sin acción real todavía.
+- [x] Reportes — resumen del mes + categorías + movimientos; exportar CSV queda deshabilitado (pendiente `expo-sharing`).
+- [x] Asistente IA — pantalla de chat con mensajes de ejemplo; el input no envía nada todavía.
+- [x] Vínculo con Telegram — genera un código mock local; falta conectar con `TelegramLinkService.generateLinkCode`.
+- [x] Preferencias — pantalla de solo lectura (tema/moneda/idioma), accesible desde Configuración; no existe todavía un endpoint de preferencias en el backend.
+- [x] Notificaciones push — pantalla de opt-in con toggles; falta integrar `expo-notifications` + `ExpoPushAdapter`.
+- [x] Configuración — perfil (solo lectura), preferencias de notificación y proveedores de IA (solo lectura).
+
 ### Fase 2 (v2) — Automatización Android (la pieza diferencial)
 
 Depende de que el Sprint 3 del roadmap general (ingestión de correo, `ingested_messages`,

@@ -10,8 +10,13 @@ import { vars } from 'nativewind';
  * triplete decimal — ver DESIGN.md §2 para la fuente de verdad y la regla de conversión
  * ("nunca usar un solo valor para ambos temas").
  */
-export const korofinThemes = {
-  light: vars({
+// Fuente cruda de las tripletas (sin pasar por vars()) — reexportada como `korofinRawColors`
+// para que cualquier lugar que necesite un valor de color plano en runtime (ej. el prop
+// `color` de los íconos de lucide-react-native, que no puede leer variables CSS de
+// NativeWind) lo lea de acá en vez de hardcodear un tema fijo. `korofinThemes` sigue siendo
+// el objeto que consume `korofin-theme-provider.tsx` sin cambios.
+const rawThemes = {
+  light: {
     '--color-background': '250 252 255',
     '--color-foreground': '20 24 31',
     '--color-card': '255 255 255',
@@ -35,8 +40,8 @@ export const korofinThemes = {
     '--color-border': '220 222 226',
     '--color-input': '226 229 233',
     '--color-ring': '39 153 54',
-  }),
-  dark: vars({
+  },
+  dark: {
     '--color-background': '5 6 7',
     '--color-foreground': '235 239 245',
     '--color-card': '11 13 17',
@@ -60,7 +65,14 @@ export const korofinThemes = {
     '--color-border': '38 41 46',
     '--color-input': '20 22 26',
     '--color-ring': '87 203 96',
-  }),
+  },
+} as const;
+
+export const korofinRawColors = rawThemes;
+
+export const korofinThemes = {
+  light: vars(rawThemes.light),
+  dark: vars(rawThemes.dark),
 } as const;
 
 export type KorofinColorScheme = keyof typeof korofinThemes;
