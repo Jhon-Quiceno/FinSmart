@@ -156,13 +156,13 @@ export default function GastosPage() {
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-destructive/10">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
                   <TrendingDown className="text-destructive" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Total gastos filtrados</p>
-                  <p className="text-xl font-semibold text-destructive">
+                  <p className="text-xl font-semibold text-destructive truncate">
                     -${totalExpenses.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                   </p>
                 </div>

@@ -12,12 +12,12 @@ export function ReportSummaryCards({ report }: ReportSummaryCardsProps) {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="rounded-xl bg-card border border-border p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10">
             <TrendingUp className="h-5 w-5 text-success" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Total Ingresos</p>
-            <p className="text-xl font-bold text-success">
+            <p className="text-xl font-bold text-success truncate">
               ${report.totalIncome.toLocaleString("es-MX")}
             </p>
           </div>
@@ -26,12 +26,12 @@ export function ReportSummaryCards({ report }: ReportSummaryCardsProps) {
 
       <div className="rounded-xl bg-card border border-border p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
             <TrendingDown className="h-5 w-5 text-destructive" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Total Gastos</p>
-            <p className="text-xl font-bold text-destructive">
+            <p className="text-xl font-bold text-destructive truncate">
               ${report.totalExpense.toLocaleString("es-MX")}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -43,12 +43,12 @@ export function ReportSummaryCards({ report }: ReportSummaryCardsProps) {
 
       <div className="rounded-xl bg-card border border-border p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
             <PiggyBank className="h-5 w-5 text-primary" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Ahorro</p>
-            <p className="text-xl font-bold text-primary">
+            <p className="text-xl font-bold text-primary truncate">
               ${report.savings.toLocaleString("es-MX")}
             </p>
           </div>

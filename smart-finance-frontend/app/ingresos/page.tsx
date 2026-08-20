@@ -140,12 +140,12 @@ export default function IngresosPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-success/10">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-success/10">
                     <TrendingUp className="text-success" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">{item.label}</p>
-                    <p className="text-xl font-semibold text-success">
+                    <p className="text-xl font-semibold text-success truncate">
                       {item.label === "Cantidad de ingresos"
                         ? item.value.toLocaleString("es-MX")
                         : `+$${item.value.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`}

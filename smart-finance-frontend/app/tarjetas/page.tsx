@@ -192,36 +192,36 @@ export default function TarjetasPage() {
             <>
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <WalletCards className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Cupo Total</p>
-                    <p className="text-xl font-bold text-foreground">{formatCurrency(totalCreditLimit)}</p>
+                    <p className="text-xl font-bold text-foreground truncate">{formatCurrency(totalCreditLimit)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
                     <AlertCircle className="h-5 w-5 text-destructive" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Saldo Total</p>
-                    <p className="text-xl font-bold text-destructive">{formatCurrency(totalBalance)}</p>
+                    <p className="text-xl font-bold text-destructive truncate">{formatCurrency(totalBalance)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10">
                     <Wallet className="h-5 w-5 text-success" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Disponible Total</p>
-                    <p className="text-xl font-bold text-success">{formatCurrency(totalAvailable)}</p>
+                    <p className="text-xl font-bold text-success truncate">{formatCurrency(totalAvailable)}</p>
                   </div>
                 </div>
               </div>

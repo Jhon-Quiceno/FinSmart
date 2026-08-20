@@ -1,23 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'expo-router';
-import { Check, Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { Link, Stack } from 'expo-router';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppText as Text, AppTextInput as TextInput } from '@/components/app-text';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { PressableScale } from '@/components/pressable-scale';
 import { useIconColors } from '@/constants/icon-colors';
 import { CARD_SHADOW } from '@/lib/shadows';
-import { loginSchema, type LoginFormValues } from '@/lib/schemas/login.schema';
+import { registerSchema, type RegisterFormValues } from '@/lib/schemas/register.schema';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { ICON_COLOR_MUTED } = useIconColors();
@@ -26,43 +22,57 @@ export default function LoginScreen() {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '', rememberMe: false },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   });
 
-  // TODO(Fase 0 backend): reemplazar por loginRequest() real contra
-  // POST /api/users/login una vez exista el endpoint mobile-friendly del §2 del plan
-  // (docs/plan-app-movil-react-native.md) — hoy solo valida el formulario.
-  const onSubmit = async (_values: LoginFormValues) => {
+  // TODO(Fase 0 backend): reemplazar por registerRequest() real contra POST /api/users/register
+  // una vez exista el endpoint mobile-friendly del §2 del plan — hoy solo valida el formulario.
+  const onSubmit = async (_values: RegisterFormValues) => {
     setSubmitError(null);
     await new Promise((resolve) => setTimeout(resolve, 800));
-    setSubmitError('Login real pendiente — falta el endpoint mobile-friendly del backend (Fase 0).');
+    setSubmitError('Registro real pendiente — falta el endpoint mobile-friendly del backend (Fase 0).');
   };
 
   return (
     <SafeAreaView className="flex-1 bg-background">
+      <Stack.Screen options={{ headerShown: true, title: 'Crear cuenta' }} />
       <ScrollView
         contentContainerClassName="flex-grow justify-center px-6 py-10"
         keyboardShouldPersistTaps="handled"
       >
         <View className="mb-8 items-center gap-2">
-          <View className="h-16 w-16 items-center justify-center rounded-2xl border border-primary/30 bg-primary/20">
-            <Text className="text-3xl font-bold text-primary">K</Text>
-          </View>
-          <Text className="text-2xl font-bold text-foreground">KoroFin</Text>
-          <Text className="text-sm text-muted-foreground">Gestión Financiera Inteligente</Text>
+          <Text className="text-2xl font-bold text-foreground">Creá tu cuenta</Text>
+          <Text className="text-sm text-muted-foreground">Empezá a organizar tus finanzas hoy</Text>
         </View>
 
         <View className="rounded-2xl border border-border bg-card p-5" style={CARD_SHADOW}>
-          <Text className="text-center text-xl font-bold text-card-foreground">
-            Bienvenido de vuelta
-          </Text>
-          <Text className="mb-5 mt-1 text-center text-sm text-muted-foreground">
-            Ingresá tus credenciales para acceder a tu cuenta
-          </Text>
-
           <View className="gap-4">
+            <View className="gap-1.5">
+              <Text className="text-sm font-medium text-foreground">Nombre completo</Text>
+              <View className="relative justify-center">
+                <User size={16} color={ICON_COLOR_MUTED} style={{ position: 'absolute', left: 12, zIndex: 1 }} />
+                <Controller
+                  control={control}
+                  name="name"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      className="rounded-lg border border-input bg-background py-3 pl-9 pr-3 text-base text-foreground"
+                      placeholder="Tu nombre"
+                      placeholderTextColor={ICON_COLOR_MUTED}
+                      autoComplete="name"
+                      editable={!isSubmitting}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                  )}
+                />
+              </View>
+              {errors.name && <Text className="text-xs text-destructive">{errors.name.message}</Text>}
+            </View>
+
             <View className="gap-1.5">
               <Text className="text-sm font-medium text-foreground">Correo electrónico</Text>
               <View className="relative justify-center">
@@ -90,10 +100,7 @@ export default function LoginScreen() {
             </View>
 
             <View className="gap-1.5">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-sm font-medium text-foreground">Contraseña</Text>
-                <Text className="text-xs font-medium text-primary">¿Olvidaste tu contraseña?</Text>
-              </View>
+              <Text className="text-sm font-medium text-foreground">Contraseña</Text>
               <View className="relative justify-center">
                 <Lock size={16} color={ICON_COLOR_MUTED} style={{ position: 'absolute', left: 12, zIndex: 1 }} />
                 <Controller
@@ -106,7 +113,7 @@ export default function LoginScreen() {
                       placeholderTextColor={ICON_COLOR_MUTED}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
-                      autoComplete="password"
+                      autoComplete="password-new"
                       editable={!isSubmitting}
                       onBlur={onBlur}
                       onChangeText={onChange}
@@ -131,26 +138,32 @@ export default function LoginScreen() {
               )}
             </View>
 
-            <Controller
-              control={control}
-              name="rememberMe"
-              render={({ field: { onChange, value } }) => (
-                <Pressable
-                  className="flex-row items-center gap-2"
-                  onPress={() => onChange(!value)}
-                  disabled={isSubmitting}
-                >
-                  <View
-                    className={`h-5 w-5 items-center justify-center rounded border ${
-                      value ? 'border-primary bg-primary' : 'border-input bg-background'
-                    }`}
-                  >
-                    {value && <Check size={12} color="white" strokeWidth={3} />}
-                  </View>
-                  <Text className="text-sm text-muted-foreground">Recordar mi sesión</Text>
-                </Pressable>
+            <View className="gap-1.5">
+              <Text className="text-sm font-medium text-foreground">Confirmar contraseña</Text>
+              <View className="relative justify-center">
+                <Lock size={16} color={ICON_COLOR_MUTED} style={{ position: 'absolute', left: 12, zIndex: 1 }} />
+                <Controller
+                  control={control}
+                  name="confirmPassword"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      className="rounded-lg border border-input bg-background py-3 pl-9 pr-3 text-base text-foreground"
+                      placeholder="••••••••"
+                      placeholderTextColor={ICON_COLOR_MUTED}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      editable={!isSubmitting}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                  )}
+                />
+              </View>
+              {errors.confirmPassword && (
+                <Text className="text-xs text-destructive">{errors.confirmPassword.message}</Text>
               )}
-            />
+            </View>
 
             {submitError && (
               <View className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">
@@ -166,28 +179,18 @@ export default function LoginScreen() {
               {isSubmitting ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text className="text-base font-medium text-primary-foreground">Iniciar sesión</Text>
+                <Text className="text-base font-medium text-primary-foreground">Crear cuenta</Text>
               )}
             </PressableScale>
           </View>
 
           <Text className="mt-5 text-center text-sm text-muted-foreground">
-            ¿No tenés una cuenta?{' '}
-            <Link href="/register" className="font-medium text-primary">
-              Registrate gratis
+            ¿Ya tenés una cuenta?{' '}
+            <Link href="/login" className="font-medium text-primary">
+              Iniciar sesión
             </Link>
           </Text>
         </View>
-
-        {/* TODO(Fase 0 backend): retirar este acceso una vez exista login real contra
-            POST /api/users/login — hoy es la única forma de llegar al resto del diseño. */}
-        <Link
-          href="/(tabs)"
-          className="mt-6 rounded-lg border border-border px-4 py-3 text-center text-sm font-medium text-muted-foreground"
-          style={{ borderStyle: 'dashed' }}
-        >
-          Continuar sin iniciar sesión (demo)
-        </Link>
       </ScrollView>
     </SafeAreaView>
   );

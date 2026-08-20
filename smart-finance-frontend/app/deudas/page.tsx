@@ -184,36 +184,36 @@ export default function DeudasPage() {
             <>
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning/10">
                     <CreditCard className="h-5 w-5 text-warning" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Deuda Total</p>
-                    <p className="text-xl font-bold text-foreground">${totalDebt.toLocaleString("es-MX")}</p>
+                    <p className="text-xl font-bold text-foreground truncate">${totalDebt.toLocaleString("es-MX")}</p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10">
                     <TrendingDown className="h-5 w-5 text-success" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Total Pagado</p>
-                    <p className="text-xl font-bold text-success">${totalPaid.toLocaleString("es-MX")}</p>
+                    <p className="text-xl font-bold text-success truncate">${totalPaid.toLocaleString("es-MX")}</p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
                     <AlertCircle className="h-5 w-5 text-destructive" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Por Pagar</p>
-                    <p className="text-xl font-bold text-destructive">${totalRemaining.toLocaleString("es-MX")}</p>
+                    <p className="text-xl font-bold text-destructive truncate">${totalRemaining.toLocaleString("es-MX")}</p>
                   </div>
                 </div>
               </div>

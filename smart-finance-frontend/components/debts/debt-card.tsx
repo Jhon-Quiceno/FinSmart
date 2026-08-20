@@ -39,13 +39,13 @@ export function DebtCard({ debt, onEdit, onDelete, onRegisterPayment, onRegister
   return (
     <div className="rounded-xl bg-card border border-border p-5 hover:border-primary/30 transition-smooth">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning/10">
             <CreditCard className="h-5 w-5 text-warning" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">{debt.name}</h3>
-            <p className="text-xs text-muted-foreground">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-foreground truncate">{debt.name}</h3>
+            <p className="text-xs text-muted-foreground truncate">
               {isPaidOff ? "Deuda saldada" : `Restante: ${formatCurrency(debt.remainingAmount)}`}
             </p>
           </div>
@@ -91,44 +91,44 @@ export function DebtCard({ debt, onEdit, onDelete, onRegisterPayment, onRegister
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-sm font-semibold text-foreground">{formatCurrency(debt.totalAmount)}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{formatCurrency(debt.totalAmount)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Restante</p>
-            <p className="text-sm font-semibold text-destructive">{formatCurrency(debt.remainingAmount)}</p>
+            <p className="text-sm font-semibold text-destructive truncate">{formatCurrency(debt.remainingAmount)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <Percent className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Interes</p>
-            <p className="text-sm font-semibold text-foreground">
+            <p className="text-sm font-semibold text-foreground truncate">
               {debt.interestRate !== null ? `${debt.interestRate}%` : "N/A"}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary">
             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Vencimiento</p>
-            <p className="text-sm font-semibold text-foreground">{formatDate(debt.dueDate)}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{formatDate(debt.dueDate)}</p>
           </div>
         </div>
       </div>

@@ -167,24 +167,24 @@ export default function ServiciosPage() {
             <>
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <Repeat className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Servicios activos</p>
-                    <p className="text-xl font-bold text-foreground">{activeCount}</p>
+                    <p className="text-xl font-bold text-foreground truncate">{activeCount}</p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl bg-card border border-border p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning/10">
                     <Wallet className="h-5 w-5 text-warning" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">Estimado mensual</p>
-                    <p className="text-xl font-bold text-foreground">
+                    <p className="text-xl font-bold text-foreground truncate">
                       ${monthlyTotal.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
