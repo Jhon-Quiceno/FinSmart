@@ -6,6 +6,7 @@ import com.smartfinance.backend.common.config.SecurityConfig;
 import com.smartfinance.backend.usuario.model.dto.AuthResponse;
 import com.smartfinance.backend.usuario.model.dto.ChangePasswordRequest;
 import com.smartfinance.backend.usuario.model.dto.LoginRequest;
+import com.smartfinance.backend.usuario.model.dto.RegisterRequest;
 import com.smartfinance.backend.usuario.model.dto.UpdateProfileRequest;
 import com.smartfinance.backend.usuario.model.dto.UserResponse;
 import com.smartfinance.backend.usuario.exception.EmailAlreadyExistsException;
@@ -78,7 +79,7 @@ class UserControllerTest {
     void loginSetsPersistentCookieWithMaxAgeWhenRememberMeIsTrue() throws Exception {
         LoginRequest request = new LoginRequest("jane@example.com", "secret123", true);
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com")),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
                 "refresh-token",
                 true
         );
@@ -99,7 +100,7 @@ class UserControllerTest {
     void loginSetsSessionCookieWithoutMaxAgeWhenRememberMeIsFalse() throws Exception {
         LoginRequest request = new LoginRequest("jane@example.com", "secret123", false);
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com")),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
                 "refresh-token",
                 false
         );
@@ -114,6 +115,148 @@ class UserControllerTest {
                     String setCookie = result.getResponse().getHeader(HttpHeaders.SET_COOKIE);
                     org.assertj.core.api.Assertions.assertThat(setCookie).doesNotContain("Max-Age");
                 });
+    }
+
+    @Test
+    void loginReturnsRefreshTokenInBodyAndNoCookieForMobileClient() throws Exception {
+        LoginRequest request = new LoginRequest("jane@example.com", "secret123", false);
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "refresh-token",
+                false
+        );
+        when(userService.login(any(LoginRequest.class))).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/login")
+                        .header("X-Client", "mobile")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+                .andExpect(result ->
+                        org.assertj.core.api.Assertions.assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNull());
+    }
+
+    @Test
+    void loginOmitsRefreshTokenFromBodyForWebClient() throws Exception {
+        LoginRequest request = new LoginRequest("jane@example.com", "secret123", false);
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "refresh-token",
+                false
+        );
+        when(userService.login(any(LoginRequest.class))).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(result ->
+                        org.assertj.core.api.Assertions.assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNotNull());
+    }
+
+    @Test
+    void registerReturnsRefreshTokenInBodyAndNoCookieForMobileClient() throws Exception {
+        RegisterRequest request = new RegisterRequest("Jane", "jane@example.com", "secret123");
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "refresh-token",
+                false
+        );
+        when(userService.register(any(RegisterRequest.class))).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/register")
+                        .header("X-Client", "mobile")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+                .andExpect(result ->
+                        org.assertj.core.api.Assertions.assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNull());
+    }
+
+    @Test
+    void registerOmitsRefreshTokenFromBodyForWebClient() throws Exception {
+        RegisterRequest request = new RegisterRequest("Jane", "jane@example.com", "secret123");
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "refresh-token",
+                false
+        );
+        when(userService.register(any(RegisterRequest.class))).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(result ->
+                        org.assertj.core.api.Assertions.assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNotNull());
+    }
+
+    @Test
+    void refreshReturnsRefreshTokenInBodyAndNoCookieForMobileClient() throws Exception {
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "new-refresh-token",
+                false
+        );
+        when(userService.refresh(any())).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/refresh")
+                        .header("X-Client", "mobile")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "old-refresh-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"))
+                .andExpect(result ->
+                        org.assertj.core.api.Assertions.assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNull());
+    }
+
+    @Test
+    void refreshOmitsRefreshTokenFromBodyForWebClient() throws Exception {
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "new-refresh-token",
+                false
+        );
+        when(userService.refresh(any())).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/refresh")
+                        .with(csrf())
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "old-refresh-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(result ->
+                        org.assertj.core.api.Assertions.assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNotNull());
+    }
+
+    @Test
+    void refreshWithMobileHeaderSkipsCsrfProtection() throws Exception {
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "new-refresh-token",
+                false
+        );
+        when(userService.refresh(any())).thenReturn(session);
+
+        // No .with(csrf()) and no X-XSRF-TOKEN header: a mobile client should still succeed.
+        mockMvc.perform(post("/api/users/refresh")
+                        .header("X-Client", "mobile")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "old-refresh-token")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void refreshWithoutMobileHeaderStillRequiresCsrf() throws Exception {
+        // No .with(csrf()) and no X-Client header: a browser client must still be rejected by CSRF.
+        mockMvc.perform(post("/api/users/refresh")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "old-refresh-token")))
+                .andExpect(status().isForbidden());
     }
 
     @Test

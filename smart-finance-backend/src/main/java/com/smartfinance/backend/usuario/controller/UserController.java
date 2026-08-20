@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -57,12 +58,12 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(
+            @Valid @RequestBody RegisterRequest request,
+            @RequestHeader(value = "X-Client", required = false) String client
+    ) {
         AuthSession session = userService.register(request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken(), session.rememberMe()).toString())
-                .body(session.response());
+        return buildAuthResponseEntity(session, HttpStatus.CREATED, isMobileClient(client));
     }
 
     @Operation(summary = "Iniciar sesion", description = "Autentica un usuario y devuelve access token")
@@ -74,12 +75,12 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            @RequestHeader(value = "X-Client", required = false) String client
+    ) {
         AuthSession session = userService.login(request);
-        return ResponseEntity
-                .ok()
-                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken(), session.rememberMe()).toString())
-                .body(session.response());
+        return buildAuthResponseEntity(session, HttpStatus.OK, isMobileClient(client));
     }
 
     @Operation(summary = "Refrescar sesion", description = "Renueva access token y refresh token desde cookie HttpOnly")
@@ -89,13 +90,13 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(HttpServletRequest request) {
+    public ResponseEntity<AuthResponse> refresh(
+            HttpServletRequest request,
+            @RequestHeader(value = "X-Client", required = false) String client
+    ) {
         String refreshToken = resolveRefreshToken(request);
         AuthSession session = userService.refresh(refreshToken);
-        return ResponseEntity
-                .ok()
-                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken(), session.rememberMe()).toString())
-                .body(session.response());
+        return buildAuthResponseEntity(session, HttpStatus.OK, isMobileClient(client));
     }
 
     @Operation(summary = "Obtener CSRF token", description = "Genera/retorna token CSRF y lo expone para el frontend SPA")
@@ -149,6 +150,36 @@ public class UserController {
         Long userId = SecurityUtils.getCurrentUserId();
         userService.changePassword(userId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Mobile clients (Bearer-token-only, no ambient cookies) identify themselves with
+     * {@code X-Client: mobile}. For them, the refresh token travels in the response body instead
+     * of an {@code HttpOnly} cookie — see {@link AuthResponse}'s Javadoc — and the corresponding
+     * request to {@code /api/users/refresh} is exempt from CSRF for that same header
+     * (see {@code SecurityConfig}). Browser clients (the default, no header) keep the
+     * cookie-only behavior unchanged.
+     */
+    private boolean isMobileClient(String client) {
+        return "mobile".equals(client);
+    }
+
+    private ResponseEntity<AuthResponse> buildAuthResponseEntity(AuthSession session, HttpStatus status, boolean mobile) {
+        if (mobile) {
+            AuthResponse bodyWithRefreshToken = new AuthResponse(
+                    session.response().accessToken(),
+                    session.response().tokenType(),
+                    session.response().expiresIn(),
+                    session.response().user(),
+                    session.refreshToken()
+            );
+            return ResponseEntity.status(status).body(bodyWithRefreshToken);
+        }
+
+        return ResponseEntity
+                .status(status)
+                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(session.refreshToken(), session.rememberMe()).toString())
+                .body(session.response());
     }
 
     private String resolveRefreshToken(HttpServletRequest request) {
