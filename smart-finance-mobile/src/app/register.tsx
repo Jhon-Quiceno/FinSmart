@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, Stack } from 'expo-router';
+import { Link, Redirect, Stack } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -9,6 +9,7 @@ import { AppText as Text, AppTextInput as TextInput } from '@/components/app-tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/pressable-scale';
+import { useAuth } from '@/context/auth-context';
 import { useIconColors } from '@/constants/icon-colors';
 import { CARD_SHADOW } from '@/lib/shadows';
 import { registerSchema, type RegisterFormValues } from '@/lib/schemas/register.schema';
@@ -18,6 +19,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { ICON_COLOR_MUTED } = useIconColors();
+  const { status, register } = useAuth();
 
   const {
     control,
@@ -28,12 +30,14 @@ export default function RegisterScreen() {
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   });
 
-  // TODO(Fase 0 backend): reemplazar por registerRequest() real contra POST /api/users/register
-  // una vez exista el endpoint mobile-friendly del §2 del plan — hoy solo valida el formulario.
-  const onSubmit = async (_values: RegisterFormValues) => {
+  if (status === 'authenticated') return <Redirect href="/(tabs)" />;
+
+  const onSubmit = async (values: RegisterFormValues) => {
     setSubmitError(null);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setSubmitError('Registro real pendiente — falta el endpoint mobile-friendly del backend (Fase 0).');
+    const result = await register(values.name, values.email, values.password);
+    if (!result.success) {
+      setSubmitError(result.error ?? 'No se pudo crear la cuenta.');
+    }
   };
 
   return (

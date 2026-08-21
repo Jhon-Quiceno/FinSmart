@@ -1,6 +1,8 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Bot, LayoutGrid, Receipt, Wallet } from 'lucide-react-native';
 import { useColorScheme } from 'react-native';
+
+import { useAuth } from '@/context/auth-context';
 
 const TAB_THEME = {
   light: { bar: 'rgb(255 255 255)', border: 'rgb(220 222 226)', active: 'rgb(39 153 54)', inactive: 'rgb(94 100 108)' },
@@ -10,6 +12,10 @@ const TAB_THEME = {
 export default function TabsLayout() {
   const colorScheme = useColorScheme();
   const theme = TAB_THEME[colorScheme === 'dark' ? 'dark' : 'light'];
+  const { status } = useAuth();
+
+  if (status === 'bootstrapping') return null;
+  if (status !== 'authenticated') return <Redirect href="/login" />;
 
   return (
     <Tabs

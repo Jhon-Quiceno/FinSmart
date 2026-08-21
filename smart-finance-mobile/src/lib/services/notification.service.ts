@@ -43,3 +43,16 @@ export async function updatePreferences(
   const response = await apiClient.put<NotificationPreference>("/api/notifications/preferences", payload)
   return response.data
 }
+
+export interface PushTokenRequest {
+  expoPushToken: string
+  deviceId: string
+}
+
+export async function registerPushToken(payload: PushTokenRequest): Promise<void> {
+  await apiClient.post("/api/notifications/push-token", payload)
+}
+
+export async function unregisterPushToken(deviceId: string): Promise<void> {
+  await apiClient.delete(`/api/notifications/push-token/${deviceId}`)
+}

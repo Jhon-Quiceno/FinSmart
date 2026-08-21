@@ -6,6 +6,8 @@ import {
   getUnreadCount,
   markAllAsRead,
   markAsRead,
+  registerPushToken,
+  unregisterPushToken,
   updatePreferences,
 } from "./notification.service"
 import type { NotificationPreferenceRequest } from "../types/notification"
@@ -124,6 +126,27 @@ describe("notification service", () => {
       const result = await updatePreferences(payload)
 
       expect(result).toEqual(payload)
+    })
+  })
+
+  describe("registerPushToken", () => {
+    it("postea el token de push y el deviceId", async () => {
+      mock.onPost("/api/notifications/push-token").reply(204)
+
+      await registerPushToken({ expoPushToken: "ExponentPushToken[abc123]", deviceId: "device-1" })
+
+      expect(JSON.parse(mock.history.post[0].data)).toEqual({
+        expoPushToken: "ExponentPushToken[abc123]",
+        deviceId: "device-1",
+      })
+    })
+  })
+
+  describe("unregisterPushToken", () => {
+    it("borra el token de push por deviceId", async () => {
+      mock.onDelete("/api/notifications/push-token/device-1").reply(204)
+
+      await expect(unregisterPushToken("device-1")).resolves.toBeUndefined()
     })
   })
 })

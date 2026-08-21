@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { Check, Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText as Text, AppTextInput as TextInput } from '@/components/app-text';
 import { PressableScale } from '@/components/pressable-scale';
+import { useAuth } from '@/context/auth-context';
 import { useIconColors } from '@/constants/icon-colors';
 import { CARD_SHADOW } from '@/lib/shadows';
 import { loginSchema, type LoginFormValues } from '@/lib/schemas/login.schema';
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { ICON_COLOR_MUTED } = useIconColors();
+  const { status, login } = useAuth();
 
   const {
     control,
@@ -32,13 +34,15 @@ export default function LoginScreen() {
     defaultValues: { email: '', password: '', rememberMe: false },
   });
 
-  // TODO(Fase 0 backend): reemplazar por loginRequest() real contra
-  // POST /api/users/login una vez exista el endpoint mobile-friendly del §2 del plan
-  // (docs/plan-app-movil-react-native.md) — hoy solo valida el formulario.
-  const onSubmit = async (_values: LoginFormValues) => {
+  if (status === 'authenticated') return <Redirect href="/(tabs)" />;
+
+  const onSubmit = async (values: LoginFormValues) => {
     setSubmitError(null);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setSubmitError('Login real pendiente — falta el endpoint mobile-friendly del backend (Fase 0).');
+    const result = await login(values.email, values.password, values.rememberMe);
+    if (!result.success) {
+      setSubmitError(result.error ?? 'No se pudo iniciar sesión.');
+    }
+    // En éxito no navegamos manualmente: el guard de arriba redirige apenas status cambia.
   };
 
   return (
@@ -177,16 +181,6 @@ export default function LoginScreen() {
             </Link>
           </Text>
         </View>
-
-        {/* TODO(Fase 0 backend): retirar este acceso una vez exista login real contra
-            POST /api/users/login — hoy es la única forma de llegar al resto del diseño. */}
-        <Link
-          href="/(tabs)"
-          className="mt-6 rounded-lg border border-border px-4 py-3 text-center text-sm font-medium text-muted-foreground"
-          style={{ borderStyle: 'dashed' }}
-        >
-          Continuar sin iniciar sesión (demo)
-        </Link>
       </ScrollView>
     </SafeAreaView>
   );
