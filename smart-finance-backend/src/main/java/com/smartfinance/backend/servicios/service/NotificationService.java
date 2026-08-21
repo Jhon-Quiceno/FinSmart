@@ -192,6 +192,19 @@ public class NotificationService {
     }
 
     /**
+     * Idempotent by design: deleting a deviceId that was never registered (permission denied,
+     * running under Expo Go where remote push isn't available, etc.) still returns success — the
+     * caller (logout flow) cannot know in advance whether a token was ever registered.
+     *
+     * @param deviceId the device identifier to remove
+     */
+    @Transactional
+    public void unregisterPushToken(String deviceId) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        pushTokenRepository.deleteByUser_IdAndDeviceId(userId, deviceId);
+    }
+
+    /**
      * Returns the user's persisted preferences, creating a row with the same defaults as the
      * database column defaults (see {@code V7__create_notifications_and_preferences.sql}) the
      * first time it is requested, so both {@link #getPreferences()} and

@@ -4,6 +4,7 @@ import com.smartfinance.backend.common.config.JwtProperties;
 import com.smartfinance.backend.usuario.model.dto.AuthResponse;
 import com.smartfinance.backend.usuario.model.dto.ChangePasswordRequest;
 import com.smartfinance.backend.usuario.model.dto.LoginRequest;
+import com.smartfinance.backend.usuario.model.dto.RefreshRequest;
 import com.smartfinance.backend.usuario.model.dto.RegisterRequest;
 import com.smartfinance.backend.usuario.model.dto.UpdateProfileRequest;
 import com.smartfinance.backend.usuario.model.dto.UserResponse;
@@ -83,7 +84,7 @@ public class UserController {
         return buildAuthResponseEntity(session, HttpStatus.OK, isMobileClient(client));
     }
 
-    @Operation(summary = "Refrescar sesion", description = "Renueva access token y refresh token desde cookie HttpOnly")
+    @Operation(summary = "Refrescar sesion", description = "Renueva access token y refresh token desde cookie HttpOnly o, para clientes mobile sin cookie, desde el cuerpo de la peticion")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Sesion refrescada exitosamente"),
             @ApiResponse(responseCode = "401", description = "Refresh token invalido",
@@ -92,9 +93,10 @@ public class UserController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
             HttpServletRequest request,
+            @RequestBody(required = false) RefreshRequest body,
             @RequestHeader(value = "X-Client", required = false) String client
     ) {
-        String refreshToken = resolveRefreshToken(request);
+        String refreshToken = resolveRefreshToken(request, body);
         AuthSession session = userService.refresh(refreshToken);
         return buildAuthResponseEntity(session, HttpStatus.OK, isMobileClient(client));
     }
@@ -108,13 +110,13 @@ public class UserController {
         return ResponseEntity.ok(Map.of("token", csrfToken.getToken()));
     }
 
-    @Operation(summary = "Cerrar sesion", description = "Revoca refresh token y limpia cookie")
+    @Operation(summary = "Cerrar sesion", description = "Revoca refresh token (desde cookie HttpOnly o, para clientes mobile sin cookie, desde el cuerpo de la peticion) y limpia cookie")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Sesion cerrada exitosamente")
     })
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request) {
-        String refreshToken = resolveRefreshToken(request);
+    public ResponseEntity<Void> logout(HttpServletRequest request, @RequestBody(required = false) RefreshRequest body) {
+        String refreshToken = resolveRefreshToken(request, body);
         userService.logout(refreshToken);
 
         return ResponseEntity
@@ -155,10 +157,12 @@ public class UserController {
     /**
      * Mobile clients (Bearer-token-only, no ambient cookies) identify themselves with
      * {@code X-Client: mobile}. For them, the refresh token travels in the response body instead
-     * of an {@code HttpOnly} cookie — see {@link AuthResponse}'s Javadoc — and the corresponding
-     * request to {@code /api/users/refresh} is exempt from CSRF for that same header
-     * (see {@code SecurityConfig}). Browser clients (the default, no header) keep the
-     * cookie-only behavior unchanged.
+     * of an {@code HttpOnly} cookie — see {@link AuthResponse}'s Javadoc — and every mutating
+     * request carrying that same header is exempt from CSRF (see {@code SecurityConfig}).
+     * {@code /refresh} and {@code /logout} also accept the token back via {@link RefreshRequest}
+     * in the request body for these clients, since they have no cookie to send it in — see
+     * {@link #resolveRefreshToken(HttpServletRequest, RefreshRequest)}. Browser clients (the
+     * default, no header) keep the cookie-only behavior unchanged.
      */
     private boolean isMobileClient(String client) {
         return "mobile".equals(client);
@@ -182,7 +186,7 @@ public class UserController {
                 .body(session.response());
     }
 
-    private String resolveRefreshToken(HttpServletRequest request) {
+    private String resolveRefreshTokenFromCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
             return null;
@@ -195,6 +199,20 @@ public class UserController {
         }
 
         return null;
+    }
+
+    /**
+     * Cookie first, body second. A browser never sends a body, so its path is unchanged; a mobile
+     * client never has a cookie, so it falls through to the body. If somehow both are present, the
+     * cookie wins — it's the source the server controls ({@code HttpOnly}), not one page JavaScript
+     * could have written.
+     */
+    private String resolveRefreshToken(HttpServletRequest request, RefreshRequest body) {
+        String fromCookie = resolveRefreshTokenFromCookie(request);
+        if (fromCookie != null && !fromCookie.isBlank()) {
+            return fromCookie;
+        }
+        return body == null ? null : body.refreshToken();
     }
 
     /**

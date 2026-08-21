@@ -7,10 +7,12 @@ import com.smartfinance.backend.usuario.model.dto.AuthResponse;
 import com.smartfinance.backend.usuario.model.dto.ChangePasswordRequest;
 import com.smartfinance.backend.usuario.model.dto.LoginRequest;
 import com.smartfinance.backend.usuario.model.dto.RegisterRequest;
+import com.smartfinance.backend.usuario.model.dto.RefreshRequest;
 import com.smartfinance.backend.usuario.model.dto.UpdateProfileRequest;
 import com.smartfinance.backend.usuario.model.dto.UserResponse;
 import com.smartfinance.backend.usuario.exception.EmailAlreadyExistsException;
 import com.smartfinance.backend.usuario.exception.InvalidCredentialsException;
+import com.smartfinance.backend.usuario.exception.InvalidRefreshTokenException;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import com.smartfinance.backend.usuario.service.AuthSession;
 import com.smartfinance.backend.common.security.JwtService;
@@ -29,7 +31,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -257,6 +261,123 @@ class UserControllerTest {
         mockMvc.perform(post("/api/users/refresh")
                         .cookie(new jakarta.servlet.http.Cookie("refresh_token", "old-refresh-token")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void refreshUsesRefreshTokenFromBodyWhenMobileClientHasNoCookie() throws Exception {
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "new-refresh-token",
+                false
+        );
+        when(userService.refresh("stored-token")).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/refresh")
+                        .header("X-Client", "mobile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshRequest("stored-token"))))
+                .andExpect(status().isOk());
+
+        verify(userService).refresh("stored-token");
+    }
+
+    @Test
+    void refreshPrefersCookieOverBodyWhenBothArePresent() throws Exception {
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "new-refresh-token",
+                false
+        );
+        when(userService.refresh("cookie-token")).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/refresh")
+                        .header("X-Client", "mobile")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "cookie-token"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshRequest("body-token"))))
+                .andExpect(status().isOk());
+
+        verify(userService).refresh("cookie-token");
+    }
+
+    @Test
+    void refreshStillWorksForBrowserWithJsonContentTypeAndEmptyBody() throws Exception {
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "new-refresh-token",
+                false
+        );
+        when(userService.refresh("cookie-token")).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/refresh")
+                        .with(csrf())
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "cookie-token"))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(userService).refresh("cookie-token");
+    }
+
+    @Test
+    void refreshStillWorksForBrowserWithoutContentTypeAndWithoutBody() throws Exception {
+        AuthSession session = new AuthSession(
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                "new-refresh-token",
+                false
+        );
+        when(userService.refresh("cookie-token")).thenReturn(session);
+
+        mockMvc.perform(post("/api/users/refresh")
+                        .with(csrf())
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "cookie-token")))
+                .andExpect(status().isOk());
+
+        verify(userService).refresh("cookie-token");
+    }
+
+    @Test
+    void refreshReturns401WhenNeitherCookieNorBodyCarryToken() throws Exception {
+        when(userService.refresh(isNull()))
+                .thenThrow(new InvalidRefreshTokenException("Refresh token requerido"));
+
+        mockMvc.perform(post("/api/users/refresh")
+                        .header("X-Client", "mobile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refreshWithMalformedJsonBodyReturns400() throws Exception {
+        mockMvc.perform(post("/api/users/refresh")
+                        .header("X-Client", "mobile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void logoutUsesRefreshTokenFromBodyWhenNoCookie() throws Exception {
+        mockMvc.perform(post("/api/users/logout")
+                        .header("X-Client", "mobile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshRequest("stored-token"))))
+                .andExpect(status().isNoContent());
+
+        verify(userService).logout("stored-token");
+    }
+
+    @Test
+    void logoutStillClearsCookieEvenForMobileClient() throws Exception {
+        mockMvc.perform(post("/api/users/logout")
+                        .header("X-Client", "mobile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshRequest("stored-token"))))
+                .andExpect(status().isNoContent())
+                .andExpect(result -> {
+                    String setCookie = result.getResponse().getHeader(HttpHeaders.SET_COOKIE);
+                    org.assertj.core.api.Assertions.assertThat(setCookie).contains("Max-Age=0");
+                });
     }
 
     @Test

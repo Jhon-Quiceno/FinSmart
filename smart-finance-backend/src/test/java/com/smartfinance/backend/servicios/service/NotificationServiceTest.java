@@ -268,6 +268,15 @@ class NotificationServiceTest {
         verify(userRepository, never()).getReferenceById(any());
     }
 
+    @Test
+    void unregisterPushTokenShouldDelegateToRepositoryScopedByCurrentUser() {
+        setAuthenticatedUser(1L);
+
+        notificationService.unregisterPushToken("device-1");
+
+        verify(pushTokenRepository).deleteByUser_IdAndDeviceId(1L, "device-1");
+    }
+
     private void setAuthenticatedUser(Long userId) {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(userId, null)
