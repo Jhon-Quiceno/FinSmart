@@ -14,6 +14,7 @@ docs/
 │  # Documentos vivos — fase SaaS actual
 ├── roadmap-saas-cuentas-reales.md     ← Roadmap estratégico: SaaS + cuentas/tarjetas reales
 ├── plan-app-movil-react-native.md     ← Plan de fases de la app móvil (React Native)
+├── plan-sprints-movil-nativo.md       ← Track móvil nativo: milestones M0-M5 (cámara, retiro de Telegram, paridad, Fase 2/3)
 ├── ideas-adicionales-producto.md      ← Funcionalidades investigadas fuera del roadmap actual
 ├── notifications-future.md            ← Canales de notificación futuros (Web Push, Telegram, WhatsApp)
 ├── analisis-valor-extractos-bancarios.md ← Análisis de valor: importación de extractos bancarios
@@ -114,6 +115,7 @@ docs/
 | Consultar el historial de sprints de la fase SaaS | [`sprints/`](sprints/) |
 | Consultar la estrategia de producto (SaaS + cuentas reales) | [`roadmap-saas-cuentas-reales.md`](roadmap-saas-cuentas-reales.md) |
 | Ver el plan de fases de la app móvil (React Native) | [`plan-app-movil-react-native.md`](plan-app-movil-react-native.md) |
+| Ver el track móvil nativo (cámara, retiro de Telegram, paridad, Fase 2/3) | [`plan-sprints-movil-nativo.md`](plan-sprints-movil-nativo.md) |
 | Ver ideas de producto fuera del roadmap actual | [`ideas-adicionales-producto.md`](ideas-adicionales-producto.md) |
 | Evaluar el valor de importar extractos bancarios | [`analisis-valor-extractos-bancarios.md`](analisis-valor-extractos-bancarios.md) |
 | Ver convenciones de commits/PRs (obligatorio) | [`convenciones.md`](convenciones.md) |

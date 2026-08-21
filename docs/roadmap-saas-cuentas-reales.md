@@ -439,7 +439,7 @@ bancaria tipo Plaid es débil o cara (Latam).
 
 ---
 
-## App móvil — 🔲 Futuro (propuesto, al final de todos los sprints numerados)
+## App móvil — 🟡 En curso (Fase 0/1 mergeadas; seguimiento en [`plan-sprints-movil-nativo.md`](plan-sprints-movil-nativo.md))
 
 Fuente: investigación de framework y viabilidad de plataforma.
 
@@ -455,7 +455,7 @@ velocidad de soporte para APIs nuevas de Android/iOS con equipos chicos.
 
 | Fase | Alcance | Esfuerzo | Estado |
 |------|---------|----------|--------|
-| v1 | Paridad con la web: dashboard, carga manual, push del backend | Mediano | 🔲 Futuro |
+| v1 | Paridad con la web: dashboard, carga manual, push del backend | Mediano | 🟡 En curso — Fase 0/1 mergeadas (ver `plan-app-movil-react-native.md`) |
 | v2 | Android only: `NotificationListenerService` + módulo nativo Kotlin, matching con IA | Grande | 🔲 Futuro, depende de Sprint 3 (correo) maduro |
 | v3 | Widgets, biometría, modo offline | Chico-Mediano | 🔲 Futuro |
 
@@ -492,13 +492,13 @@ de sprints.
 |---|---|---|---|
 | 1 | Deudas Fase A + quick-add IA + tracking/rate limiting | ✅ Hecho (PR #82) | §"Nivel 1" 1.1 (Fase A), §"Automatizaciones rápidas", §"Módulos backend" (`ai_usage_events`), §"Mejoras técnicas backend" (rate limiting) |
 | — | Fase B — Dominio de tarjetas completo | ✅ Hecho (#83-#89) | §"Nivel 1" 1.1 (Fase B) — no es un sprint numerado |
-| 2 | Extractos bancarios + primer flujo n8n | ✅ Bot de Telegram validado (2026-07-22); extractos pendiente de validar — rama `feature/sprint-2-extractos-bancarios-telegram-bot`, PR pendiente de abrir | §"Nivel 2" |
+| 2 | Extractos bancarios + primer flujo n8n | ✅ Bot de Telegram validado (2026-07-22); extractos pendiente de validar — mergeado a `develop` vía PR #90 | §"Nivel 2" |
 | 3 | Integración de correo (Gmail API + Pub/Sub) | 🔲 Propuesto | §"Automatización con IA de correo/SMS/notificaciones", §"Módulos backend" (`ingested_messages`, `automation_rules`, `integration_credentials`) |
 | 4 | Seguridad y confiabilidad de backend | 🔲 Propuesto | §"Mejoras técnicas pendientes" → Backend |
 | 5 | Modernización frontend | 🔲 Propuesto | §"Mejoras técnicas pendientes" → Frontend |
 | 6 | Nivel 3: Open Finance en sandbox | 🔲 Propuesto | §"Nivel 3" |
 | 7 | Planes, suscripciones y billing | 🔲 Propuesto | §"SaaS multi-tenant y modelo de negocio", §"Módulos backend" (`plans`, `subscriptions`) |
-| Futuro | App móvil React Native | 🔲 Propuesto, al final | §"App móvil" — plan detallado de fases en [`plan-app-movil-react-native.md`](plan-app-movil-react-native.md) |
+| Futuro | App móvil React Native | 🟡 En curso — Fase 0/1 mergeadas (múltiples PRs) | §"App móvil" — plan detallado de fases en [`plan-app-movil-react-native.md`](plan-app-movil-react-native.md); seguimiento como milestones (M0-M5) en [`plan-sprints-movil-nativo.md`](plan-sprints-movil-nativo.md) |
 | Sin sprint | Dominio de GitHub Students (administrativo) | 🔲 Pendiente | Operativo, en paralelo |
 
 ---
