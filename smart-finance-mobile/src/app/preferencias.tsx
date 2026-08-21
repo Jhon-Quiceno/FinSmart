@@ -19,8 +19,9 @@ export default function PreferenciasScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <Stack.Screen options={{ headerShown: true, title: 'Preferencias' }} />
-      {/* TODO(Fase 0 backend): conectar con un endpoint real de preferencias — hoy son valores
-          fijos de solo lectura, no existe GET/PUT /api/users/preferences todavía. */}
+      {/* Ver docs/plan-sprints-movil-nativo.md, milestone M3: conectar con un endpoint real de
+          preferencias — hoy son valores fijos de solo lectura, no existe GET/PUT
+          /api/users/preferences todavía (deliberadamente diferido a M3, no es deuda de Fase 0). */}
       <View className="gap-3 px-5 py-6">
         <View className="overflow-hidden rounded-xl border border-border bg-card" style={CARD_SHADOW}>
           {ROWS.map((row, index) => {

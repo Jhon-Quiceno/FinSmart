@@ -1,19 +1,53 @@
 import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { Bell, BellOff } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Switch, View } from 'react-native';
 
 import { AppText as Text } from '@/components/app-text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useIconColors } from '@/constants/icon-colors';
+import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks/use-notifications';
+import { registerPushTokenForCurrentUser } from '@/lib/push';
 import { CARD_SHADOW } from '@/lib/shadows';
+import type { NotificationPreferenceRequest } from '@/lib/types/notification';
 
-// TODO(Fase 0 backend): conectar con expo-notifications + ExpoPushAdapter (§Fase 0 del plan)
-// para pedir el permiso real del sistema y registrar el push token contra el backend.
 export default function NotificacionesScreen() {
-  const [pushEnabled, setPushEnabled] = useState(false);
   const { ICON_COLOR_PRIMARY } = useIconColors();
+  const { data: preferences } = useNotificationPreferences();
+  const updatePreferences = useUpdateNotificationPreferences();
+
+  // Refleja el permiso real del sistema, no un estado local inventado — se pide con
+  // requestPermissionsAsync() recién cuando el usuario activa el switch maestro.
+  const [pushEnabled, setPushEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Notifications.getPermissionsAsync().then((settings) => {
+      if (!cancelled) setPushEnabled(settings.granted);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleMasterToggle(value: boolean) {
+    // No existe una API para revocar el permiso del OS desde la app (es responsabilidad del
+    // usuario en Ajustes) — solo se puede reaccionar a un intento de ACTIVAR.
+    if (!value) return;
+
+    const settings = await Notifications.requestPermissionsAsync();
+    setPushEnabled(settings.granted);
+    if (settings.granted) {
+      void registerPushTokenForCurrentUser();
+    }
+  }
+
+  function togglePreference(key: keyof NotificationPreferenceRequest) {
+    if (!preferences) return;
+    updatePreferences.mutate({ ...preferences, [key]: !preferences[key] });
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -38,14 +72,34 @@ export default function NotificacionesScreen() {
             <Text className="text-sm font-medium text-foreground">Activar notificaciones push</Text>
             <Text className="text-xs text-muted-foreground">Recibí alertas aunque no tengas la app abierta</Text>
           </View>
-          <Switch value={pushEnabled} onValueChange={setPushEnabled} />
+          <Switch value={pushEnabled} onValueChange={(value) => void handleMasterToggle(value)} />
         </View>
 
         <View className="gap-3 rounded-xl border border-border bg-card p-4" style={CARD_SHADOW}>
-          <ToggleRow label="Recordatorios de pago" defaultValue disabled={!pushEnabled} />
-          <ToggleRow label="Alertas de sobregasto" defaultValue disabled={!pushEnabled} />
-          <ToggleRow label="Resumen semanal" disabled={!pushEnabled} />
-          <ToggleRow label="Recordatorio de inactividad" defaultValue disabled={!pushEnabled} />
+          <ToggleRow
+            label="Recordatorios de pago"
+            value={preferences?.paymentReminders ?? false}
+            disabled={!pushEnabled}
+            onValueChange={() => togglePreference('paymentReminders')}
+          />
+          <ToggleRow
+            label="Alertas de sobregasto"
+            value={preferences?.overspendAlerts ?? false}
+            disabled={!pushEnabled}
+            onValueChange={() => togglePreference('overspendAlerts')}
+          />
+          <ToggleRow
+            label="Resumen semanal"
+            value={preferences?.weeklySummary ?? false}
+            disabled={!pushEnabled}
+            onValueChange={() => togglePreference('weeklySummary')}
+          />
+          <ToggleRow
+            label="Recordatorio de inactividad"
+            value={preferences?.inactivityReminders ?? false}
+            disabled={!pushEnabled}
+            onValueChange={() => togglePreference('inactivityReminders')}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -54,18 +108,19 @@ export default function NotificacionesScreen() {
 
 function ToggleRow({
   label,
-  defaultValue = false,
+  value,
   disabled = false,
+  onValueChange,
 }: {
   label: string;
-  defaultValue?: boolean;
+  value: boolean;
   disabled?: boolean;
+  onValueChange: (value: boolean) => void;
 }) {
-  const [value, setValue] = useState(defaultValue);
   return (
     <View className="flex-row items-center justify-between">
       <Text className={`text-sm ${disabled ? 'text-muted-foreground' : 'text-foreground'}`}>{label}</Text>
-      <Switch value={value} onValueChange={setValue} disabled={disabled} />
+      <Switch value={value} onValueChange={onValueChange} disabled={disabled} />
     </View>
   );
 }

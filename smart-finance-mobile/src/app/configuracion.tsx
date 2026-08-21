@@ -5,7 +5,6 @@ import {
   ChevronRight,
   LogOut,
   Mail,
-  MessageCircle,
   PieChart,
   Settings,
   Shield,
@@ -32,7 +31,6 @@ const NOTIFICATION_LABELS: { key: keyof typeof mockNotificationPreferences; labe
 
 const CONFIG_MENU_ITEMS: { href: Href; label: string; description: string; icon: LucideIcon }[] = [
   { href: '/reportes', label: 'Reportes', description: 'Comparativas mensuales', icon: PieChart },
-  { href: '/telegram', label: 'Vínculo con Telegram', description: 'Registrá gastos desde el bot', icon: MessageCircle },
   { href: '/preferencias', label: 'Preferencias', description: 'Tema, moneda e idioma', icon: Settings },
   { href: '/notificaciones', label: 'Notificaciones', description: 'Activá alertas y elegí qué recibir', icon: Bell },
 ];

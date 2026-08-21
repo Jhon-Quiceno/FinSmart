@@ -1,6 +1,6 @@
 import MockAdapter from "axios-mock-adapter"
 import { apiClient } from "../api-client"
-import { exportReport, getMonthlyReport, getReportMovements } from "./report.service"
+import { exportReport, exportReportBytes, getMonthlyReport, getReportMovements } from "./report.service"
 
 describe("report service", () => {
   let mock: MockAdapter
@@ -173,6 +173,33 @@ describe("report service", () => {
       mock.onGet("/api/reports/export", { params: { year: 2026, month: 7, format: "csv" } }).reply(500)
 
       await expect(exportReport(2026, 7, "csv")).rejects.toBeTruthy()
+    })
+  })
+
+  describe("exportReportBytes", () => {
+    it("downloads the export as raw bytes and reads the filename from Content-Disposition", async () => {
+      const buffer = new TextEncoder().encode("Fecha,Tipo\n").buffer
+
+      mock.onGet("/api/reports/export", { params: { year: 2026, month: 7, format: "csv" } }).reply(
+        200,
+        buffer,
+        { "content-disposition": 'attachment; filename="korofin-2026-07.csv"' },
+      )
+
+      const result = await exportReportBytes(2026, 7, "csv")
+
+      expect(result.filename).toBe("korofin-2026-07.csv")
+      expect(result.data).toBeInstanceOf(ArrayBuffer)
+    })
+
+    it("falls back to a constructed filename when Content-Disposition is missing", async () => {
+      const buffer = new TextEncoder().encode("Fecha,Tipo\n").buffer
+
+      mock.onGet("/api/reports/export", { params: { year: 2026, month: 3, format: "csv" } }).reply(200, buffer)
+
+      const result = await exportReportBytes(2026, 3, "csv")
+
+      expect(result.filename).toBe("korofin-2026-03.csv")
     })
   })
 })
