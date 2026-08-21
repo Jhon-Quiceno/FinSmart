@@ -1,7 +1,9 @@
 import { Redirect } from 'expo-router';
 
-// TODO(Fase 0 backend): una vez exista sesión real, decidir acá entre /login y /(tabs)
-// según haya o no un refreshToken válido en expo-secure-store.
+import { useAuth } from '@/context/auth-context';
+
 export default function Index() {
-  return <Redirect href="/login" />;
+  const { status } = useAuth();
+  if (status === 'bootstrapping') return null;
+  return <Redirect href={status === 'authenticated' ? '/(tabs)' : '/login'} />;
 }

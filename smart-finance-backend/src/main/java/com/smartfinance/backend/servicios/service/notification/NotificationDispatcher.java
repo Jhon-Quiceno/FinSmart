@@ -3,6 +3,7 @@ package com.smartfinance.backend.servicios.service.notification;
 import com.smartfinance.backend.servicios.model.entity.NotificationPreference;
 import com.smartfinance.backend.servicios.model.entity.NotificationType;
 import com.smartfinance.backend.servicios.repository.NotificationPreferenceRepository;
+import com.smartfinance.backend.servicios.repository.PushTokenRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import com.smartfinance.backend.servicios.service.NotificationService;
 import org.slf4j.Logger;
@@ -34,17 +35,23 @@ public class NotificationDispatcher {
     private final NotificationService notificationService;
     private final UserRepository userRepository;
     private final NotificationSender notificationSender;
+    private final PushTokenRepository pushTokenRepository;
+    private final PushNotificationSender pushNotificationSender;
 
     public NotificationDispatcher(
             NotificationPreferenceRepository notificationPreferenceRepository,
             NotificationService notificationService,
             UserRepository userRepository,
-            NotificationSender notificationSender
+            NotificationSender notificationSender,
+            PushTokenRepository pushTokenRepository,
+            PushNotificationSender pushNotificationSender
     ) {
         this.notificationPreferenceRepository = notificationPreferenceRepository;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.notificationSender = notificationSender;
+        this.pushTokenRepository = pushTokenRepository;
+        this.pushNotificationSender = pushNotificationSender;
     }
 
     /**
@@ -79,6 +86,14 @@ public class NotificationDispatcher {
                 notificationSender.send(recipient, title, message);
             });
         }
+
+        // Registering a device (POST /api/notifications/push-token) IS the opt-in for push — no
+        // separate preference toggle exists, so every registered token gets every dispatched
+        // notification that reaches this point.
+        pushTokenRepository.findByUser_Id(userId).forEach(pushToken -> {
+            PushRecipient recipient = new PushRecipient(userId, pushToken.getExpoPushToken());
+            pushNotificationSender.send(recipient, title, message);
+        });
     }
 
     private boolean isEnabledFor(NotificationPreference preference, NotificationType type) {

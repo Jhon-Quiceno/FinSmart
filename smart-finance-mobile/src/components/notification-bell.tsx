@@ -4,9 +4,7 @@ import { View } from 'react-native';
 
 import { PressableScale } from '@/components/pressable-scale';
 import { useIconColors } from '@/constants/icon-colors';
-
-// Mock: reemplazar por el conteo real de notificaciones sin leer del feed (TODO Fase 0 backend).
-const mockUnreadNotificationsCount = 2;
+import { useUnreadCount } from '@/hooks/use-notifications';
 
 /**
  * Campana de notificaciones del header — distinta de la burbuja de perfil. Lleva al centro de
@@ -15,6 +13,7 @@ const mockUnreadNotificationsCount = 2;
 export function NotificationBell() {
   const router = useRouter();
   const { ICON_COLOR_MUTED } = useIconColors();
+  const { data: unreadCount } = useUnreadCount();
 
   return (
     <PressableScale
@@ -23,7 +22,7 @@ export function NotificationBell() {
       hitSlop={6}
     >
       <Bell size={18} color={ICON_COLOR_MUTED} />
-      {mockUnreadNotificationsCount > 0 && (
+      {!!unreadCount && (
         <View className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
       )}
     </PressableScale>

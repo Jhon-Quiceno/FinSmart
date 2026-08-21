@@ -5,7 +5,6 @@ import {
   ChevronRight,
   LogOut,
   Mail,
-  MessageCircle,
   PieChart,
   Settings,
   Shield,
@@ -18,6 +17,7 @@ import { AppText as Text } from '@/components/app-text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/pressable-scale';
+import { useAuth } from '@/context/auth-context';
 import { useIconColors } from '@/constants/icon-colors';
 import { mockAiProviders, mockNotificationPreferences, mockUser } from '@/lib/mock/configuracion';
 import { CARD_SHADOW } from '@/lib/shadows';
@@ -31,13 +31,13 @@ const NOTIFICATION_LABELS: { key: keyof typeof mockNotificationPreferences; labe
 
 const CONFIG_MENU_ITEMS: { href: Href; label: string; description: string; icon: LucideIcon }[] = [
   { href: '/reportes', label: 'Reportes', description: 'Comparativas mensuales', icon: PieChart },
-  { href: '/telegram', label: 'Vínculo con Telegram', description: 'Registrá gastos desde el bot', icon: MessageCircle },
   { href: '/preferencias', label: 'Preferencias', description: 'Tema, moneda e idioma', icon: Settings },
   { href: '/notificaciones', label: 'Notificaciones', description: 'Activá alertas y elegí qué recibir', icon: Bell },
 ];
 
 export default function ConfiguracionScreen() {
   const { ICON_COLOR_DESTRUCTIVE, ICON_COLOR_MUTED } = useIconColors();
+  const { logout } = useAuth();
   return (
     <SafeAreaView className="flex-1 bg-background">
       <Stack.Screen options={{ headerShown: true, title: 'Configuración' }} />
@@ -130,7 +130,10 @@ export default function ConfiguracionScreen() {
           <ChevronRight size={16} color={ICON_COLOR_MUTED} />
         </PressableScale>
 
-        <PressableScale className="flex-row items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-5 py-4">
+        <PressableScale
+          className="flex-row items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-5 py-4"
+          onPress={() => void logout()}
+        >
           <LogOut size={16} color={ICON_COLOR_DESTRUCTIVE} />
           <Text className="text-sm font-medium text-destructive">Cerrar sesión</Text>
         </PressableScale>

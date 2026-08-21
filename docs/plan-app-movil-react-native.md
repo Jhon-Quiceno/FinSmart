@@ -104,7 +104,7 @@ pensado para un problema que un cliente nativo con Bearer token no tiene.
 
 | Cosa de la web | Por qué no aplica en RN |
 |---|---|
-| Web Push (VAPID) — `docs/notifications-future.md` lo marca como "mejor candidato futuro" para web | Es específico de Service Worker de navegador. En móvil el canal equivalente es **push nativo** (`expo-notifications` sobre FCM/APNs) — reemplaza a Web Push, no lo complementa. Requiere un adaptador backend nuevo (`ExpoPushAdapter` implementando el puerto `NotificationSender` ya existente, mismo patrón que `EmailNotificationSender`). |
+| Web Push (VAPID) — `docs/notifications-future.md` lo marca como "mejor candidato futuro" para web | Es específico de Service Worker de navegador. En móvil el canal equivalente es **push nativo** (`expo-notifications` sobre FCM/APNs) — reemplaza a Web Push, no lo complementa. Requiere un adaptador backend nuevo (`ExpoPushAdapter` implementando el puerto hermano `PushNotificationSender`, no `NotificationSender` directamente — `NotificationSender` está atado 1:1 a `EmailRecipient` e inyectado como dependencia única, no lista, en `NotificationDispatcher`, así que reusarlo tal cual dispararía un `NoUniqueBeanDefinitionException`). |
 | PWA / Service Worker propio (`public/sw.js` si se implementa) | No aplica — RN no corre en un navegador. |
 | SSR/SEO de Next.js, metadata, rutas públicas indexables | Irrelevante en una app de instalación directa (no hay crawler indexando una app nativa). |
 | Cookie `HttpOnly` + CSRF (`XSRF-TOKEN`) | Ver §2 — se reemplaza por Bearer + refresh en `expo-secure-store`. |
@@ -172,10 +172,10 @@ Configuración de VS Code (carpeta `smart-finance-mobile/.vscode/`):
 
 ### Fase 0 — Preparación (antes de escribir pantallas)
 
-- [ ] Backend: endpoint de auth mobile-friendly (§2) — refresh token en body, exento de CSRF.
-- [ ] Backend: adaptador `ExpoPushAdapter` sobre el puerto `NotificationSender` (mismo patrón
-      que `EmailNotificationSender`), tabla `push_tokens` (`user_id`, `expo_push_token`,
-      `device_id`, `created_at`).
+- [x] Backend: endpoint de auth mobile-friendly (§2) — refresh token en body, exento de CSRF.
+- [x] Backend: adaptador `ExpoPushAdapter` sobre el puerto hermano `PushNotificationSender`
+      (no `NotificationSender` directamente — ver §4), tabla `push_tokens` (`user_id`,
+      `expo_push_token`, `device_id`, `created_at`).
 - [ ] Scaffolding `smart-finance-mobile/` con Expo + TypeScript + Expo Router + NativeWind.
 - [ ] Configurar VS Code (`.vscode/extensions.json` + `settings.json` + `tasks.json`, ver §5.1)
       y verificar que `npx expo start` levanta y conecta con Expo Go en un celular físico.
@@ -228,6 +228,10 @@ real queda marcado con `TODO(Fase 0 backend)` en el código:
 
 ### Fase 2 (v2) — Automatización Android (la pieza diferencial)
 
+> El seguimiento en forma de milestone de esta fase (y de todo lo que viene después de la
+> Fase 1) vive en [`plan-sprints-movil-nativo.md`](plan-sprints-movil-nativo.md) — ahí es
+> M4.
+
 Depende de que el Sprint 3 del roadmap general (ingestión de correo, `ingested_messages`,
 motor de extracción con IA, bandeja de revisión) esté maduro — **no tiene sentido construir
 esto antes**, porque reutiliza el mismo pipeline de extracción/confianza/revisión que ese
@@ -246,6 +250,11 @@ sprint deja armado.
       "auto-categorización inteligente en Android", nunca como paridad de plataforma.
 
 ### Fase 3 (v3) — Capacidades nativas adicionales
+
+> Seguimiento como milestone en [`plan-sprints-movil-nativo.md`](plan-sprints-movil-nativo.md)
+> (M5). La captura de recibo por cámara listada más abajo se adelantó a M1 de ese documento
+> (no depende de biometría/offline/widgets y el trabajo real resultó mínimo — ver M1 para el
+> detalle).
 
 | Ítem | Detalle |
 |---|---|

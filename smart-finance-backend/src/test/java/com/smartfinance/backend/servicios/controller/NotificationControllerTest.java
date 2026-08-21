@@ -6,6 +6,7 @@ import com.smartfinance.backend.common.config.SecurityConfig;
 import com.smartfinance.backend.servicios.model.dto.NotificationPreferenceRequest;
 import com.smartfinance.backend.servicios.model.dto.NotificationPreferenceResponse;
 import com.smartfinance.backend.servicios.model.dto.NotificationResponse;
+import com.smartfinance.backend.servicios.model.dto.PushTokenRequest;
 import com.smartfinance.backend.common.exception.ResourceNotFoundException;
 import com.smartfinance.backend.servicios.model.entity.NotificationType;
 import com.smartfinance.backend.usuario.repository.UserRepository;
@@ -31,10 +32,13 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -173,5 +177,80 @@ class NotificationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidBody))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void registerPushTokenReturns204WhenValid() throws Exception {
+        PushTokenRequest request = new PushTokenRequest("ExponentPushToken[abc123]", "device-1");
+
+        mockMvc.perform(post("/api/notifications/push-token")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(notificationService).registerPushToken(request);
+    }
+
+    @Test
+    void registerPushTokenReturns400WhenExpoPushTokenIsBlank() throws Exception {
+        String invalidBody = """
+                {"expoPushToken": "", "deviceId": "device-1"}
+                """;
+
+        mockMvc.perform(post("/api/notifications/push-token")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void mutatingRequestWithMobileHeaderSkipsCsrf() throws Exception {
+        // No .with(csrf()): the X-Client: mobile header alone must be enough to bypass CSRF,
+        // on a path that is NOT one of the unconditionally-exempt ones (see SecurityConfig).
+        PushTokenRequest request = new PushTokenRequest("ExponentPushToken[abc123]", "device-1");
+
+        mockMvc.perform(post("/api/notifications/push-token")
+                        .header("Authorization", AUTH_HEADER)
+                        .header("X-Client", "mobile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void mutatingRequestWithoutMobileHeaderStillRequiresCsrf() throws Exception {
+        PushTokenRequest request = new PushTokenRequest("ExponentPushToken[abc123]", "device-1");
+
+        mockMvc.perform(post("/api/notifications/push-token")
+                        .header("Authorization", AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unregisterPushTokenReturns204() throws Exception {
+        mockMvc.perform(delete("/api/notifications/push-token/device-1")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(notificationService).unregisterPushToken("device-1");
+    }
+
+    @Test
+    void unregisterPushTokenWithMobileHeaderSkipsCsrf() throws Exception {
+        // Same CSRF-exemption contract as mutatingRequestWithMobileHeaderSkipsCsrf, exercised on
+        // the DELETE endpoint the real mobile app will call on logout.
+        mockMvc.perform(delete("/api/notifications/push-token/device-1")
+                        .header("Authorization", AUTH_HEADER)
+                        .header("X-Client", "mobile"))
+                .andExpect(status().isNoContent());
+
+        verify(notificationService).unregisterPushToken("device-1");
     }
 }

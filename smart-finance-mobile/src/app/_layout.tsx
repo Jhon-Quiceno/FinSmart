@@ -1,3 +1,4 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -5,6 +6,9 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { KorofinThemeProvider } from '@/components/korofin-theme-provider';
+import { AuthProvider, useAuth } from '@/context/auth-context';
+import { queryClient } from '@/lib/query-client';
+import { useQueryAppStateFocus } from '@/lib/query-focus';
 import '@/global.css';
 
 // Colores de header nativo (React Navigation no puede leer clases de NativeWind) — mismas
@@ -19,9 +23,6 @@ const HEADER_THEME = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const theme = HEADER_THEME[colorScheme === 'dark' ? 'dark' : 'light'];
-
   // Inter-Variable.ttf es el variable font oficial de Google Fonts (eje de peso 100-900 en
   // un solo archivo) — la misma tipografía que carga la web vía next/font/google. Con un
   // solo archivo, las clases `font-medium`/`font-semibold`/`font-bold` que ya usa toda la
@@ -30,27 +31,46 @@ export default function RootLayout() {
     Inter: require('../../assets/fonts/Inter-Variable.ttf'),
   });
 
-  useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
   if (!fontsLoaded) {
     return null;
   }
 
   return (
-    <KorofinThemeProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          headerStyle: { backgroundColor: theme.card },
-          headerTintColor: theme.tint,
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: theme.background },
-        }}
-      />
-    </KorofinThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <KorofinThemeProvider>
+          <RootNavigator />
+        </KorofinThemeProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
+// El splash ahora depende de DOS gates AND-eados: fuentes cargadas (ver RootLayout de arriba)
+// Y sesión resuelta (bootstrapping del AuthProvider) — antes solo dependía de las fuentes, lo
+// que dejaba ver un frame de /login o /(tabs) "equivocado" mientras el AuthProvider todavía
+// no sabía si había sesión.
+function RootNavigator() {
+  const colorScheme = useColorScheme();
+  const theme = HEADER_THEME[colorScheme === 'dark' ? 'dark' : 'light'];
+  const { status } = useAuth();
+  useQueryAppStateFocus();
+
+  useEffect(() => {
+    if (status !== 'bootstrapping') {
+      SplashScreen.hideAsync();
+    }
+  }, [status]);
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        headerStyle: { backgroundColor: theme.card },
+        headerTintColor: theme.tint,
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: theme.background },
+      }}
+    />
   );
 }
