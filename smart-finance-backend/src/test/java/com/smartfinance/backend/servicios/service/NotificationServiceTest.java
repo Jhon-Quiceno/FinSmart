@@ -3,15 +3,18 @@ package com.smartfinance.backend.servicios.service;
 import com.smartfinance.backend.servicios.model.dto.NotificationPreferenceRequest;
 import com.smartfinance.backend.servicios.model.dto.NotificationPreferenceResponse;
 import com.smartfinance.backend.servicios.model.dto.NotificationResponse;
+import com.smartfinance.backend.servicios.model.dto.PushTokenRequest;
 import com.smartfinance.backend.common.exception.ResourceNotFoundException;
 import com.smartfinance.backend.servicios.mapper.NotificationMapper;
 import com.smartfinance.backend.servicios.mapper.NotificationPreferenceMapper;
 import com.smartfinance.backend.servicios.model.entity.Notification;
 import com.smartfinance.backend.servicios.model.entity.NotificationPreference;
 import com.smartfinance.backend.servicios.model.entity.NotificationType;
+import com.smartfinance.backend.servicios.model.entity.PushToken;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.servicios.repository.NotificationPreferenceRepository;
 import com.smartfinance.backend.servicios.repository.NotificationRepository;
+import com.smartfinance.backend.servicios.repository.PushTokenRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -57,6 +60,9 @@ class NotificationServiceTest {
 
     @Mock
     private NotificationPreferenceMapper notificationPreferenceMapper;
+
+    @Mock
+    private PushTokenRepository pushTokenRepository;
 
     @InjectMocks
     private NotificationService notificationService;
@@ -228,6 +234,38 @@ class NotificationServiceTest {
 
         Assertions.assertEquals(1, result.getTotalElements());
         Assertions.assertEquals(30L, result.getContent().get(0).id());
+    }
+
+    @Test
+    void registerPushTokenShouldCreateNewRowWhenDeviceNotYetRegistered() {
+        setAuthenticatedUser(1L);
+        PushTokenRequest request = new PushTokenRequest("ExponentPushToken[abc123]", "device-1");
+        when(pushTokenRepository.findByUser_IdAndDeviceId(1L, "device-1")).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(1L)).thenReturn(buildUser(1L));
+
+        notificationService.registerPushToken(request);
+
+        ArgumentCaptor<PushToken> captor = ArgumentCaptor.forClass(PushToken.class);
+        verify(pushTokenRepository).save(captor.capture());
+        Assertions.assertEquals("ExponentPushToken[abc123]", captor.getValue().getExpoPushToken());
+        Assertions.assertEquals("device-1", captor.getValue().getDeviceId());
+    }
+
+    @Test
+    void registerPushTokenShouldOverwriteTokenOnExistingRowForSameDevice() {
+        setAuthenticatedUser(1L);
+        PushTokenRequest request = new PushTokenRequest("ExponentPushToken[rotated]", "device-1");
+        PushToken existing = new PushToken();
+        existing.setId(5L);
+        existing.setExpoPushToken("ExponentPushToken[old]");
+        existing.setDeviceId("device-1");
+        when(pushTokenRepository.findByUser_IdAndDeviceId(1L, "device-1")).thenReturn(Optional.of(existing));
+
+        notificationService.registerPushToken(request);
+
+        verify(pushTokenRepository).save(existing);
+        Assertions.assertEquals("ExponentPushToken[rotated]", existing.getExpoPushToken());
+        verify(userRepository, never()).getReferenceById(any());
     }
 
     private void setAuthenticatedUser(Long userId) {

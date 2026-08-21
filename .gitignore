@@ -1,6 +1,7 @@
 # Ignore agent and skill files
 .agents/
 .claude/
+.codegraph/
 
 # Ignore environment files with secrets
 .env

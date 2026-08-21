@@ -2,8 +2,10 @@ package com.smartfinance.backend.servicios.service.notification;
 
 import com.smartfinance.backend.servicios.model.entity.NotificationPreference;
 import com.smartfinance.backend.servicios.model.entity.NotificationType;
+import com.smartfinance.backend.servicios.model.entity.PushToken;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.servicios.repository.NotificationPreferenceRepository;
+import com.smartfinance.backend.servicios.repository.PushTokenRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import com.smartfinance.backend.servicios.service.NotificationService;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -35,6 +38,12 @@ class NotificationDispatcherTest {
 
     @Mock
     private NotificationSender notificationSender;
+
+    @Mock
+    private PushTokenRepository pushTokenRepository;
+
+    @Mock
+    private PushNotificationSender pushNotificationSender;
 
     @InjectMocks
     private NotificationDispatcher notificationDispatcher;
@@ -145,5 +154,31 @@ class NotificationDispatcherTest {
         notificationDispatcher.dispatch(4L, NotificationType.MONTH_END_PREDICTION, "Título", "Mensaje", null);
 
         verify(notificationService).createNotification(4L, NotificationType.MONTH_END_PREDICTION, "Título", "Mensaje", null);
+    }
+
+    @Test
+    void dispatchShouldSendPushToEveryTokenRegisteredByTheUser() {
+        when(notificationPreferenceRepository.findByUser_Id(8L)).thenReturn(Optional.empty());
+        PushToken firstDevice = new PushToken();
+        firstDevice.setExpoPushToken("ExponentPushToken[first]");
+        PushToken secondDevice = new PushToken();
+        secondDevice.setExpoPushToken("ExponentPushToken[second]");
+        when(pushTokenRepository.findByUser_Id(8L)).thenReturn(List.of(firstDevice, secondDevice));
+
+        notificationDispatcher.dispatch(8L, NotificationType.PAYMENT_REMINDER, "Título", "Mensaje", null);
+
+        verify(pushNotificationSender).send(eq(new PushRecipient(8L, "ExponentPushToken[first]")), eq("Título"), eq("Mensaje"));
+        verify(pushNotificationSender).send(eq(new PushRecipient(8L, "ExponentPushToken[second]")), eq("Título"), eq("Mensaje"));
+    }
+
+    @Test
+    void dispatchShouldSkipPushWhenUserHasNoRegisteredTokens() {
+        when(notificationPreferenceRepository.findByUser_Id(9L)).thenReturn(Optional.empty());
+        when(pushTokenRepository.findByUser_Id(9L)).thenReturn(List.of());
+
+        notificationDispatcher.dispatch(9L, NotificationType.PAYMENT_REMINDER, "Título", "Mensaje", null);
+
+        verify(notificationService).createNotification(9L, NotificationType.PAYMENT_REMINDER, "Título", "Mensaje", null);
+        verify(pushNotificationSender, never()).send(any(PushRecipient.class), anyString(), anyString());
     }
 }

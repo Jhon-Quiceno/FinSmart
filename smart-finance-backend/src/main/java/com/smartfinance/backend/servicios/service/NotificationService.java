@@ -3,14 +3,17 @@ package com.smartfinance.backend.servicios.service;
 import com.smartfinance.backend.servicios.model.dto.NotificationPreferenceRequest;
 import com.smartfinance.backend.servicios.model.dto.NotificationPreferenceResponse;
 import com.smartfinance.backend.servicios.model.dto.NotificationResponse;
+import com.smartfinance.backend.servicios.model.dto.PushTokenRequest;
 import com.smartfinance.backend.common.exception.ResourceNotFoundException;
 import com.smartfinance.backend.servicios.mapper.NotificationMapper;
 import com.smartfinance.backend.servicios.mapper.NotificationPreferenceMapper;
 import com.smartfinance.backend.servicios.model.entity.Notification;
 import com.smartfinance.backend.servicios.model.entity.NotificationPreference;
 import com.smartfinance.backend.servicios.model.entity.NotificationType;
+import com.smartfinance.backend.servicios.model.entity.PushToken;
 import com.smartfinance.backend.servicios.repository.NotificationPreferenceRepository;
 import com.smartfinance.backend.servicios.repository.NotificationRepository;
+import com.smartfinance.backend.servicios.repository.PushTokenRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
 import com.smartfinance.backend.common.security.SecurityUtils;
 import org.slf4j.Logger;
@@ -45,19 +48,22 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final NotificationMapper notificationMapper;
     private final NotificationPreferenceMapper notificationPreferenceMapper;
+    private final PushTokenRepository pushTokenRepository;
 
     public NotificationService(
             NotificationRepository notificationRepository,
             NotificationPreferenceRepository notificationPreferenceRepository,
             UserRepository userRepository,
             NotificationMapper notificationMapper,
-            NotificationPreferenceMapper notificationPreferenceMapper
+            NotificationPreferenceMapper notificationPreferenceMapper,
+            PushTokenRepository pushTokenRepository
     ) {
         this.notificationRepository = notificationRepository;
         this.notificationPreferenceRepository = notificationPreferenceRepository;
         this.userRepository = userRepository;
         this.notificationMapper = notificationMapper;
         this.notificationPreferenceMapper = notificationPreferenceMapper;
+        this.pushTokenRepository = pushTokenRepository;
     }
 
     @Transactional(readOnly = true)
@@ -158,6 +164,31 @@ public class NotificationService {
         notificationPreferenceMapper.updateEntityFromRequest(request, preference);
 
         return notificationPreferenceMapper.toResponse(notificationPreferenceRepository.save(preference));
+    }
+
+    /**
+     * Registers (or updates) an Expo push token for one of the current user's devices.
+     *
+     * <p>Upserts on {@code (user, deviceId)} rather than always inserting: the same device
+     * reinstalling the app or having its token rotated by Expo must overwrite the existing row,
+     * not accumulate duplicates (enforced at the database level by
+     * {@code uk_push_tokens_user_device} in {@code V26__create_push_tokens.sql}).
+     *
+     * @param request the device's current token and a stable device identifier
+     */
+    @Transactional
+    public void registerPushToken(PushTokenRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        PushToken pushToken = pushTokenRepository.findByUser_IdAndDeviceId(userId, request.deviceId())
+                .orElseGet(() -> {
+                    PushToken created = new PushToken();
+                    created.setUser(userRepository.getReferenceById(userId));
+                    created.setDeviceId(request.deviceId());
+                    return created;
+                });
+
+        pushToken.setExpoPushToken(request.expoPushToken());
+        pushTokenRepository.save(pushToken);
     }
 
     /**
