@@ -11,23 +11,19 @@ import {
   User,
   type LucideIcon,
 } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppText as Text } from '@/components/app-text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChangePasswordModal } from '@/components/change-password-modal';
+import { EditProfileModal } from '@/components/edit-profile-modal';
 import { PressableScale } from '@/components/pressable-scale';
 import { useAuth } from '@/context/auth-context';
 import { useIconColors } from '@/constants/icon-colors';
-import { mockAiProviders, mockNotificationPreferences, mockUser } from '@/lib/mock/configuracion';
+import { useAiProvidersStatus } from '@/hooks/use-ai-providers';
 import { CARD_SHADOW } from '@/lib/shadows';
-
-const NOTIFICATION_LABELS: { key: keyof typeof mockNotificationPreferences; label: string }[] = [
-  { key: 'paymentReminders', label: 'Recordatorios de pago' },
-  { key: 'overspendAlerts', label: 'Alertas de sobregasto' },
-  { key: 'weeklySummary', label: 'Resumen semanal' },
-  { key: 'inactivityReminders', label: 'Recordatorio de inactividad' },
-];
 
 const CONFIG_MENU_ITEMS: { href: Href; label: string; description: string; icon: LucideIcon }[] = [
   { href: '/reportes', label: 'Reportes', description: 'Comparativas mensuales', icon: PieChart },
@@ -37,7 +33,14 @@ const CONFIG_MENU_ITEMS: { href: Href; label: string; description: string; icon:
 
 export default function ConfiguracionScreen() {
   const { ICON_COLOR_DESTRUCTIVE, ICON_COLOR_MUTED } = useIconColors();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const providersQuery = useAiProvidersStatus();
+
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [changePasswordVisible, setChangePasswordVisible] = useState(false);
+
+  const providers = providersQuery.data ?? [];
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <Stack.Screen options={{ headerShown: true, title: 'Configuración' }} />
@@ -47,14 +50,13 @@ export default function ConfiguracionScreen() {
             <User size={32} color={ICON_COLOR_MUTED} />
           </View>
           <View className="items-center">
-            <Text className="text-base font-semibold text-foreground">{mockUser.name}</Text>
+            <Text className="text-base font-semibold text-foreground">{user?.name ?? ''}</Text>
             <View className="mt-1 flex-row items-center gap-1.5">
               <Mail size={12} color={ICON_COLOR_MUTED} />
-              <Text className="text-xs text-muted-foreground">{mockUser.email}</Text>
+              <Text className="text-xs text-muted-foreground">{user?.email ?? ''}</Text>
             </View>
           </View>
-          {/* TODO(Fase 0 backend): edición real de perfil contra PUT /api/users/me. */}
-          <PressableScale className="mt-1 rounded-lg border border-border px-4 py-2">
+          <PressableScale className="mt-1 rounded-lg border border-border px-4 py-2" onPress={() => setEditProfileVisible(true)}>
             <Text className="text-xs font-medium text-foreground">Editar perfil</Text>
           </PressableScale>
         </View>
@@ -84,37 +86,24 @@ export default function ConfiguracionScreen() {
         </View>
 
         <View className="rounded-xl border border-border bg-card p-5" style={CARD_SHADOW}>
-          <Text className="mb-3 text-base font-semibold text-card-foreground">Preferencias de notificación</Text>
-          <View className="gap-2.5">
-            {NOTIFICATION_LABELS.map(({ key, label }) => (
-              <View key={key} className="flex-row items-center justify-between">
-                <Text className="text-sm text-foreground">{label}</Text>
-                <View className={`rounded-full px-2.5 py-0.5 ${mockNotificationPreferences[key] ? 'bg-success/15' : 'bg-muted'}`}>
-                  <Text className={`text-[10px] font-medium ${mockNotificationPreferences[key] ? 'text-success' : 'text-muted-foreground'}`}>
-                    {mockNotificationPreferences[key] ? 'Activo' : 'Inactivo'}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View className="rounded-xl border border-border bg-card p-5" style={CARD_SHADOW}>
           <View className="mb-3 flex-row items-center gap-2">
             <Bot size={16} color={ICON_COLOR_MUTED} />
             <Text className="text-base font-semibold text-card-foreground">Proveedores de IA</Text>
           </View>
           <View className="gap-2.5">
-            {mockAiProviders.map((provider) => (
+            {providers.map((provider) => (
               <View key={provider.name} className="flex-row items-center justify-between">
                 <Text className="text-sm text-foreground">{provider.name}</Text>
-                <View className={`rounded-full px-2.5 py-0.5 ${provider.active ? 'bg-success/15' : 'bg-muted'}`}>
-                  <Text className={`text-[10px] font-medium ${provider.active ? 'text-success' : 'text-muted-foreground'}`}>
-                    {provider.active ? 'En uso' : 'Disponible'}
+                <View className={`rounded-full px-2.5 py-0.5 ${provider.configured ? 'bg-success/15' : 'bg-muted'}`}>
+                  <Text className={`text-[10px] font-medium ${provider.configured ? 'text-success' : 'text-muted-foreground'}`}>
+                    {provider.configured ? 'En uso' : 'Disponible'}
                   </Text>
                 </View>
               </View>
             ))}
+            {providers.length === 0 && !providersQuery.isPending && (
+              <Text className="text-xs text-muted-foreground">No hay proveedores configurados.</Text>
+            )}
           </View>
           <Text className="mt-3 text-xs text-muted-foreground">Solo lectura — se administra desde el backend</Text>
         </View>
@@ -122,6 +111,7 @@ export default function ConfiguracionScreen() {
         <PressableScale
           className="flex-row items-center justify-between rounded-xl border border-border bg-card px-5 py-4"
           style={CARD_SHADOW}
+          onPress={() => setChangePasswordVisible(true)}
         >
           <View className="flex-row items-center gap-2.5">
             <Shield size={16} color={ICON_COLOR_MUTED} />
@@ -138,6 +128,9 @@ export default function ConfiguracionScreen() {
           <Text className="text-sm font-medium text-destructive">Cerrar sesión</Text>
         </PressableScale>
       </ScrollView>
+
+      <EditProfileModal visible={editProfileVisible} onClose={() => setEditProfileVisible(false)} />
+      <ChangePasswordModal visible={changePasswordVisible} onClose={() => setChangePasswordVisible(false)} />
     </SafeAreaView>
   );
 }
