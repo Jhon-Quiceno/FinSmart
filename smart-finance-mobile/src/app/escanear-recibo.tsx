@@ -13,6 +13,7 @@ import { useCreateExpense } from '@/hooks/use-expenses';
 import { useCreateIncome } from '@/hooks/use-incomes';
 import { useScanReceipt } from '@/hooks/use-scan-receipt';
 import { getApiErrorMessage } from '@/lib/api-client';
+import { getTodayDateInput } from '@/lib/date';
 import { CARD_SHADOW } from '@/lib/shadows';
 import type { CategoryType } from '@/lib/types/category';
 
@@ -29,6 +30,7 @@ export default function EscanearReciboScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [capturedImage, setCapturedImage] = useState<{ uri: string; dataUri: string } | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   const scanReceipt = useScanReceipt();
 
@@ -47,9 +49,16 @@ export default function EscanearReciboScreen() {
     const camera = cameraRef.current;
     if (!camera) return;
 
-    const photo = await camera.takePictureAsync({ base64: true, quality: 0.6 });
+    let photo;
+    try {
+      photo = await camera.takePictureAsync({ base64: true, quality: 0.6 });
+    } catch {
+      setCaptureError('No se pudo tomar la foto. Probá de nuevo.');
+      return;
+    }
     if (!photo?.base64) return;
 
+    setCaptureError(null);
     const dataUri = `data:image/jpeg;base64,${photo.base64}`;
     setCapturedImage({ uri: photo.uri, dataUri });
 
@@ -92,7 +101,7 @@ export default function EscanearReciboScreen() {
     const payload = {
       description: trimmedDescription,
       amount: parsedAmount,
-      date: new Date().toISOString().slice(0, 10),
+      date: getTodayDateInput(),
       categoryId,
     };
 
@@ -141,6 +150,11 @@ export default function EscanearReciboScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
         <SafeAreaView className="absolute inset-x-0 bottom-0">
+          {captureError && (
+            <View className="mx-8 mb-3 rounded-lg bg-black/60 px-3 py-2">
+              <Text className="text-center text-sm text-white">{captureError}</Text>
+            </View>
+          )}
           <View className="flex-row items-center justify-between px-8 pb-6">
             <Pressable
               className="h-11 w-11 items-center justify-center rounded-full bg-black/40"

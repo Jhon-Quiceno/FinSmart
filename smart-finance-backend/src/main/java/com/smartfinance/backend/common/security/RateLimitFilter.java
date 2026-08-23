@@ -15,16 +15,17 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Basic in-memory rate limiting for the three endpoints most exposed to abuse: login, register,
- * and the AI chat endpoint (which fans out to a paid/rate-limited AI provider per call).
+ * Basic in-memory rate limiting for the endpoints most exposed to abuse: login, register, and the
+ * two routes that fan out to a paid/rate-limited AI provider per call ({@code /api/ai/chat} and
+ * {@code /api/receipts/scan}).
  *
  * <p><b>Filter order decision:</b> registered via {@code addFilterAfter(rateLimitFilter,
  * JwtAuthenticationFilter.class)} in {@code SecurityConfig} — running after
  * {@link JwtAuthenticationFilter} means {@link SecurityContextHolder} already has the
- * authenticated user (if any) by the time this filter runs, so {@code /api/ai/chat} can be keyed
- * by IP+userId instead of IP alone. The simpler alternative (IP-only for all three routes, filter
+ * authenticated user (if any) by the time this filter runs, so the AI-backed routes can be keyed
+ * by IP+userId instead of IP alone. The simpler alternative (IP-only for every route, filter
  * order irrelevant) was considered and rejected: two different users behind the same IP
- * (office/NAT) would otherwise share one AI-chat bucket, which is a worse failure mode than the
+ * (office/NAT) would otherwise share one bucket, which is a worse failure mode than the
  * small added complexity of reading the security context here.
  *
  * <p><b>Constructor dependencies are intentionally limited to {@code @Value}-injected
@@ -43,6 +44,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String LOGIN_PATH = "/api/users/login";
     private static final String REGISTER_PATH = "/api/users/register";
     private static final String AI_CHAT_PATH = "/api/ai/chat";
+    private static final String RECEIPT_SCAN_PATH = "/api/receipts/scan";
 
     private final InMemoryRateLimiter rateLimiter = new InMemoryRateLimiter();
 
@@ -52,6 +54,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Duration registerWindow;
     private final int aiChatMaxRequests;
     private final Duration aiChatWindow;
+    private final int receiptScanMaxRequests;
+    private final Duration receiptScanWindow;
 
     public RateLimitFilter(
             @Value("${app.rate-limit.login.max-requests:5}") int loginMaxRequests,
@@ -59,7 +63,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             @Value("${app.rate-limit.register.max-requests:3}") int registerMaxRequests,
             @Value("${app.rate-limit.register.window-seconds:300}") long registerWindowSeconds,
             @Value("${app.rate-limit.ai-chat.max-requests:10}") int aiChatMaxRequests,
-            @Value("${app.rate-limit.ai-chat.window-seconds:60}") long aiChatWindowSeconds
+            @Value("${app.rate-limit.ai-chat.window-seconds:60}") long aiChatWindowSeconds,
+            @Value("${app.rate-limit.receipt-scan.max-requests:10}") int receiptScanMaxRequests,
+            @Value("${app.rate-limit.receipt-scan.window-seconds:60}") long receiptScanWindowSeconds
     ) {
         this.loginMaxRequests = loginMaxRequests;
         this.loginWindow = Duration.ofSeconds(loginWindowSeconds);
@@ -67,6 +73,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.registerWindow = Duration.ofSeconds(registerWindowSeconds);
         this.aiChatMaxRequests = aiChatMaxRequests;
         this.aiChatWindow = Duration.ofSeconds(aiChatWindowSeconds);
+        this.receiptScanMaxRequests = receiptScanMaxRequests;
+        this.receiptScanWindow = Duration.ofSeconds(receiptScanWindowSeconds);
     }
 
     @Override
@@ -94,18 +102,27 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return new RateLimitRule(clientIp(request) + ":register", registerMaxRequests, registerWindow);
         }
         if (AI_CHAT_PATH.equals(path)) {
-            return new RateLimitRule(aiChatKey(request), aiChatMaxRequests, aiChatWindow);
+            return new RateLimitRule(authenticatedKey(request, "ai-chat"), aiChatMaxRequests, aiChatWindow);
+        }
+        if (RECEIPT_SCAN_PATH.equals(path)) {
+            return new RateLimitRule(authenticatedKey(request, "receipt-scan"), receiptScanMaxRequests, receiptScanWindow);
         }
         return null;
     }
 
-    private String aiChatKey(HttpServletRequest request) {
+    /**
+     * Misma idea que la clave de {@code /api/ai/chat}: IP+userId en vez de solo IP, para que dos
+     * usuarios autenticados detrás del mismo NAT/oficina no compartan un mismo balde. Usada por
+     * ambas rutas que disparan una llamada de IA paga por request ({@code /api/ai/chat} y
+     * {@code /api/receipts/scan}).
+     */
+    private String authenticatedKey(HttpServletRequest request, String bucket) {
         String ip = clientIp(request);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() != null) {
-            return ip + ":ai-chat:" + authentication.getPrincipal();
+            return ip + ":" + bucket + ":" + authentication.getPrincipal();
         }
-        return ip + ":ai-chat";
+        return ip + ":" + bucket;
     }
 
     /**

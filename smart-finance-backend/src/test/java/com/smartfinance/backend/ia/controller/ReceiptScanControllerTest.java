@@ -118,4 +118,16 @@ class ReceiptScanControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void scanReturns400WhenImageDataUriExceedsMaxSize() throws Exception {
+        ReceiptScanRequest request = new ReceiptScanRequest("data:image/jpeg;base64," + "a".repeat(15_000_001));
+
+        mockMvc.perform(post("/api/receipts/scan")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
 }
