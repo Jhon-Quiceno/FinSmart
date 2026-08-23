@@ -34,7 +34,13 @@
         }
       ],
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "KoroFin usa la cámara para escanear tus recibos y cargar el gasto automáticamente."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
