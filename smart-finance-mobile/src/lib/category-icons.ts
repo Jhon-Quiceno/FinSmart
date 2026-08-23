@@ -11,8 +11,7 @@ import {
 } from 'lucide-react-native';
 
 // Ícono específico por categoría para las filas de movimientos/transacciones — más informativo
-// que la flecha genérica de ingreso/gasto que se usaba antes. Nombres coherentes con
-// `lib/mock/categorias.ts`/`lib/mock/movimientos.ts`.
+// que la flecha genérica de ingreso/gasto que se usaba antes.
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Mercado: ShoppingCart,
   Transporte: Car,

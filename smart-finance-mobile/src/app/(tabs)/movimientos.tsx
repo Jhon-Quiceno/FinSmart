@@ -22,7 +22,7 @@ import { formatCurrency, formatDate } from '@/lib/format';
 import { mergeMovements, type Movement } from '@/lib/merge-movements';
 import type { CategoryType } from '@/lib/types/category';
 import type { PaymentMethodType } from '@/lib/types/expense';
-import { FREQUENCY_LABELS } from '@/lib/mock/servicios';
+import { FREQUENCY_LABELS } from '@/constants/recurring-frequency';
 import { CARD_SHADOW } from '@/lib/shadows';
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethodType, string> = {
