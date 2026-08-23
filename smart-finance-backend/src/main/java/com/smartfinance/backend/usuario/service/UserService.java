@@ -6,6 +6,8 @@ import com.smartfinance.backend.usuario.model.dto.ChangePasswordRequest;
 import com.smartfinance.backend.usuario.model.dto.LoginRequest;
 import com.smartfinance.backend.usuario.model.dto.RegisterRequest;
 import com.smartfinance.backend.usuario.model.dto.UpdateProfileRequest;
+import com.smartfinance.backend.usuario.model.dto.UpdateUserPreferencesRequest;
+import com.smartfinance.backend.usuario.model.dto.UserPreferencesResponse;
 import com.smartfinance.backend.usuario.model.dto.UserResponse;
 import com.smartfinance.backend.usuario.exception.EmailAlreadyExistsException;
 import com.smartfinance.backend.usuario.exception.InvalidCredentialsException;
@@ -170,6 +172,32 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
         refreshTokenService.revokeAllForUser(userId);
+    }
+
+    /**
+     * @throws ResourceNotFoundException si no existe un usuario con {@code userId}
+     */
+    @Transactional(readOnly = true)
+    public UserPreferencesResponse getPreferences(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        return new UserPreferencesResponse(user.getTheme(), user.getCurrency(), user.getLanguage());
+    }
+
+    /**
+     * @throws ResourceNotFoundException si no existe un usuario con {@code userId}
+     */
+    @Transactional
+    public UserPreferencesResponse updatePreferences(Long userId, UpdateUserPreferencesRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        user.setTheme(request.theme());
+        user.setCurrency(request.currency());
+        user.setLanguage(request.language());
+        User updatedUser = userRepository.save(user);
+
+        return new UserPreferencesResponse(updatedUser.getTheme(), updatedUser.getCurrency(), updatedUser.getLanguage());
     }
 
     private AuthSession buildAuthSession(User user, boolean rememberMe) {

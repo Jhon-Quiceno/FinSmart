@@ -7,6 +7,8 @@ import com.smartfinance.backend.usuario.model.dto.LoginRequest;
 import com.smartfinance.backend.usuario.model.dto.RefreshRequest;
 import com.smartfinance.backend.usuario.model.dto.RegisterRequest;
 import com.smartfinance.backend.usuario.model.dto.UpdateProfileRequest;
+import com.smartfinance.backend.usuario.model.dto.UpdateUserPreferencesRequest;
+import com.smartfinance.backend.usuario.model.dto.UserPreferencesResponse;
 import com.smartfinance.backend.usuario.model.dto.UserResponse;
 import com.smartfinance.backend.common.exception.ErrorResponse;
 import com.smartfinance.backend.common.security.SecurityUtils;
@@ -27,6 +29,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -152,6 +155,28 @@ public class UserController {
         Long userId = SecurityUtils.getCurrentUserId();
         userService.changePassword(userId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Obtener preferencias", description = "Devuelve el tema, la moneda y el idioma del usuario autenticado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Preferencias disponibles")
+    })
+    @GetMapping("/preferences")
+    public ResponseEntity<UserPreferencesResponse> getPreferences() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(userService.getPreferences(userId));
+    }
+
+    @Operation(summary = "Actualizar preferencias", description = "Actualiza el tema, la moneda y el idioma del usuario autenticado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Preferencias actualizadas exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Datos de entrada invalidos",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PatchMapping("/preferences")
+    public ResponseEntity<UserPreferencesResponse> updatePreferences(@Valid @RequestBody UpdateUserPreferencesRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(userService.updatePreferences(userId, request));
     }
 
     /**

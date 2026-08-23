@@ -12,6 +12,8 @@ import com.smartfinance.backend.usuario.exception.InvalidRefreshTokenException;
 import com.smartfinance.backend.common.exception.ResourceNotFoundException;
 import com.smartfinance.backend.usuario.mapper.UserMapper;
 import com.smartfinance.backend.ia.model.entity.AiMessageKind;
+import com.smartfinance.backend.usuario.model.entity.AppLanguage;
+import com.smartfinance.backend.usuario.model.entity.ThemePreference;
 import com.smartfinance.backend.usuario.model.entity.User;
 import com.smartfinance.backend.ia.repository.AiMessageRepository;
 import com.smartfinance.backend.usuario.repository.UserRepository;
@@ -69,7 +71,7 @@ class UserServiceTest {
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
         when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
         when(refreshTokenService.createForUser(any(User.class), eq(false))).thenReturn("refresh-token");
-        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(10L, "Ana", "ana@mail.com"));
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(10L, "Ana", "ana@mail.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES));
 
         AuthSession session = userService.register(request);
 
@@ -102,7 +104,7 @@ class UserServiceTest {
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
         when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
         when(refreshTokenService.createForUser(any(User.class), eq(true))).thenReturn("refresh-token");
-        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(7L, "John", "john@mail.com"));
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(7L, "John", "john@mail.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES));
 
         AuthSession session = userService.login(new LoginRequest("JOHN@mail.com", "secret123", true));
 
@@ -127,7 +129,7 @@ class UserServiceTest {
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
         when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
         when(refreshTokenService.createForUser(any(User.class), eq(false))).thenReturn("refresh-token");
-        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(8L, "Jane", "jane@mail.com"));
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(8L, "Jane", "jane@mail.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES));
 
         AuthSession session = userService.login(new LoginRequest("jane@mail.com", "secret123", null));
 
@@ -179,7 +181,7 @@ class UserServiceTest {
                 .thenReturn(new RefreshTokenService.RotationResult(user, "new-refresh-token", true));
         when(jwtService.generateAccessToken(user)).thenReturn("access-token");
         when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
-        when(userMapper.toResponse(user)).thenReturn(new UserResponse(11L, "Rotated", "rotated@mail.com"));
+        when(userMapper.toResponse(user)).thenReturn(new UserResponse(11L, "Rotated", "rotated@mail.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES));
 
         AuthSession session = userService.refresh("old-refresh-token");
 
@@ -196,7 +198,7 @@ class UserServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.existsByEmailIgnoreCase("new@mail.com")).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(1L, "New Name", "new@mail.com"));
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(1L, "New Name", "new@mail.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES));
 
         UserResponse response = userService.updateProfile(1L, new UpdateProfileRequest("New Name", "NEW@mail.com"));
 
@@ -214,7 +216,7 @@ class UserServiceTest {
         user.setEmail("same@mail.com");
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(1L, "New Name", "same@mail.com"));
+        when(userMapper.toResponse(any(User.class))).thenReturn(new UserResponse(1L, "New Name", "same@mail.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES));
 
         userService.updateProfile(1L, new UpdateProfileRequest("New Name", "same@mail.com"));
 
@@ -233,6 +235,43 @@ class UserServiceTest {
         Assertions.assertThrows(EmailAlreadyExistsException.class,
                 () -> userService.updateProfile(1L, new UpdateProfileRequest("New Name", "taken@mail.com")));
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void getPreferencesShouldReturnStoredValues() {
+        User user = new User();
+        user.setId(1L);
+        user.setTheme(ThemePreference.DARK);
+        user.setCurrency("USD");
+        user.setLanguage(AppLanguage.EN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        var response = userService.getPreferences(1L);
+
+        Assertions.assertEquals(ThemePreference.DARK, response.theme());
+        Assertions.assertEquals("USD", response.currency());
+        Assertions.assertEquals(AppLanguage.EN, response.language());
+    }
+
+    @Test
+    void updatePreferencesShouldPersistNewValues() {
+        User user = new User();
+        user.setId(1L);
+        user.setTheme(ThemePreference.SYSTEM);
+        user.setCurrency("COP");
+        user.setLanguage(AppLanguage.ES);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = userService.updatePreferences(
+                1L, new com.smartfinance.backend.usuario.model.dto.UpdateUserPreferencesRequest(ThemePreference.DARK, "USD", AppLanguage.EN));
+
+        Assertions.assertEquals(ThemePreference.DARK, response.theme());
+        Assertions.assertEquals("USD", response.currency());
+        Assertions.assertEquals(AppLanguage.EN, response.language());
+        Assertions.assertEquals(ThemePreference.DARK, user.getTheme());
+        Assertions.assertEquals("USD", user.getCurrency());
+        Assertions.assertEquals(AppLanguage.EN, user.getLanguage());
     }
 
     @Test

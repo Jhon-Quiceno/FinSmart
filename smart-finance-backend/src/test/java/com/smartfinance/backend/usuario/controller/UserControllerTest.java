@@ -9,7 +9,11 @@ import com.smartfinance.backend.usuario.model.dto.LoginRequest;
 import com.smartfinance.backend.usuario.model.dto.RegisterRequest;
 import com.smartfinance.backend.usuario.model.dto.RefreshRequest;
 import com.smartfinance.backend.usuario.model.dto.UpdateProfileRequest;
+import com.smartfinance.backend.usuario.model.dto.UpdateUserPreferencesRequest;
+import com.smartfinance.backend.usuario.model.dto.UserPreferencesResponse;
 import com.smartfinance.backend.usuario.model.dto.UserResponse;
+import com.smartfinance.backend.usuario.model.entity.AppLanguage;
+import com.smartfinance.backend.usuario.model.entity.ThemePreference;
 import com.smartfinance.backend.usuario.exception.EmailAlreadyExistsException;
 import com.smartfinance.backend.usuario.exception.InvalidCredentialsException;
 import com.smartfinance.backend.usuario.exception.InvalidRefreshTokenException;
@@ -36,6 +40,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -83,7 +89,7 @@ class UserControllerTest {
     void loginSetsPersistentCookieWithMaxAgeWhenRememberMeIsTrue() throws Exception {
         LoginRequest request = new LoginRequest("jane@example.com", "secret123", true);
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "refresh-token",
                 true
         );
@@ -104,7 +110,7 @@ class UserControllerTest {
     void loginSetsSessionCookieWithoutMaxAgeWhenRememberMeIsFalse() throws Exception {
         LoginRequest request = new LoginRequest("jane@example.com", "secret123", false);
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "refresh-token",
                 false
         );
@@ -125,7 +131,7 @@ class UserControllerTest {
     void loginReturnsRefreshTokenInBodyAndNoCookieForMobileClient() throws Exception {
         LoginRequest request = new LoginRequest("jane@example.com", "secret123", false);
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "refresh-token",
                 false
         );
@@ -146,7 +152,7 @@ class UserControllerTest {
     void loginOmitsRefreshTokenFromBodyForWebClient() throws Exception {
         LoginRequest request = new LoginRequest("jane@example.com", "secret123", false);
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "refresh-token",
                 false
         );
@@ -166,7 +172,7 @@ class UserControllerTest {
     void registerReturnsRefreshTokenInBodyAndNoCookieForMobileClient() throws Exception {
         RegisterRequest request = new RegisterRequest("Jane", "jane@example.com", "secret123");
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "refresh-token",
                 false
         );
@@ -187,7 +193,7 @@ class UserControllerTest {
     void registerOmitsRefreshTokenFromBodyForWebClient() throws Exception {
         RegisterRequest request = new RegisterRequest("Jane", "jane@example.com", "secret123");
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "refresh-token",
                 false
         );
@@ -206,7 +212,7 @@ class UserControllerTest {
     @Test
     void refreshReturnsRefreshTokenInBodyAndNoCookieForMobileClient() throws Exception {
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "new-refresh-token",
                 false
         );
@@ -224,7 +230,7 @@ class UserControllerTest {
     @Test
     void refreshOmitsRefreshTokenFromBodyForWebClient() throws Exception {
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "new-refresh-token",
                 false
         );
@@ -242,7 +248,7 @@ class UserControllerTest {
     @Test
     void refreshWithMobileHeaderSkipsCsrfProtection() throws Exception {
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "new-refresh-token",
                 false
         );
@@ -266,7 +272,7 @@ class UserControllerTest {
     @Test
     void refreshUsesRefreshTokenFromBodyWhenMobileClientHasNoCookie() throws Exception {
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "new-refresh-token",
                 false
         );
@@ -284,7 +290,7 @@ class UserControllerTest {
     @Test
     void refreshPrefersCookieOverBodyWhenBothArePresent() throws Exception {
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "new-refresh-token",
                 false
         );
@@ -303,7 +309,7 @@ class UserControllerTest {
     @Test
     void refreshStillWorksForBrowserWithJsonContentTypeAndEmptyBody() throws Exception {
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "new-refresh-token",
                 false
         );
@@ -321,7 +327,7 @@ class UserControllerTest {
     @Test
     void refreshStillWorksForBrowserWithoutContentTypeAndWithoutBody() throws Exception {
         AuthSession session = new AuthSession(
-                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com"), null),
+                new AuthResponse("access-token", "Bearer", 900L, new UserResponse(1L, "Jane", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES), null),
                 "new-refresh-token",
                 false
         );
@@ -383,7 +389,7 @@ class UserControllerTest {
     @Test
     void updateProfileReturns200WithUpdatedUserWhenValid() throws Exception {
         UpdateProfileRequest request = new UpdateProfileRequest("Jane Doe", "jane@example.com");
-        UserResponse response = new UserResponse(1L, "Jane Doe", "jane@example.com");
+        UserResponse response = new UserResponse(1L, "Jane Doe", "jane@example.com", ThemePreference.SYSTEM, "COP", AppLanguage.ES);
         when(userService.updateProfile(eq(1L), any(UpdateProfileRequest.class))).thenReturn(response);
 
         mockMvc.perform(put("/api/users/profile")
@@ -477,6 +483,76 @@ class UserControllerTest {
         ChangePasswordRequest request = new ChangePasswordRequest("oldPassword", "newPassword123");
 
         mockMvc.perform(put("/api/users/password")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getPreferencesReturns200WithStoredValues() throws Exception {
+        when(userService.getPreferences(1L))
+                .thenReturn(new UserPreferencesResponse(ThemePreference.DARK, "USD", AppLanguage.EN));
+
+        mockMvc.perform(get("/api/users/preferences").header("Authorization", AUTH_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.theme").value("DARK"))
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.language").value("EN"));
+    }
+
+    @Test
+    void getPreferencesReturns403WithoutAuthToken() throws Exception {
+        mockMvc.perform(get("/api/users/preferences"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updatePreferencesReturns200WithUpdatedValues() throws Exception {
+        UpdateUserPreferencesRequest request = new UpdateUserPreferencesRequest(ThemePreference.DARK, "USD", AppLanguage.EN);
+        when(userService.updatePreferences(eq(1L), any(UpdateUserPreferencesRequest.class)))
+                .thenReturn(new UserPreferencesResponse(ThemePreference.DARK, "USD", AppLanguage.EN));
+
+        mockMvc.perform(patch("/api/users/preferences")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.theme").value("DARK"))
+                .andExpect(jsonPath("$.currency").value("USD"))
+                .andExpect(jsonPath("$.language").value("EN"));
+    }
+
+    @Test
+    void updatePreferencesReturns400WhenThemeIsAnUnknownEnumValue() throws Exception {
+        String invalidBody = "{\"theme\":\"PURPLE\",\"currency\":\"COP\",\"language\":\"ES\"}";
+
+        mockMvc.perform(patch("/api/users/preferences")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updatePreferencesReturns400WhenCurrencyIsNotSupported() throws Exception {
+        String invalidBody = "{\"theme\":\"DARK\",\"currency\":\"XXX\",\"language\":\"EN\"}";
+
+        mockMvc.perform(patch("/api/users/preferences")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updatePreferencesReturns403WithoutAuthToken() throws Exception {
+        UpdateUserPreferencesRequest request = new UpdateUserPreferencesRequest(ThemePreference.DARK, "USD", AppLanguage.EN);
+
+        mockMvc.perform(patch("/api/users/preferences")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
