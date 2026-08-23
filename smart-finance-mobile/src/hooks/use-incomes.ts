@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { createWithOfflineFallback } from "@/lib/offline-create"
 import {
   createIncome,
   deleteIncome,
@@ -25,7 +26,8 @@ export function useIncomes(filters: IncomeFilters = {}) {
 export function useCreateIncome() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: IncomeRequest) => createIncome(payload),
+    mutationFn: (payload: IncomeRequest) =>
+      createWithOfflineFallback("INCOME", payload, () => createIncome(payload)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [INCOMES_QUERY_KEY] })
     },

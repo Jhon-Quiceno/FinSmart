@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
-import { Globe, Palette, RotateCcw, Wallet } from 'lucide-react-native';
+import { Fingerprint, Globe, Palette, RotateCcw, Wallet } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { AppText as Text } from '@/components/app-text';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,11 @@ import { PressableScale } from '@/components/pressable-scale';
 import { useIconColors } from '@/constants/icon-colors';
 import { useUpdateUserPreferences, useUserPreferences } from '@/hooks/use-user-preferences';
 import { getApiErrorMessage } from '@/lib/api-client';
+import {
+  isBiometricAvailable,
+  isBiometricLockEnabled,
+  setBiometricLockEnabled,
+} from '@/lib/biometric-lock';
 import { CARD_SHADOW } from '@/lib/shadows';
 import {
   CURRENCIES,
@@ -63,6 +68,22 @@ export default function PreferenciasScreen() {
   const [language, setLanguage] = useState<LanguageCode>('ES');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const hydratedFromBackend = useRef(false);
+
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLockEnabled, setBiometricLockEnabledState] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const [available, enabled] = await Promise.all([isBiometricAvailable(), isBiometricLockEnabled()]);
+      setBiometricAvailable(available);
+      setBiometricLockEnabledState(enabled && available);
+    })();
+  }, []);
+
+  async function toggleBiometricLock(value: boolean) {
+    setBiometricLockEnabledState(value);
+    await setBiometricLockEnabled(value);
+  }
 
   // Hidrata una sola vez desde el backend (fuente de verdad entre dispositivos); cambios
   // posteriores del usuario en esta pantalla no deben pisarse con un refetch en segundo plano.
@@ -201,6 +222,24 @@ export default function PreferenciasScreen() {
                 );
               })}
             </View>
+          </View>
+        )}
+
+        {biometricAvailable && (
+          <View
+            className="flex-row items-center justify-between rounded-xl border border-border bg-card p-4"
+            style={CARD_SHADOW}
+          >
+            <View className="flex-1 flex-row items-center gap-3 pr-3">
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
+                <Fingerprint size={16} color={ICON_COLOR_MUTED} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-medium text-foreground">Bloqueo con biometría</Text>
+                <Text className="text-xs text-muted-foreground">Face ID o huella para abrir la app</Text>
+              </View>
+            </View>
+            <Switch value={biometricLockEnabled} onValueChange={(value) => void toggleBiometricLock(value)} />
           </View>
         )}
 

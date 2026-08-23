@@ -40,6 +40,13 @@
         {
           "cameraPermission": "KoroFin usa la cámara para escanear tus recibos y cargar el gasto automáticamente."
         }
+      ],
+      "expo-sqlite",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "KoroFin usa Face ID para desbloquear la app cuando activás el bloqueo con biometría."
+        }
       ]
     ],
     "experiments": {
