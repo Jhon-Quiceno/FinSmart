@@ -1,7 +1,12 @@
+import type { BackendTheme, CurrencyCode, LanguageCode } from './preferences';
+
 export interface ApiUserResponse {
   id: number;
   name: string;
   email: string;
+  theme: BackendTheme;
+  currency: CurrencyCode;
+  language: LanguageCode;
 }
 
 export interface ApiAuthResponse {

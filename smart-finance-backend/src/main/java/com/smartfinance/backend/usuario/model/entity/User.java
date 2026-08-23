@@ -3,6 +3,8 @@ package com.smartfinance.backend.usuario.model.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -63,6 +65,17 @@ public class User {
      */
     @Column(name = "ai_chat_period", length = 7)
     private String aiChatPeriod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme", nullable = false, length = 10)
+    private ThemePreference theme = ThemePreference.SYSTEM;
+
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = "COP";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "language", nullable = false, length = 5)
+    private AppLanguage language = AppLanguage.ES;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
