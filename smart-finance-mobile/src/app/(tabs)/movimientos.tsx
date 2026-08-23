@@ -1,6 +1,7 @@
-import { ArrowDownRight, ArrowUpRight, Repeat, Search, Sparkles, Tag } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ArrowDownRight, ArrowUpRight, Camera, Repeat, Search, Sparkles, Tag } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { AppText as Text, AppTextInput as TextInput } from '@/components/app-text';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -287,6 +288,8 @@ function ServiciosSection() {
 }
 
 export default function MovimientosScreen() {
+  const router = useRouter();
+  const { ICON_COLOR_PRIMARY } = useIconColors();
   const [section, setSection] = useState<Section>('MOVS');
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
@@ -308,6 +311,14 @@ export default function MovimientosScreen() {
       {section === 'CATS' && <CategoriasSection />}
       {section === 'SERVS' && <ServiciosSection />}
 
+      <Pressable
+        onPress={() => router.push('/escanear-recibo')}
+        className="items-center justify-center rounded-full border border-border bg-card"
+        style={[CARD_SHADOW, { position: 'absolute', right: 24, bottom: 88, width: 44, height: 44 }]}
+        hitSlop={6}
+      >
+        <Camera size={18} color={ICON_COLOR_PRIMARY} />
+      </Pressable>
       <Fab onPress={() => setQuickAddVisible(true)} />
       <QuickAddExpenseModal visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
     </SafeAreaView>
