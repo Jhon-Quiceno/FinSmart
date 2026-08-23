@@ -1,16 +1,11 @@
-import axios from 'axios';
-
+import { isConnectivityFailure } from './connectivity';
 import { enqueueMovement, type QueuedMovementKind } from './offline-queue';
+import { getCurrentUserId } from './session';
 import type { ExpenseRequest } from './types/expense';
 import type { IncomeRequest } from './types/income';
 
 export interface QueuedResult {
   queued: true;
-}
-
-/** Una falla sin `response` es de conectividad (nunca llegó a un servidor) - ver getApiErrorMessage. */
-function isConnectivityFailure(error: unknown): boolean {
-  return axios.isAxiosError(error) && !error.response;
 }
 
 /**
@@ -29,7 +24,14 @@ export async function createWithOfflineFallback<T>(
     return await createFn();
   } catch (error) {
     if (!isConnectivityFailure(error)) throw error;
-    await enqueueMovement(kind, payload);
+
+    // Sin usuario identificable (no debería pasar: crear un movimiento ya requiere estar
+    // autenticado) no hay a nombre de quién encolarlo — se propaga la falla de conectividad
+    // original en vez de arriesgar una fila huérfana.
+    const userId = getCurrentUserId();
+    if (userId === null) throw error;
+
+    await enqueueMovement(userId, kind, payload);
     return { queued: true };
   }
 }

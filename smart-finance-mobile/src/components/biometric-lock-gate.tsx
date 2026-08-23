@@ -16,8 +16,14 @@ export function BiometricLockGate({ children }: PropsWithChildren) {
   const { ICON_COLOR_MUTED } = useIconColors();
   const [locked, setLocked] = useState<boolean | null>(null);
   const appState = useRef(AppState.currentState);
+  // El prompt nativo de authenticateAsync dispara por sí mismo transiciones de AppState
+  // (active→inactial→active) mientras está en pantalla. Sin este guard, el listener de abajo
+  // interpretaría esa transición como "volvió de background" y llamaría a checkLockState de
+  // nuevo, pisando un desbloqueo exitoso que ya estaba en curso (doble prompt).
+  const authenticating = useRef(false);
 
   const checkLockState = useCallback(async () => {
+    if (authenticating.current) return;
     const [enabled, available] = await Promise.all([isBiometricLockEnabled(), isBiometricAvailable()]);
     setLocked(enabled && available);
   }, []);
@@ -36,13 +42,25 @@ export function BiometricLockGate({ children }: PropsWithChildren) {
   }, [checkLockState]);
 
   async function unlock() {
-    const success = await authenticate('Desbloqueá KoroFin');
-    if (success) setLocked(false);
+    authenticating.current = true;
+    try {
+      const success = await authenticate('Desbloqueá KoroFin');
+      if (success) setLocked(false);
+    } catch {
+      // El usuario puede reintentar tocando "Desbloquear" de nuevo.
+    } finally {
+      authenticating.current = false;
+    }
   }
 
-  // null: todavía resolviendo si el bloqueo aplica — no mostrar nada tapado ni destapado por un
-  // instante. false: bloqueo desactivado o sin biometría enrolada — pasa directo.
-  if (locked === null || locked === false) {
+  // null: todavía resolviendo si el bloqueo aplica — no se sabe si mostrar la app o el bloqueo, y
+  // mostrar los children acá (aunque sea un instante) expondría el cache financiero persistido en
+  // AsyncStorage antes de confirmar que el usuario pasó la biometría. false: bloqueo desactivado o
+  // sin biometría enrolada — pasa directo.
+  if (locked === null) {
+    return null;
+  }
+  if (locked === false) {
     return <>{children}</>;
   }
 
