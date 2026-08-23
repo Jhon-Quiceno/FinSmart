@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { createWithOfflineFallback } from "@/lib/offline-create"
 import {
   createExpense,
   deleteExpense,
@@ -25,7 +26,8 @@ export function useExpenses(filters: ExpenseFilters = {}) {
 export function useCreateExpense() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: ExpenseRequest) => createExpense(payload),
+    mutationFn: (payload: ExpenseRequest) =>
+      createWithOfflineFallback("EXPENSE", payload, () => createExpense(payload)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [EXPENSES_QUERY_KEY] })
     },

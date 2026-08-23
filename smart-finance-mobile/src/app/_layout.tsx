@@ -1,12 +1,16 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { BiometricLockGate } from '@/components/biometric-lock-gate';
 import { KorofinThemeProvider } from '@/components/korofin-theme-provider';
 import { AuthProvider, useAuth } from '@/context/auth-context';
+import { useOfflineSync } from '@/hooks/use-offline-sync';
 import { queryClient } from '@/lib/query-client';
 import { useQueryAppStateFocus } from '@/lib/query-focus';
 import '@/global.css';
@@ -22,6 +26,13 @@ const HEADER_THEME = {
 // evita el flash de texto en la fuente del sistema antes de que Inter esté lista.
 SplashScreen.preventAutoHideAsync();
 
+// Modo offline acotado (M5, docs/plan-sprints-movil-nativo.md): persiste el cache de react-query
+// en AsyncStorage para que el último estado conocido (dashboard, movimientos, etc.) siga
+// disponible al abrir la app sin conexión, no solo mientras el proceso de JS sigue vivo en
+// memoria. La cola de altas de gasto/ingreso creadas offline vive aparte, en SQLite
+// (ver lib/offline-queue.ts) — react-query solo cachea lecturas.
+const asyncStoragePersister = createAsyncStoragePersister({ storage: AsyncStorage });
+
 export default function RootLayout() {
   // Inter-Variable.ttf es el variable font oficial de Google Fonts (eje de peso 100-900 en
   // un solo archivo) — la misma tipografía que carga la web vía next/font/google. Con un
@@ -36,13 +47,18 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister: asyncStoragePersister }}
+    >
       <AuthProvider>
         <KorofinThemeProvider>
-          <RootNavigator />
+          <BiometricLockGate>
+            <RootNavigator />
+          </BiometricLockGate>
         </KorofinThemeProvider>
       </AuthProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 
@@ -55,6 +71,7 @@ function RootNavigator() {
   const theme = HEADER_THEME[colorScheme === 'dark' ? 'dark' : 'light'];
   const { status } = useAuth();
   useQueryAppStateFocus();
+  useOfflineSync(status === 'authenticated');
 
   useEffect(() => {
     if (status !== 'bootstrapping') {

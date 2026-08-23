@@ -1,5 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
+import { decodeJwtPayload } from './jwt';
+
 // Primitivas de sesion: access token en memoria (nunca en disco) + refresh token persistido en
 // SecureStore (Keychain/Keystore cifrado por el OS). Reglas deliberadas:
 //   - Nunca cae a AsyncStorage como fallback: AsyncStorage no esta cifrado, y guardar ahi un
@@ -30,6 +32,21 @@ export function setAccessToken(token: string | null): void {
 
 export function clearAccessToken(): void {
   accessToken = null;
+}
+
+/**
+ * Id del usuario dueño del access token actual, leído del claim `sub` (ver
+ * `JwtService#generateAccessToken` en el backend) — no de `AuthContext.user`, para no depender de
+ * que el estado de React ya haya sido pintado. Usado por la cola offline (offline-create.ts,
+ * offline-queue.ts) para no mezclar movimientos encolados entre dos usuarios en el mismo
+ * dispositivo.
+ */
+export function getCurrentUserId(): number | null {
+  if (!accessToken) return null;
+  const payload = decodeJwtPayload<{ sub?: string }>(accessToken);
+  if (!payload?.sub) return null;
+  const userId = Number(payload.sub);
+  return Number.isFinite(userId) ? userId : null;
 }
 
 /** El login la llama con el valor real de "Recordar mi sesión". */
