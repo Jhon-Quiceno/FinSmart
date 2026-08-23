@@ -47,3 +47,10 @@ export interface AiUsage {
   remaining: number
   resetsAt: string
 }
+
+/** Espejo de AiProviderStatusResponse del backend — GET /api/ai/providers/status, solo lectura. */
+export interface AiProviderStatus {
+  name: string
+  configured: boolean
+  priority: number
+}

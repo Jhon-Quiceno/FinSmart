@@ -111,6 +111,7 @@ pensado para un problema que un cliente nativo con Bearer token no tiene.
 | Botones "Google"/"GitHub" decorativos en login (ya marcados como deuda en el roadmap, Sprint 5) | Si se implementan de verdad en la web antes, se heredan vía el mismo backend OAuth; si no, no hace falta duplicarlos en la primera versión móvil. |
 | Sidebar colapsable de escritorio, drawer de hamburguesa | Se reemplaza por navegación nativa (tabs inferiores + stack), no por el mismo componente adaptado. |
 | Exportación CSV vía descarga de archivo del navegador (`lib/download.ts`) | En RN el equivalente es compartir el archivo vía `expo-sharing`/`expo-file-system`, no un `<a download>`. |
+| Vínculo con Telegram (`TelegramLinkService`, bot de captura de recibos) | Telegram resolvía "foto de recibo → gasto" en la web porque el navegador no tiene cámara accesible. En mobile ese problema no existe — la captura pasa directo por `expo-camera` (M1 de `plan-sprints-movil-nativo.md`), sin Telegram de por medio. Se mantiene solo en la web, sin cambios. |
 
 ---
 
@@ -176,14 +177,16 @@ Configuración de VS Code (carpeta `smart-finance-mobile/.vscode/`):
 - [x] Backend: adaptador `ExpoPushAdapter` sobre el puerto hermano `PushNotificationSender`
       (no `NotificationSender` directamente — ver §4), tabla `push_tokens` (`user_id`,
       `expo_push_token`, `device_id`, `created_at`).
-- [ ] Scaffolding `smart-finance-mobile/` con Expo + TypeScript + Expo Router + NativeWind.
-- [ ] Configurar VS Code (`.vscode/extensions.json` + `settings.json` + `tasks.json`, ver §5.1)
+- [x] Scaffolding `smart-finance-mobile/` con Expo + TypeScript + Expo Router + NativeWind.
+- [x] Configurar VS Code (`.vscode/extensions.json` + `settings.json` + `tasks.json`, ver §5.1)
       y verificar que `npx expo start` levanta y conecta con Expo Go en un celular físico.
-- [ ] Portar tokens de `DESIGN.md` a un theme de NativeWind (conversión OKLCH → HEX).
-- [ ] Decidir extracción de `lib/types/`/`lib/schemas/` a paquete compartido o copia directa
-      (empezar con copia directa es válido; no bloquear la Fase 1 por esto).
-- [ ] CI: workflow de GitHub Actions con `paths: smart-finance-mobile/**` para no disparar
-      builds del backend/frontend en cada cambio móvil (y viceversa).
+- [x] Portar tokens de `DESIGN.md` a un theme de NativeWind (conversión OKLCH → HEX,
+      `constants/korofin-colors.ts` + `korofin-theme-provider.tsx`).
+- [x] Extracción de `lib/schemas/`/`lib/types/`: se optó por copia directa a
+      `smart-finance-mobile/src/lib/schemas|types` (no paquete compartido) — válido según lo
+      planteado acá mismo; revisar si el drift empieza a doler de verdad (§6).
+- [x] CI: `.github/workflows/ci.yml` con `paths-filter` sobre `smart-finance-mobile/**` y job
+      `mobile-checks` dedicado, para no disparar builds cruzados con backend/frontend.
 
 ### Fase 1 (v1) — Paridad esencial con la web
 
@@ -199,32 +202,39 @@ funciones que dependen de terceros aún no maduros (correo, Open Finance).
 | Servicios | Suscripciones y pagos recurrentes. |
 | Reportes | Vista in-app de comparativas; exportar/compartir CSV vía `expo-sharing` en vez de descarga de navegador. |
 | Asistente IA | Chat, igual que la web (mismo endpoint `/api/ai/chat`). |
-| Vínculo con Telegram | Pantalla de configuración que genera el código de un solo uso (`TelegramLinkService.generateLinkCode`) — reutiliza el endpoint tal cual, es el mismo flujo que ya existe en la web. |
 | Notificaciones push | `expo-notifications` + `ExpoPushAdapter` de Fase 0 — primera vez que KoroFin tiene push real (la web solo tiene in-app + email). |
-| Configuración | Perfil, preferencias de notificación, estado de proveedores de IA (solo lectura). |
+| Configuración | Perfil editable, cambio de contraseña, tema (claro/oscuro/sistema, local), estado de proveedores de IA (solo lectura). |
+
+**Decisión (2026-08-21): vínculo con Telegram descartado en mobile, no es un ítem pendiente.**
+En la web, Telegram existía porque el navegador no tiene cámara accesible para capturar
+recibos — el bot era el único camino para "foto → gasto". En mobile ese problema no existe:
+la app tiene cámara nativa, así que el camino de captura por foto pasa directo a
+`expo-camera` sin intermediario (milestone M1 de
+[`plan-sprints-movil-nativo.md`](plan-sprints-movil-nativo.md)). Telegram se mantiene
+**solo en la web**, sin cambios — no se toca ni se retira en este trabajo.
 
 **Fuera de alcance de v1** (dependen de piezas que el roadmap general aún no cerró):
 extractos bancarios (Nivel 2, pendiente de validar con datos reales), Open Finance (Nivel 3,
 sandbox), billing/planes (Sprint 7).
 
-**Progreso de diseño (UI mock, sin integración de backend real)** — pantallas navegables con
-datos de ejemplo, construidas sobre `(tabs)` + rutas sueltas en Expo Router; cada submit/acción
-real queda marcado con `TODO(Fase 0 backend)` en el código:
+**Progreso — Fase 1 completa, integrada contra el backend real** (2026-08-21). Todas las
+pantallas viven sobre `(tabs)` + rutas sueltas en Expo Router y consumen los endpoints reales,
+sin datos mock:
 
-- [x] Auth — login (con acceso demo temporal a `(tabs)`) y registro; falta el endpoint mobile-friendly (§2) para que dejen de ser un stub.
+- [x] Auth — login y registro reales contra el endpoint mobile-friendly (§2); sin bypass demo.
 - [x] Navegación — 4 tabs (Inicio, Movimientos, Deudas, Asistente) + burbuja de perfil en el header de cada una (menú: Ver perfil / Configuraciones / Notificaciones); botón "Agregar" como FAB flotante en vez de ícono fijo en el header. Se eliminó el tab "Más" — su contenido se redistribuyó según el modelo de datos real (ver ítems siguientes).
-- [x] Dashboard — balance, categorías principales, alertas/insights, transacciones recientes (gráfico simple con barras, sin librería de charts nueva).
-- [x] Movimientos — ahora es un hub con 3 secciones (Movimientos / Categorías / Servicios) porque están acopladas en el modelo de datos real (`Expense.category`/`Income.category` son FK directas, y `RecurringPaymentService.payRecurringPayment` crea un `Expense` enlazado al pagar un servicio):
-  - Movimientos: lista con filtro ingreso/gasto y quick-add visual; sugerencia de categoría por IA queda como nota, no implementada.
-  - Categorías: listado filtrable por Ingreso/Gasto; el CRUD ya existe en el backend real, falta el cliente HTTP mobile-friendly.
+- [x] Dashboard — balance, categorías principales, alertas/insights, transacciones recientes, con datos reales del backend (gráfico simple con barras, sin librería de charts nueva).
+- [x] Movimientos — hub con 3 secciones (Movimientos / Categorías / Servicios), acopladas porque así vive el modelo real (`Expense.category`/`Income.category` son FK directas, y `RecurringPaymentService.payRecurringPayment` crea un `Expense` enlazado al pagar un servicio):
+  - Movimientos: lista con filtro ingreso/gasto y quick-add real, con sugerencia de categoría por IA (`useCategorize()` vía `use-ai-categorize.ts`, igual que la web).
+  - Categorías: CRUD real contra el backend.
   - Servicios: listado de pagos recurrentes con próxima fecha de cobro.
-- [x] Deudas / Tarjetas — Deudas y Tarjetas separadas con toggle (mismo patrón que el filtro de Ingresos/Gastos); registrar cargo/pago son botones sin acción real todavía.
-- [x] Reportes — resumen del mes + categorías + movimientos; exportar CSV queda deshabilitado (pendiente `expo-sharing`).
-- [x] Asistente IA — pantalla de chat con mensajes de ejemplo; el input no envía nada todavía.
-- [x] Vínculo con Telegram — genera un código mock local; falta conectar con `TelegramLinkService.generateLinkCode`.
-- [x] Preferencias — pantalla de solo lectura (tema/moneda/idioma), accesible desde Configuración; no existe todavía un endpoint de preferencias en el backend.
-- [x] Notificaciones push — pantalla de opt-in con toggles; falta integrar `expo-notifications` + `ExpoPushAdapter`.
-- [x] Configuración — perfil (solo lectura), preferencias de notificación y proveedores de IA (solo lectura).
+- [x] Deudas / Tarjetas — Deudas y Tarjetas separadas con toggle (mismo patrón que el filtro de Ingresos/Gastos); registrar cargo/pago con mutaciones reales.
+- [x] Reportes — resumen del mes + categorías + movimientos; exportar/compartir CSV real vía `expo-sharing`.
+- [x] Asistente IA — chat real contra `/api/ai/chat`, igual que la web.
+- [x] Captura de recibos por cámara — **no implementada todavía, es el milestone M1 de [`plan-sprints-movil-nativo.md`](plan-sprints-movil-nativo.md)**, el siguiente paso después de esta fase.
+- [x] Preferencias — tema (claro/oscuro/sistema) real, aplicado con NativeWind y persistido en `expo-secure-store`, sin depender del backend; moneda e idioma siguen de solo lectura, diferidos a M3 (no existe todavía `GET/PUT /api/users/preferences`).
+- [x] Notificaciones push — opt-in real con `expo-notifications` + `ExpoPushAdapter`.
+- [x] Configuración — perfil editable (`PUT /api/users/profile`), cambio de contraseña (`PUT /api/users/password`) y proveedores de IA (`GET /api/ai/providers/status`, solo lectura por diseño — no hay mutación, el operador de la app configura los proveedores). La tarjeta de preferencias de notificación se quitó de esta pantalla por estar duplicada con `/notificaciones` (que ya las gestiona); queda solo el enlace del menú.
 
 ### Fase 2 (v2) — Automatización Android (la pieza diferencial)
 

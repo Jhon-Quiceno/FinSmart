@@ -24,6 +24,7 @@ interface AuthContextValue {
   login: (email: string, password: string, rememberMe: boolean) => Promise<AuthActionResult>;
   register: (name: string, email: string, password: string) => Promise<AuthActionResult>;
   logout: () => Promise<void>;
+  updateUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -126,8 +127,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('unauthenticated');
   }
 
+  // Actualiza el usuario en memoria tras una edición exitosa (ej. PUT /api/users/profile) sin
+  // pasar por otro round-trip de refresh — el backend ya devuelve el usuario actualizado.
+  function updateUser(updatedUser: AuthUser): void {
+    setUser(updatedUser);
+  }
+
   return (
-    <AuthContext.Provider value={{ status, user, login, register, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ status, user, login, register, logout, updateUser }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

@@ -1,6 +1,13 @@
 import { apiClient } from "../api-client"
-import type { AiUsage, CategorizeRequest, CategorizeResponse, ChatMessage, ChatReply } from "../types/ai"
-import type { Insight } from "../types/ai"
+import type {
+  AiProviderStatus,
+  AiUsage,
+  CategorizeRequest,
+  CategorizeResponse,
+  ChatMessage,
+  ChatReply,
+  Insight,
+} from "../types/ai"
 import type { PaginatedResponse } from "../types/pagination"
 
 export interface ChatHistoryFilters {
@@ -45,5 +52,10 @@ export async function categorize(payload: CategorizeRequest): Promise<Categorize
 
 export async function getUsage(): Promise<AiUsage> {
   const response = await apiClient.get<AiUsage>("/api/ai/chat/usage")
+  return response.data
+}
+
+export async function getProvidersStatus(): Promise<AiProviderStatus[]> {
+  const response = await apiClient.get<AiProviderStatus[]>("/api/ai/providers/status")
   return response.data
 }
