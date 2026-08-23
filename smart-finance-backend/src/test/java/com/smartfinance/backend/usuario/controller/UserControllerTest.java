@@ -525,6 +525,18 @@ class UserControllerTest {
     }
 
     @Test
+    void updatePreferencesReturns400WhenThemeIsAnUnknownEnumValue() throws Exception {
+        String invalidBody = "{\"theme\":\"PURPLE\",\"currency\":\"COP\",\"language\":\"ES\"}";
+
+        mockMvc.perform(patch("/api/users/preferences")
+                        .header("Authorization", AUTH_HEADER)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void updatePreferencesReturns400WhenCurrencyIsNotSupported() throws Exception {
         String invalidBody = "{\"theme\":\"DARK\",\"currency\":\"XXX\",\"language\":\"EN\"}";
 

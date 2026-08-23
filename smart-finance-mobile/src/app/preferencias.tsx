@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { Globe, Palette, Wallet } from 'lucide-react-native';
+import { Globe, Palette, RotateCcw, Wallet } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
@@ -81,6 +81,13 @@ export default function PreferenciasScreen() {
   }, [preferencesQuery.data]);
 
   async function persist(next: { theme: ThemePreference; currency: CurrencyCode; language: LanguageCode }) {
+    // Salvaguarda: si el GET inicial nunca llegó a hidratar (falló, o el usuario alcanzó a tocar
+    // algo antes de que resuelva), no hay forma de saber los valores reales del servidor — mandar
+    // el PATCH acá pisaría lo que haya guardado con los defaults locales (COP/ES). La UI ya evita
+    // este caso ocultando los controles hasta preferencesQuery.isSuccess, esto es defensa en
+    // profundidad si algo cambia ese gate más adelante.
+    if (!hydratedFromBackend.current) return;
+
     setErrorMessage(null);
     try {
       await updatePreferences.mutateAsync({
@@ -118,11 +125,25 @@ export default function PreferenciasScreen() {
           <View className="items-center py-10">
             <ActivityIndicator />
           </View>
+        ) : preferencesQuery.isError ? (
+          <View className="gap-3 rounded-xl border border-border bg-card p-4" style={CARD_SHADOW}>
+            <Text className="text-sm text-muted-foreground">
+              No se pudieron cargar tus preferencias. Cambiarlas ahora pisaría lo que tengas guardado.
+            </Text>
+            <Pressable
+              className="h-10 flex-row items-center justify-center gap-2 rounded-lg border border-border bg-background active:opacity-70"
+              onPress={() => void preferencesQuery.refetch()}
+            >
+              <RotateCcw size={16} color={ICON_COLOR_MUTED} />
+              <Text className="text-sm font-medium text-foreground">Reintentar</Text>
+            </Pressable>
+          </View>
         ) : (
           <View className="overflow-hidden rounded-xl border border-border bg-card" style={CARD_SHADOW}>
             <Pressable
               className="flex-row items-center gap-3 border-b border-border px-4 py-3.5 active:opacity-70"
               onPress={cycleTheme}
+              disabled={updatePreferences.isPending}
             >
               <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
                 <Palette size={16} color={ICON_COLOR_MUTED} />
@@ -145,6 +166,7 @@ export default function PreferenciasScreen() {
                     key={code}
                     scaleTo={0.97}
                     onPress={() => selectCurrency(code)}
+                    disabled={updatePreferences.isPending}
                     className={`rounded-full border px-3 py-1.5 ${active ? 'border-primary bg-primary' : 'border-border bg-background'}`}
                   >
                     <Text className={`text-xs font-medium ${active ? 'text-primary-foreground' : 'text-foreground'}`}>
@@ -169,6 +191,7 @@ export default function PreferenciasScreen() {
                     key={code}
                     scaleTo={0.97}
                     onPress={() => selectLanguage(code)}
+                    disabled={updatePreferences.isPending}
                     className={`rounded-full border px-3 py-1.5 ${active ? 'border-primary bg-primary' : 'border-border bg-background'}`}
                   >
                     <Text className={`text-xs font-medium ${active ? 'text-primary-foreground' : 'text-foreground'}`}>
